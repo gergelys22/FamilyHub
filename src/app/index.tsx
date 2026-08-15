@@ -1,5 +1,6 @@
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors, radius, spacing } from '@/constants/theme';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const family = [
   { name: 'Anya', initials: 'A', color: '#EC4899' },
@@ -123,7 +124,7 @@ function Notice({ icon, tone, title, meta }: { icon: string; tone: 'green' | 'pi
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#071123' },
+  safeArea: { flex: 1, backgroundColor: colors.background },
   content: { paddingHorizontal: 16, paddingBottom: 24, gap: 12 },
   header: { height: 64, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 10 },
@@ -155,7 +156,7 @@ const styles = StyleSheet.create({
   quickLabel: { color: '#E7EDF7', fontSize: 10, fontWeight: '600' },
   twoColumns: { flexDirection: 'row', gap: 10 },
   column: { flex: 1, gap: 10 },
-  card: { backgroundColor: '#101D33', borderWidth: 1, borderColor: '#20304A', borderRadius: 14, padding: 12 },
+  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: spacing.md, gap: spacing.sm },
   eventRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   dateBadge: { width: 34, height: 38, backgroundColor: '#172641', borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   month: { color: '#F97316', fontSize: 8, fontWeight: '800' },
