@@ -1,5 +1,6 @@
 import { FamilyHeader } from '@/components/family-header';
 import { colors, radius, spacing } from '@/constants/theme';
+import { useAuth } from '@/providers/auth-provider';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -28,19 +29,28 @@ function SectionTitle({ children, action }: { children: string; action?: string 
 }
 
 export default function HomeScreen() {
+  const { profile, profileError, signOut } = useAuth();
+  const userInitial = profile?.display_name.trim().charAt(0).toLocaleUpperCase('hu-HU') || '?';
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <FamilyHeader
-          userInitial="A"
+          userInitial={userInitial}
           hasUnreadNotifications
           onNotificationsPress={() => {
             console.log('Értesítések');
           }}
           onProfilePress={() => {
-            console.log('Profil');
+            void signOut();
           }}
         />
+
+        {profileError ? (
+          <View style={styles.connectionError}>
+            <Text style={styles.connectionErrorText}>A profil betöltése sikertelen: {profileError}</Text>
+          </View>
+        ) : null}
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.familyRow}>
           {family.map((person) => (
@@ -127,6 +137,8 @@ function Notice({ icon, tone, title, meta }: { icon: string; tone: 'green' | 'pi
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   content: { paddingHorizontal: 16, paddingBottom: 24, gap: 12 },
+  connectionError: { padding: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.danger, backgroundColor: '#3B1622' },
+  connectionErrorText: { color: '#FDA4AF', fontSize: 12 },
   familyRow: { gap: 13, paddingVertical: 5, paddingRight: 10 },
   person: { alignItems: 'center', width: 54, gap: 5 },
   avatarRing: { width: 48, height: 48, borderRadius: 24, borderWidth: 2, padding: 2 },

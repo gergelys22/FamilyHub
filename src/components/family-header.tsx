@@ -37,6 +37,20 @@ export function FamilyHeader({
                         pressed && styles.pressed,
                     ]}
                 >
+                    <Text style={styles.notificationIcon}>●</Text>
+                    {hasUnreadNotifications ? <View style={styles.unreadIndicator} /> : null}
+                </Pressable>
+
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Profil megnyitása"
+                    hitSlop={8}
+                    onPress={onProfilePress}
+                    style={({ pressed}) => [
+                        styles.profileButton,
+                        pressed && styles.pressed,
+                    ]}
+                >
                     <Text style={styles.profileText}>{userInitial}</Text>
                 </Pressable>
             </View>
