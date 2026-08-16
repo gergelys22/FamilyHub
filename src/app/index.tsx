@@ -1,3 +1,4 @@
+import { FamilyHeader } from '@/components/family-header';
 import { colors, radius, spacing } from '@/constants/theme';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -30,16 +31,16 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <View style={styles.brand}>
-            <View style={styles.logo}><Text style={styles.logoText}>⌂</Text></View>
-            <Text style={styles.brandText}>CsaládTér</Text>
-          </View>
-          <View style={styles.headerActions}>
-            <View style={styles.notification}><Text style={styles.notificationText}>●</Text></View>
-            <View style={styles.profile}><Text style={styles.profileText}>A</Text></View>
-          </View>
-        </View>
+        <FamilyHeader
+          userInitial="A"
+          hasUnreadNotifications
+          onNotificationsPress={() => {
+            console.log('Értesítések');
+          }}
+          onProfilePress={() => {
+            console.log('Profil');
+          }}
+        />
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.familyRow}>
           {family.map((person) => (
@@ -126,16 +127,6 @@ function Notice({ icon, tone, title, meta }: { icon: string; tone: 'green' | 'pi
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   content: { paddingHorizontal: 16, paddingBottom: 24, gap: 12 },
-  header: { height: 64, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  brand: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  logo: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#3B82F6', alignItems: 'center', justifyContent: 'center' },
-  logoText: { color: '#FFFFFF', fontSize: 22, fontWeight: '800' },
-  brandText: { color: '#F8FAFC', fontSize: 20, fontWeight: '800' },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  notification: { width: 38, height: 38, borderRadius: 19, borderWidth: 1, borderColor: '#23334D', alignItems: 'center', justifyContent: 'center' },
-  notificationText: { color: '#F97316', fontSize: 15 },
-  profile: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#D6B38D', alignItems: 'center', justifyContent: 'center' },
-  profileText: { color: '#3B2415', fontWeight: '800' },
   familyRow: { gap: 13, paddingVertical: 5, paddingRight: 10 },
   person: { alignItems: 'center', width: 54, gap: 5 },
   avatarRing: { width: 48, height: 48, borderRadius: 24, borderWidth: 2, padding: 2 },
