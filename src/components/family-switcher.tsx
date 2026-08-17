@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 
@@ -13,6 +13,7 @@ export function FamilySwitcher({ onActiveFamilyChange }: FamilySwitcherProps) {
   const router = useRouter();
   const [families, setFamilies] = useState<Family[]>([]);
   const [activeFamilyId, setActiveFamilyId] = useState<string | null>(null);
+  const activeFamilyIdRef = useRef<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -25,11 +26,10 @@ export function FamilySwitcher({ onActiveFamilyChange }: FamilySwitcherProps) {
 
         setFamilies(result);
         setErrorMessage(null);
-        setActiveFamilyId((currentId) => {
-          const nextFamily = result.find((family) => family.id === currentId) ?? result[0] ?? null;
-          onActiveFamilyChange?.(nextFamily);
-          return nextFamily?.id ?? null;
-        });
+        const nextFamily = result.find((family) => family.id === activeFamilyIdRef.current) ?? result[0] ?? null;
+        activeFamilyIdRef.current = nextFamily?.id ?? null;
+        setActiveFamilyId(activeFamilyIdRef.current);
+        onActiveFamilyChange?.(nextFamily);
       })
       .catch((error: unknown) => {
         if (!active) return;
@@ -47,6 +47,7 @@ export function FamilySwitcher({ onActiveFamilyChange }: FamilySwitcherProps) {
   useFocusEffect(loadFamilies);
 
   function selectFamily(family: Family) {
+    activeFamilyIdRef.current = family.id;
     setActiveFamilyId(family.id);
     onActiveFamilyChange?.(family);
   }
@@ -58,6 +59,7 @@ export function FamilySwitcher({ onActiveFamilyChange }: FamilySwitcherProps) {
       .then((result) => {
         setFamilies(result);
         const nextFamily = result[0] ?? null;
+        activeFamilyIdRef.current = nextFamily?.id ?? null;
         setActiveFamilyId(nextFamily?.id ?? null);
         onActiveFamilyChange?.(nextFamily);
       })
