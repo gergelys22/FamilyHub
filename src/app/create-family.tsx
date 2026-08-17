@@ -89,7 +89,7 @@ export default function CreateFamilyScreen() {
             <Pressable
                 accessibilityRole="button"
                 disabled={submitting}
-                onPress={() => router.back()}
+                onPress={() => router.replace('/')}
                 style={styles.secondaryButton}>
                 <Text style={styles.secondaryButtonText}>Mégse</Text>
             </Pressable>

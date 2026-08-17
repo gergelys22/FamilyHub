@@ -55,14 +55,24 @@ function AppNavigator() {
               }}
             />
           ))}
-        </Tabs.Protected>
 
-        <Tabs.Protected guard={!session}>
           <Tabs.Screen
             name="create-family"
             options={{
               href: null,
               title: 'Család létrehozása',
+              tabBarStyle: { display: 'none' },
+            }}
+          />
+        </Tabs.Protected>
+
+        <Tabs.Protected guard={!session}>
+          <Tabs.Screen
+            name="sign-in"
+            options={{
+              href: null,
+              title: 'Bejelentkezés',
+              tabBarStyle: { display: 'none' },
             }}
           />
         </Tabs.Protected>
