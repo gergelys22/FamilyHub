@@ -1,17 +1,11 @@
 import { FamilyHeader } from '@/components/family-header';
+import { FamilySwitcher } from '@/components/family-switcher';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import type { Family } from '@/services/families';
+import { useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-
-const family = [
-  { name: 'Anya', initials: 'A', color: '#EC4899' },
-  { name: 'Apa', initials: 'A', color: '#F59E0B' },
-  { name: 'Anna', initials: 'AN', color: '#8B5CF6' },
-  { name: 'Máté', initials: 'M', color: '#F97316' },
-  { name: 'Lili', initials: 'L', color: '#14B8A6' },
-];
 
 const quickActions = [
   { icon: '▣', label: 'Új esemény', color: '#3B82F6' },
@@ -30,8 +24,8 @@ function SectionTitle({ children, action }: { children: string; action?: string 
 }
 
 export default function HomeScreen() {
-  const router = useRouter();
   const { profile, profileError, signOut } = useAuth();
+  const [activeFamily, setActiveFamily] = useState<Family | null>(null);
   const userInitial =
     profile?.display_name.trim().charAt(0).toLocaleUpperCase('hu-HU') || '?';
 
@@ -49,16 +43,7 @@ export default function HomeScreen() {
           }}
         />
 
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Új családi kör létrehozása"
-          onPress={() => router.push('/create-family')}
-          style={({ pressed }) => [
-            styles.createFamilyButton,
-            pressed && styles.createFamilyButtonPressed,
-          ]}>
-          <Text style={styles.createFamilyButtonText}>+ Új családi kör létrehozása</Text>
-        </Pressable>
+        <FamilySwitcher onActiveFamilyChange={setActiveFamily} />
 
         {profileError ? (
           <View style={styles.connectionError}>
@@ -66,21 +51,24 @@ export default function HomeScreen() {
           </View>
         ) : null}
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.familyRow}>
-          {family.map((person) => (
-            <View key={person.name} style={styles.person}>
-              <View style={[styles.avatarRing, { borderColor: person.color }]}>
-                <View style={styles.avatar}><Text style={styles.avatarText}>{person.initials}</Text></View>
-                <View style={styles.onlineDot} />
+        {activeFamily ? (
+          <>
+            <SectionTitle action="1 tag">Családtagok</SectionTitle>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.familyRow}>
+              <View style={styles.person}>
+                <View style={[styles.avatarRing, { borderColor: colors.primaryLight }]}>
+                  <View style={styles.avatar}><Text style={styles.avatarText}>{userInitial}</Text></View>
+                  <View style={styles.onlineDot} />
+                </View>
+                <Text numberOfLines={1} style={styles.personName}>{profile?.display_name || 'Te'}</Text>
               </View>
-              <Text style={styles.personName}>{person.name}</Text>
-            </View>
-          ))}
-          <View style={styles.person}>
-            <View style={styles.addAvatar}><Text style={styles.addText}>+</Text></View>
-            <Text style={styles.mutedName}>Új tag</Text>
-          </View>
-        </ScrollView>
+              <View style={styles.person}>
+                <View style={styles.addAvatar}><Text style={styles.addText}>+</Text></View>
+                <Text style={styles.mutedName}>Új tag</Text>
+              </View>
+            </ScrollView>
+          </>
+        ) : null}
 
         <SectionTitle>Gyors műveletek</SectionTitle>
         <View style={styles.quickRow}>
@@ -153,21 +141,6 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingBottom: 24, gap: 12 },
   connectionError: { padding: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.danger, backgroundColor: '#3B1622' },
   connectionErrorText: { color: '#FDA4AF', fontSize: 12 },
-  createFamilyButton: {
-    minHeight: 46,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    borderRadius: radius.md,
-  },
-  createFamilyButtonText: {
-    color: colors.primaryLight,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  createFamilyButtonPressed: { opacity: 0.75 },
   familyRow: { gap: 13, paddingVertical: 5, paddingRight: 10 },
   person: { alignItems: 'center', width: 54, gap: 5 },
   avatarRing: { width: 48, height: 48, borderRadius: 24, borderWidth: 2, padding: 2 },
