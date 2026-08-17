@@ -64,6 +64,15 @@ function AppNavigator() {
               tabBarStyle: { display: 'none' },
             }}
           />
+
+          <Tabs.Screen
+            name="invite-member"
+            options={{
+              href: null,
+              title: 'Új családtag',
+              tabBarStyle: { display: 'none' },
+            }}
+          />
         </Tabs.Protected>
 
         <Tabs.Protected guard={!session}>

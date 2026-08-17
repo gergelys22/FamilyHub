@@ -3,8 +3,9 @@ import { FamilySwitcher } from '@/components/family-switcher';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
 import type { Family } from '@/services/families';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const quickActions = [
@@ -24,6 +25,7 @@ function SectionTitle({ children, action }: { children: string; action?: string 
 }
 
 export default function HomeScreen() {
+  const router = useRouter();
   const { profile, profileError, signOut } = useAuth();
   const [activeFamily, setActiveFamily] = useState<Family | null>(null);
   const userInitial =
@@ -62,10 +64,17 @@ export default function HomeScreen() {
                 </View>
                 <Text numberOfLines={1} style={styles.personName}>{profile?.display_name || 'Te'}</Text>
               </View>
-              <View style={styles.person}>
+              <Pressable
+                accessibilityLabel="Új családtag meghívása"
+                accessibilityRole="button"
+                onPress={() => router.push({
+                  pathname: '/invite-member',
+                  params: { familyId: activeFamily.id, familyName: activeFamily.name },
+                })}
+                style={({ pressed }) => [styles.person, pressed && styles.personPressed]}>
                 <View style={styles.addAvatar}><Text style={styles.addText}>+</Text></View>
                 <Text style={styles.mutedName}>Új tag</Text>
-              </View>
+              </Pressable>
             </ScrollView>
           </>
         ) : null}
@@ -143,6 +152,7 @@ const styles = StyleSheet.create({
   connectionErrorText: { color: '#FDA4AF', fontSize: 12 },
   familyRow: { gap: 13, paddingVertical: 5, paddingRight: 10 },
   person: { alignItems: 'center', width: 54, gap: 5 },
+  personPressed: { opacity: 0.65 },
   avatarRing: { width: 48, height: 48, borderRadius: 24, borderWidth: 2, padding: 2 },
   avatar: { flex: 1, borderRadius: 22, backgroundColor: '#2D3B52', alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: '#F8FAFC', fontSize: 12, fontWeight: '800' },
