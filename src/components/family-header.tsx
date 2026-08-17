@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, spacing } from '@/constants/theme';
+import { router } from '../../.expo/types/router';
 
 
 type FamilyHeaderProps = {
@@ -52,6 +53,15 @@ export function FamilyHeader({
                     ]}
                 >
                     <Text style={styles.profileText}>{userInitial}</Text>
+                </Pressable>
+                <Pressable
+                    accessibilityRole="button"
+                    onPress={() => router.push('/create-family')}
+                    style={({ pressed }) => [
+                        styles.createFamilyButton,
+                        pressed && styles.pressed,
+                    ]}>
+                    <Text style={styles.createFamilyButtonText}>+ Új családi kör létrehozása</Text>
                 </Pressable>
             </View>
         </View>
@@ -130,5 +140,20 @@ const styles = StyleSheet.create({
     },
     pressed: {
         opacity: 0.7,
+    },
+
+    createFamilyButton: {
+        minHeight: 46,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.surface,
+        borderWidth: 1,
+        borderColor: colors.primary,
+        borderRadius: radius.md,
+    },
+    createFamilyButtonText: {
+        color: colors.primaryLight,
+        fontSize: 13,
+        fontWeight: '700',
     },
 });

@@ -1,8 +1,8 @@
+import { AuthProvider, useAuth } from '@/providers/auth-provider';
 import { Tabs } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
-import { AuthProvider, useAuth } from '@/providers/auth-provider';
 
 const tabs = [
   { name: 'index', title: 'Főoldal', icon: '⌂' },
@@ -59,11 +59,10 @@ function AppNavigator() {
 
         <Tabs.Protected guard={!session}>
           <Tabs.Screen
-            name="sign-in"
+            name="create-family"
             options={{
               href: null,
-              title: 'Bejelentkezés',
-              tabBarStyle: { display: 'none' },
+              title: 'Család létrehozása',
             }}
           />
         </Tabs.Protected>

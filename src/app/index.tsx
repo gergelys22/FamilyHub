@@ -1,8 +1,9 @@
 import { FamilyHeader } from '@/components/family-header';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
 const family = [
   { name: 'Anya', initials: 'A', color: '#EC4899' },
@@ -29,8 +30,10 @@ function SectionTitle({ children, action }: { children: string; action?: string 
 }
 
 export default function HomeScreen() {
+  const router = useRouter();
   const { profile, profileError, signOut } = useAuth();
-  const userInitial = profile?.display_name.trim().charAt(0).toLocaleUpperCase('hu-HU') || '?';
+  const userInitial =
+    profile?.display_name.trim().charAt(0).toLocaleUpperCase('hu-HU') || '?';
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -45,6 +48,17 @@ export default function HomeScreen() {
             void signOut();
           }}
         />
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Új családi kör létrehozása"
+          onPress={() => router.push('/create-family')}
+          style={({ pressed }) => [
+            styles.createFamilyButton,
+            pressed && styles.createFamilyButtonPressed,
+          ]}>
+          <Text style={styles.createFamilyButtonText}>+ Új családi kör létrehozása</Text>
+        </Pressable>
 
         {profileError ? (
           <View style={styles.connectionError}>
@@ -139,6 +153,21 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingBottom: 24, gap: 12 },
   connectionError: { padding: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.danger, backgroundColor: '#3B1622' },
   connectionErrorText: { color: '#FDA4AF', fontSize: 12 },
+  createFamilyButton: {
+    minHeight: 46,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: radius.md,
+  },
+  createFamilyButtonText: {
+    color: colors.primaryLight,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  createFamilyButtonPressed: { opacity: 0.75 },
   familyRow: { gap: 13, paddingVertical: 5, paddingRight: 10 },
   person: { alignItems: 'center', width: 54, gap: 5 },
   avatarRing: { width: 48, height: 48, borderRadius: 24, borderWidth: 2, padding: 2 },
