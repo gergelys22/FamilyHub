@@ -44,6 +44,15 @@ function AppNavigator() {
           tabBarStyle: styles.tabBar,
           tabBarLabelStyle: styles.tabLabel,
         }}>
+        <Tabs.Screen
+          name="auth/callback"
+          options={{
+            href: null,
+            title: 'E-mail megerősítése',
+            tabBarStyle: { display: 'none' },
+          }}
+        />
+
         <Tabs.Protected guard={Boolean(session)}>
           {tabs.map((tab) => (
             <Tabs.Screen
