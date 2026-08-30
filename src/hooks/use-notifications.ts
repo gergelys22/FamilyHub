@@ -40,8 +40,9 @@ export function useNotifications() {
 
     loadNotifications('Az értesítések betöltése sikertelen.');
 
+    const channelName = `app-notifications:${profileId}:${Date.now()}:${Math.random()}`;
     const channel = supabase
-      .channel(`app-notifications:${profileId}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
