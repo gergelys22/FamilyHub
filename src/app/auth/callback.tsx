@@ -28,38 +28,10 @@ export default function AuthCallbackScreen() {
   const [message, setMessage] = useState('Az e-mail-cím megerősítése folyamatban…');
 
   useEffect(() => {
-    if (incomingUrl) return;
-
-    let active = true;
-    const timeout = setTimeout(() => {
-      void supabase.auth.getUser().then(async ({ data, error }) => {
-        if (!active) return;
-
-        if (!error && data.user) {
-          router.replace('/');
-          return;
-        }
-
-        await supabase.auth.signOut({ scope: 'local' });
-        if (!active) return;
-        setState('confirmed');
-        setMessage('Nincs feldolgozható megerősítő link. Jelentkezz be, vagy nyisd meg újra az e-mailben kapott linket.');
-      });
-    }, 1200);
-
-    return () => {
-      active = false;
-      clearTimeout(timeout);
-    };
-  }, [incomingUrl, router]);
-
-  useEffect(() => {
-    if (!incomingUrl) return;
-
     let active = true;
 
     async function completeConfirmation() {
-      const params = getCallbackParams(incomingUrl!);
+      const params = getCallbackParams(incomingUrl ?? '');
       const errorDescription = params.get('error_description');
 
       if (errorDescription) {
@@ -73,6 +45,16 @@ export default function AuthCallbackScreen() {
       const accessToken = params.get('access_token');
       const refreshToken = params.get('refresh_token');
 
+      // A Supabase egyes megerősítési folyamatai a tokent már a
+      // kiszolgálón feldolgozzák, és paraméterek nélkül irányítanak vissza.
+      if (!code && !(accessToken && refreshToken)) {
+        await supabase.auth.signOut({ scope: 'local' });
+        if (!active) return;
+        setState('confirmed');
+        setMessage('Az e-mail-címed megerősítése sikerült. Átirányítunk a bejelentkezéshez…');
+        return;
+      }
+
       if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (!active) return;
@@ -81,7 +63,10 @@ export default function AuthCallbackScreen() {
           setMessage(error.message);
           return;
         }
-        router.replace('/');
+        await supabase.auth.signOut({ scope: 'local' });
+        if (!active) return;
+        setState('confirmed');
+        setMessage('Az e-mail-címed megerősítése sikerült. Átirányítunk a bejelentkezéshez…');
         return;
       }
 
@@ -96,12 +81,13 @@ export default function AuthCallbackScreen() {
           setMessage(error.message);
           return;
         }
-        router.replace('/');
+        await supabase.auth.signOut({ scope: 'local' });
+        if (!active) return;
+        setState('confirmed');
+        setMessage('Az e-mail-címed megerősítése sikerült. Átirányítunk a bejelentkezéshez…');
         return;
       }
 
-      setState('confirmed');
-      setMessage('Az e-mail-címed megerősítése sikerült. Most már bejelentkezhetsz.');
     }
 
     void completeConfirmation();
@@ -111,9 +97,19 @@ export default function AuthCallbackScreen() {
     };
   }, [incomingUrl, router]);
 
+  useEffect(() => {
+    if (state !== 'confirmed') return;
+
+    const timeout = setTimeout(() => {
+      router.replace({ pathname: '/sign-in', params: { mode: 'login' } });
+    }, 1800);
+
+    return () => clearTimeout(timeout);
+  }, [router, state]);
+
   async function goToSignIn() {
     await supabase.auth.signOut({ scope: 'local' });
-    router.replace('/sign-in');
+    router.replace({ pathname: '/sign-in', params: { mode: 'login' } });
   }
 
   return (

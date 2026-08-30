@@ -26,7 +26,7 @@ function SectionTitle({ children, action }: { children: string; action?: string 
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { profile, profileError, signOut } = useAuth();
+  const { profile, profileError } = useAuth();
   const [activeFamily, setActiveFamily] = useState<Family | null>(null);
   const userInitial =
     profile?.display_name.trim().charAt(0).toLocaleUpperCase('hu-HU') || '?';
@@ -41,7 +41,7 @@ export default function HomeScreen() {
             console.log('Értesítések');
           }}
           onProfilePress={() => {
-            void signOut();
+            router.push('/profile');
           }}
         />
 

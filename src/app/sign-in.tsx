@@ -1,12 +1,6 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import { useState } from 'react';
 import {
   ActivityIndicator,
-  Animated,
-  Easing,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -16,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { colors, radius, spacing } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
@@ -54,7 +49,9 @@ function EyeIcon({ visible }: { visible: boolean }) {
 
 export default function SignInScreen() {
   const { signIn, signUp } = useAuth();
-  const [isRegistration, setIsRegistration] = useState(false);
+  const router = useRouter();
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
+  const isRegistration = mode === 'register';
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -115,11 +112,15 @@ export default function SignInScreen() {
     if (error) {
       setMessage(error);
       setIsError(true);
+      return;
     }
+
+    router.replace('/');
   }
 
   function switchMode() {
-    setIsRegistration((current) => !current);
+    router.setParams({ mode: isRegistration ? 'login' : 'register' });
+    setDisplayName('');
     setPassword('');
     setConfirmPassword('');
     setPasswordVisible(false);
