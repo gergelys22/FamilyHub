@@ -159,6 +159,15 @@ function AppNavigator() {
               tabBarStyle: { display: 'none' },
             }}
           />
+
+          <Tabs.Screen
+            name="notifications"
+            options={{
+              href: null,
+              title: 'Értesítések',
+              tabBarStyle: { display: 'none' },
+            }}
+          />
         </Tabs.Protected>
 
         <Tabs.Protected guard={!session}>
