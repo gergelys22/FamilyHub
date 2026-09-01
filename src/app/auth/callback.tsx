@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import * as Linking from 'expo-linking';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, radius, spacing } from '@/constants/theme';
@@ -9,21 +8,22 @@ import { supabase } from '@/lib/supabase';
 
 type CallbackState = 'processing' | 'confirmed' | 'error';
 
-function getCallbackParams(url: string) {
-  const queryPart = url.includes('?') ? url.split('?')[1].split('#')[0] : '';
-  const hashPart = url.includes('#') ? url.split('#')[1] : '';
-  const params = new URLSearchParams(queryPart);
-
-  new URLSearchParams(hashPart).forEach((value, key) => {
-    params.set(key, value);
-  });
-
-  return params;
+function firstParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
 }
 
 export default function AuthCallbackScreen() {
   const router = useRouter();
-  const incomingUrl = Linking.useURL();
+  const callbackParams = useLocalSearchParams<{
+    code?: string | string[];
+    access_token?: string | string[];
+    refresh_token?: string | string[];
+    error_description?: string | string[];
+  }>();
+  const code = firstParam(callbackParams.code);
+  const accessToken = firstParam(callbackParams.access_token);
+  const refreshToken = firstParam(callbackParams.refresh_token);
+  const errorDescription = firstParam(callbackParams.error_description);
   const [state, setState] = useState<CallbackState>('processing');
   const [message, setMessage] = useState('Az e-mail-cím megerősítése folyamatban…');
 
@@ -31,19 +31,12 @@ export default function AuthCallbackScreen() {
     let active = true;
 
     async function completeConfirmation() {
-      const params = getCallbackParams(incomingUrl ?? '');
-      const errorDescription = params.get('error_description');
-
       if (errorDescription) {
         if (!active) return;
         setState('error');
         setMessage(errorDescription.replace(/\+/g, ' '));
         return;
       }
-
-      const code = params.get('code');
-      const accessToken = params.get('access_token');
-      const refreshToken = params.get('refresh_token');
 
       // A Supabase egyes megerősítési folyamatai a tokent már a
       // kiszolgálón feldolgozzák, és paraméterek nélkül irányítanak vissza.
@@ -95,7 +88,7 @@ export default function AuthCallbackScreen() {
     return () => {
       active = false;
     };
-  }, [incomingUrl, router]);
+  }, [accessToken, code, errorDescription, refreshToken, router]);
 
   useEffect(() => {
     if (state !== 'confirmed') return;

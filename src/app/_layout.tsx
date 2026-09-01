@@ -1,5 +1,4 @@
 import { AuthProvider, useAuth } from '@/providers/auth-provider';
-import * as Linking from 'expo-linking';
 import { Tabs } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
@@ -70,14 +69,6 @@ export default function RootLayout() {
 
 function AppNavigator() {
   const { loading, session } = useAuth();
-  const incomingUrl = Linking.useLinkingURL();
-  const isAuthCallback = Boolean(
-    incomingUrl &&
-      (/auth\/callback(?:[?#/]|$)/.test(incomingUrl) ||
-        /[?#&](?:code|access_token|refresh_token|error_description)=/.test(
-          incomingUrl,
-        )),
-  );
 
   if (loading) {
     return (
@@ -181,16 +172,14 @@ function AppNavigator() {
           />
         </Tabs.Protected>
 
-        <Tabs.Protected guard={isAuthCallback}>
-          <Tabs.Screen
-            name="auth/callback"
-            options={{
-              href: null,
-              title: 'E-mail megerősítése',
-              tabBarStyle: { display: 'none' },
-            }}
-          />
-        </Tabs.Protected>
+        <Tabs.Screen
+          name="auth/callback"
+          options={{
+            href: null,
+            title: 'E-mail megerősítése',
+            tabBarStyle: { display: 'none' },
+          }}
+        />
       </Tabs>
     </>
   );
