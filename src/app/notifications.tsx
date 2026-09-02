@@ -260,6 +260,9 @@ export default function NotificationsScreen() {
                   if (!notification.read_at) {
                     void markAsRead(notification.id);
                   }
+                  if (notification.notification_type === 'family_invite') {
+                    router.push('/invitations');
+                  }
                 }}
               />
             ))
