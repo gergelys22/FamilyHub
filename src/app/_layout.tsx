@@ -168,6 +168,15 @@ function AppNavigator() {
               tabBarStyle: { display: 'none' },
             }}
           />
+
+          <Tabs.Screen
+            name="create-event"
+            options={{
+              href: null,
+              title: 'Új esemény',
+              tabBarStyle: { display: 'none' },
+            }}
+          />
         </Tabs.Protected>
 
         <Tabs.Protected guard={!session}>

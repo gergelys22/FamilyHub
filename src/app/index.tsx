@@ -25,12 +25,13 @@ const quickActions: {
   label: string;
   color: string;
   icon: IconName;
-  route?: '/map' | '/invite-member';
+  route?: '/map' | '/invite-member' | '/create-event';
 }[] = [
   {
     label: 'Új esemény',
     color: '#8B5CF6',
     icon: { ios: 'calendar.badge.plus', android: 'event_upcoming', web: 'event_upcoming' },
+    route: '/create-event',
   },
   {
     label: 'Új feladat',
@@ -171,11 +172,18 @@ export default function HomeScreen() {
   const firstName = displayName.split(/\s+/)[0];
   const visibleNotifications = notifications.slice(0, 3);
 
-  function openQuickAction(route?: '/map' | '/invite-member') {
+  function openQuickAction(route?: '/map' | '/invite-member' | '/create-event') {
     if (!route) return;
     if (route === '/invite-member' && activeFamily) {
       router.push({
         pathname: route,
+        params: { familyId: activeFamily.id, familyName: activeFamily.name },
+      });
+      return;
+    }
+    if (route === '/create-event' && activeFamily) {
+      router.push({
+        pathname: './create-event',
         params: { familyId: activeFamily.id, familyName: activeFamily.name },
       });
       return;
