@@ -134,6 +134,15 @@ function AppNavigator() {
           />
 
           <Tabs.Screen
+            name="event-details"
+            options={{
+              href: null,
+              title: 'Esemény részletei',
+              tabBarStyle: { display: 'none' },
+            }}
+          />          
+
+          <Tabs.Screen
             name="invite-member"
             options={{
               href: null,

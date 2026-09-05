@@ -21,10 +21,84 @@ function monthBounds(date: Date) {
   return { from: new Date(date.getFullYear(), date.getMonth(), 1), to: new Date(date.getFullYear(), date.getMonth() + 1, 1) };
 }
 
-function EventCard({ event }: { event: FamilyEvent }) {
+function EventCard({
+  event,
+  onPress,
+}: {
+  event: FamilyEvent;
+  onPress: () => void;
+}) {
   const start = new Date(event.starts_at);
   const color = categoryColors[event.category] ?? colors.primary;
-  return <View style={styles.eventCard}><View style={[styles.eventAccent, { backgroundColor: color }]} /><View style={[styles.eventIcon, { backgroundColor: `${color}22` }]}><SymbolView name={categoryIcons[event.category] ?? categoryIcons.family} size={22} tintColor={color} type="hierarchical" weight={{ ios: 'semibold', android: medium }} style={styles.symbol} /></View><View style={styles.flex}><Text style={styles.eventTitle}>{event.title}</Text><Text style={styles.eventMeta}>{start.toLocaleDateString('hu-HU', { month: 'long', day: 'numeric' })} · {start.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' })}</Text>{event.location_name ? <Text style={styles.location}>⌖ {event.location_name}</Text> : null}</View></View>;
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.eventCard,
+        pressed && styles.pressed,
+      ]}>
+      <View
+        style={[
+          styles.eventAccent,
+          { backgroundColor: color },
+        ]}
+      />
+
+      <View
+        style={[
+          styles.eventIcon,
+          { backgroundColor: `${color}22` },
+        ]}>
+        <SymbolView
+          name={
+            categoryIcons[event.category] ??
+            categoryIcons.family
+          }
+          size={22}
+          tintColor={color}
+          type="hierarchical"
+          weight={{ ios: 'semibold', android: medium }}
+          style={styles.symbol}
+        />
+      </View>
+
+      <View style={styles.flex}>
+        <Text style={styles.eventTitle}>{event.title}</Text>
+
+        <Text style={styles.eventMeta}>
+          {start.toLocaleDateString('hu-HU', {
+            month: 'long',
+            day: 'numeric',
+          })}
+          {' · '}
+          {start.toLocaleTimeString('hu-HU', {
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+        </Text>
+
+        {event.location_name ? (
+          <Text style={styles.location}>
+            ⌖ {event.location_name}
+          </Text>
+        ) : null}
+      </View>
+
+      <SymbolView
+        name={{
+          ios: 'chevron.right',
+          android: 'chevron_right',
+          web: 'chevron_right',
+        }}
+        size={20}
+        tintColor={colors.textMuted}
+        weight={{ ios: 'semibold', android: medium }}
+        style={styles.symbol}
+      />
+    </Pressable>
+  );
 }
 
 export default function CalendarScreen() {
@@ -57,7 +131,7 @@ export default function CalendarScreen() {
     {activeFamily ? <Pressable onPress={() => router.push({ pathname: './create-event', params: { familyId: activeFamily.id, familyName: activeFamily.name } })} style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}><SymbolView name={{ ios: 'calendar.badge.plus', android: 'event_upcoming', web: 'event_upcoming' }} size={24} tintColor="#FFFFFF" type="hierarchical" weight={{ ios: 'semibold', android: medium }} style={styles.symbol} /><Text style={styles.addButtonText}>Új esemény</Text></Pressable> : null}
     <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Események</Text><Text style={styles.count}>{events.length} esemény</Text></View>
     {error ? <View style={styles.errorCard}><Text style={styles.errorText}>{error}</Text></View> : null}
-    {loading ? <ActivityIndicator color={colors.primaryLight} size="large" style={styles.loader} /> : events.length ? events.map((event) => <EventCard key={event.id} event={event} />) : <View style={styles.empty}><SymbolView name={{ ios: 'calendar.badge.exclamationmark', android: 'event_busy', web: 'event_busy' }} size={38} tintColor={colors.textMuted} type="hierarchical" weight={{ ios: 'semibold', android: medium }} style={styles.emptySymbol} /><Text style={styles.emptyTitle}>Nincs esemény ebben a hónapban</Text><Text style={styles.emptyText}>Hozd létre az első közös családi programot.</Text></View>}
+    {loading ? <ActivityIndicator color={colors.primaryLight} size="large" style={styles.loader} /> : events.length ? events.map((event) => <EventCard key={event.id} event={event} onPress={() => router.push({ pathname: './event-details', params: { eventId: event.id } })} />) : <View style={styles.empty}><SymbolView name={{ ios: 'calendar.badge.exclamationmark', android: 'event_busy', web: 'event_busy' }} size={38} tintColor={colors.textMuted} type="hierarchical" weight={{ ios: 'semibold', android: medium }} style={styles.emptySymbol} /><Text style={styles.emptyTitle}>Nincs esemény ebben a hónapban</Text><Text style={styles.emptyText}>Hozd létre az első közös családi programot.</Text></View>}
   </ScrollView></SafeAreaView>;
 }
 
