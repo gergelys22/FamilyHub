@@ -1,5 +1,8 @@
+import DateTimeField from '@/components/date-time-field';
+import LocationAutocomplete from '@/components/location-autocomplete';
 import { colors, radius, spacing } from '@/constants/theme';
 import { createFamilyEvent, type EventCategory } from '@/services/events';
+import { parseLocalDateTime } from '@/utils/event-date-time';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import medium from 'expo-symbols/androidWeights/medium';
@@ -43,25 +46,53 @@ export default function CreateEventScreen() {
   const valid = useMemo(() => Boolean(familyId && title.trim().length >= 2 && /^\d{4}-\d{2}-\d{2}$/.test(date) && /^\d{2}:\d{2}$/.test(startTime)), [date, familyId, startTime, title]);
 
   async function save() {
-    if (!familyId || !valid) return;
-    const startsAt = new Date(`${date}T${startTime}:00`);
-    const endsAt = endTime ? new Date(`${date}T${endTime}:00`) : undefined;
-    if (Number.isNaN(startsAt.getTime()) || (endsAt && endsAt < startsAt)) {
-      Alert.alert('Hibás időpont', 'Ellenőrizd a dátumot és a kezdési/befejezési időt.');
-      return;
-    }
+  if (!familyId || !valid || saving) return;
 
-    setSaving(true);
-    try {
-      await createFamilyEvent({ familyId, title, description, location, category, startsAt, endsAt });
-      Alert.alert('Esemény létrehozva', 'Az esemény bekerült a családi naptárba.');
-      router.replace('/calendar');
-    } catch (caught) {
-      Alert.alert('Nem sikerült menteni', caught instanceof Error ? caught.message : 'Próbáld újra később.');
-    } finally {
-      setSaving(false);
-    }
+  const startsAt = parseLocalDateTime(date, startTime);
+  const endsAt = endTime
+    ? parseLocalDateTime(date, endTime)
+    : undefined;
+
+  if (
+    !startsAt ||
+    endsAt === null ||
+    (endsAt && endsAt.getTime() < startsAt.getTime())
+  ) {
+    Alert.alert(
+      'Hibás időpont',
+      'Ellenőrizd a dátumot és az időpontokat. A befejezés nem lehet a kezdés előtt. Az időpontokat azonos napra, a készülék helyi időzónájában adjuk meg.',
+    );
+    return;
   }
+
+  setSaving(true);
+
+  try {
+    await createFamilyEvent({
+      familyId,
+      title,
+      description,
+      location: location.trim(),
+      category,
+      startsAt,
+      endsAt,
+    });
+
+    Alert.alert(
+      'Esemény létrehozva',
+      'Az esemény bekerült a családi naptárba.',
+    );
+
+    router.replace('/calendar');
+  } catch (caught) {
+    Alert.alert(
+      'Nem sikerült menteni',
+      caught instanceof Error ? caught.message : 'Próbáld újra később.',
+    );
+  } finally {
+    setSaving(false);
+  }
+}
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
@@ -74,12 +105,68 @@ export default function CreateEventScreen() {
           <View style={styles.headerSpacer} />
         </View>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <View style={styles.familyBadge}><Text style={styles.familyBadgeText}>{familyName}</Text></View>
-          <View style={styles.field}><Text style={styles.label}>Esemény címe</Text><TextInput value={title} onChangeText={setTitle} placeholder="Például: családi vacsora" placeholderTextColor={colors.textMuted} style={styles.input} maxLength={120} /></View>
-          <View style={styles.field}><Text style={styles.label}>Kategória</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categories}>{categories.map((item) => <Pressable key={item.value} onPress={() => setCategory(item.value)} style={[styles.category, category === item.value && { borderColor: item.color, backgroundColor: `${item.color}22` }]}><View style={[styles.categoryDot, { backgroundColor: item.color }]} /><Text style={styles.categoryText}>{item.label}</Text></Pressable>)}</ScrollView></View>
-          <View style={styles.row}><View style={[styles.field, styles.flex]}><Text style={styles.label}>Dátum</Text><TextInput value={date} onChangeText={setDate} placeholder="ÉÉÉÉ-HH-NN" placeholderTextColor={colors.textMuted} style={styles.input} keyboardType="numbers-and-punctuation" /></View></View>
-          <View style={styles.row}><View style={[styles.field, styles.flex]}><Text style={styles.label}>Kezdés</Text><TextInput value={startTime} onChangeText={setStartTime} placeholder="18:00" placeholderTextColor={colors.textMuted} style={styles.input} keyboardType="numbers-and-punctuation" /></View><View style={[styles.field, styles.flex]}><Text style={styles.label}>Befejezés</Text><TextInput value={endTime} onChangeText={setEndTime} placeholder="19:00" placeholderTextColor={colors.textMuted} style={styles.input} keyboardType="numbers-and-punctuation" /></View></View>
-          <View style={styles.field}><Text style={styles.label}>Helyszín</Text><TextInput value={location} onChangeText={setLocation} placeholder="Opcionális" placeholderTextColor={colors.textMuted} style={styles.input} /></View>
+          <View style={styles.familyBadge}>
+            <Text style={styles.familyBadgeText}>{familyName}</Text>
+          </View>
+          <View style={styles.field}>
+            <Text style={styles.label}>Esemény címe</Text>
+              <TextInput 
+                value={title}
+                onChangeText={setTitle} 
+                placeholder="Például: családi vacsora" 
+                placeholderTextColor={colors.textMuted} 
+                style={styles.input} maxLength={120} />
+            </View>
+          <View style={styles.field}>
+            <Text style={styles.label}>Kategória</Text>
+              <ScrollView 
+                horizontal showsHorizontalScrollIndicator={false} 
+                contentContainerStyle={styles.categories}>{categories.map((item) => 
+                <Pressable key={item.value} 
+                  onPress={() => setCategory(item.value)} 
+                  style={[styles.category, category === item.value && 
+                    { borderColor: item.color, backgroundColor: `${item.color}22` }]}>
+                      <View style={[styles.categoryDot, { backgroundColor: item.color }]} />
+                        <Text style={styles.categoryText}>{item.label}</Text>
+                 </Pressable>)}
+              </ScrollView>
+            </View>
+          <DateTimeField
+            label="Dátum"
+            mode="date"
+            value={date}
+            onChange={setDate}
+            disabled={saving}
+          />
+
+          <View style={styles.row}>
+            <View style={styles.flex}>
+              <DateTimeField
+                label="Kezdés"
+                mode="time"
+                value={startTime}
+                onChange={setStartTime}
+                disabled={saving}
+              />
+            </View>
+
+          <View style={styles.flex}>
+            <DateTimeField
+              label="Befejezés"
+              mode="time"
+              value={endTime}
+              onChange={setEndTime}
+              disabled={saving}
+              clearable
+            />
+          </View>
+        </View>
+
+        <LocationAutocomplete
+          value={location}
+          onChange={setLocation}
+          disabled={saving}
+        />
           <View style={styles.field}><Text style={styles.label}>Leírás</Text><TextInput value={description} onChangeText={setDescription} placeholder="Részletek az eseményről…" placeholderTextColor={colors.textMuted} style={[styles.input, styles.textArea]} multiline textAlignVertical="top" maxLength={1000} /></View>
           <Pressable disabled={!valid || saving} onPress={() => void save()} style={({ pressed }) => [styles.saveButton, (!valid || saving) && styles.disabled, pressed && styles.pressed]}>{saving ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.saveText}>Esemény létrehozása</Text>}</Pressable>
         </ScrollView>
