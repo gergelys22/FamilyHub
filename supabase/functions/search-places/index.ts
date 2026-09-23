@@ -16,6 +16,8 @@ type GeoapifyResult = {
   place_id?: string;
   formatted?: string;
   name?: string;
+  lat?: number;
+  lon?: number;
 };
 
 Deno.serve(async (request: Request) => {
@@ -120,9 +122,18 @@ Deno.serve(async (request: Request) => {
           ? `${name}, ${address}`
           : address;
 
+      const hasCoordinates =
+        typeof item.lat === 'number'
+        && Number.isFinite(item.lat)
+        && typeof item.lon === 'number'
+        && Number.isFinite(item.lon);
+
       return [{
         id: typeof item.place_id === 'string' ? item.place_id : label,
         label,
+        ...(hasCoordinates
+          ? { latitude: item.lat, longitude: item.lon }
+          : {}),
       }];
     });
 

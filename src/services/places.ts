@@ -4,6 +4,8 @@ import { FunctionsHttpError } from '@supabase/supabase-js';
 export type PlaceSuggestion = {
     id: string;
     label: string;
+    latitude?: number;
+    longitude?: number;
 };
 
 export async function searchPlaces(
@@ -41,6 +43,8 @@ export async function searchPlaces(
         (item) =>
             item &&
             typeof item.id === 'string' &&
-            typeof item.label === 'string',
+            typeof item.label === 'string' &&
+            (item.latitude === undefined || Number.isFinite(item.latitude)) &&
+            (item.longitude === undefined || Number.isFinite(item.longitude)),
     );
 }

@@ -15,6 +15,8 @@ export type FamilyEvent = {
   title: string;
   description: string | null;
   location_name: string | null;
+  location_latitude: number | null;
+  location_longitude: number | null;
   category: EventCategory;
   starts_at: string;
   ends_at: string | null;
@@ -23,7 +25,7 @@ export type FamilyEvent = {
 export async function getFamilyEvents(familyId: string, from: Date, to: Date): Promise<FamilyEvent[]> {
   const { data, error } = await supabase
     .from('family_events')
-    .select('id, family_id, title, description, location_name, category, starts_at, ends_at')
+    .select('id, family_id, title, description, location_name, location_latitude, location_longitude, category, starts_at, ends_at')
     .eq('family_id', familyId)
     .gte('starts_at', from.toISOString())
     .lt('starts_at', to.toISOString())
@@ -39,7 +41,7 @@ export async function getFamilyEvent(
   const { data, error } = await supabase
     .from('family_events')
     .select(
-      'id, family_id, title, description, location_name, category, starts_at, ends_at',
+      'id, family_id, title, description, location_name, location_latitude, location_longitude, category, starts_at, ends_at',
     )
     .eq('id', eventId)
     .single();
@@ -55,6 +57,8 @@ export async function createFamilyEvent(input: {
   title: string;
   description: string;
   location: string;
+  locationLatitude?: number;
+  locationLongitude?: number;
   category: EventCategory;
   startsAt: Date;
   endsAt?: Date;
@@ -64,6 +68,8 @@ export async function createFamilyEvent(input: {
     event_title: input.title.trim(),
     event_description: input.description.trim(),
     event_location: input.location.trim(),
+    event_location_latitude: input.locationLatitude ?? null,
+    event_location_longitude: input.locationLongitude ?? null,
     event_category: input.category,
     event_starts_at: input.startsAt.toISOString(),
     event_ends_at: input.endsAt?.toISOString() ?? null,
@@ -80,6 +86,8 @@ export async function updateFamilyEvent(
     title: string;
     description: string;
     location: string;
+    locationLatitude?: number;
+    locationLongitude?: number;
     category: EventCategory;
     startsAt: Date;
     endsAt?: Date;
@@ -91,6 +99,8 @@ export async function updateFamilyEvent(
       title: input.title.trim(),
       description: input.description.trim() || null,
       location_name: input.location.trim() || null,
+      location_latitude: input.locationLatitude ?? null,
+      location_longitude: input.locationLongitude ?? null,
       category: input.category,
       starts_at: input.startsAt.toISOString(),
       ends_at: input.endsAt?.toISOString() ?? null,

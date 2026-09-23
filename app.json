@@ -17,6 +17,11 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyDDlJn3EgoZ1pdO2F5FrAmwql0-xI_dk8k"
+        }
+      },
       "predictiveBackGestureEnabled": false,
       "package": "com.gergely2002.FamilyHub"
     },
@@ -36,7 +41,8 @@
       ],
       "expo-font",
       "expo-status-bar",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-maps"
     ],
     "experiments": {
       "typedRoutes": true,

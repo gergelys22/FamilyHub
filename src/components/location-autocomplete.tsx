@@ -15,6 +15,7 @@ import {
 type Props = {
   value: string;
   onChange: (value: string) => void;
+  onSelect?: (place: PlaceSuggestion) => void;
   disabled?: boolean;
 };
 
@@ -27,6 +28,7 @@ type SearchResult = {
 export default function LocationAutocomplete({
   value,
   onChange,
+  onSelect,
   disabled = false,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -104,6 +106,7 @@ export default function LocationAutocomplete({
     setOpen(false);
     setResult(null);
     onChange(place.label);
+    onSelect?.(place);
     Keyboard.dismiss();
   }
 

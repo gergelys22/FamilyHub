@@ -38,6 +38,10 @@ export default function CreateEventScreen() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
+  const [locationCoordinates, setLocationCoordinates] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
   const [date, setDate] = useState(defaultDate);
   const [startTime, setStartTime] = useState('18:00');
   const [endTime, setEndTime] = useState('19:00');
@@ -73,6 +77,8 @@ export default function CreateEventScreen() {
       title,
       description,
       location: location.trim(),
+      locationLatitude: locationCoordinates?.latitude,
+      locationLongitude: locationCoordinates?.longitude,
       category,
       startsAt,
       endsAt,
@@ -164,7 +170,20 @@ export default function CreateEventScreen() {
 
         <LocationAutocomplete
           value={location}
-          onChange={setLocation}
+          onChange={(nextLocation) => {
+            setLocation(nextLocation);
+            setLocationCoordinates(null);
+          }}
+          onSelect={(place) => {
+            if (place.latitude === undefined || place.longitude === undefined) {
+              return;
+            }
+
+            setLocationCoordinates({
+              latitude: place.latitude,
+              longitude: place.longitude,
+            });
+          }}
           disabled={saving}
         />
           <View style={styles.field}><Text style={styles.label}>Leírás</Text><TextInput value={description} onChangeText={setDescription} placeholder="Részletek az eseményről…" placeholderTextColor={colors.textMuted} style={[styles.input, styles.textArea]} multiline textAlignVertical="top" maxLength={1000} /></View>
