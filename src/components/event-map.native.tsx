@@ -1,6 +1,7 @@
 import type { FamilyEvent } from '@/services/events';
-import { GoogleMaps } from 'expo-maps';
 import { StyleSheet } from 'react-native';
+
+type ExpoMapsModule = typeof import('expo-maps');
 
 type EventMapProps = {
   events: FamilyEvent[];
@@ -17,6 +18,11 @@ function hasCoordinates(event: FamilyEvent) {
 }
 
 export function EventMap({ events, selectedEventId }: EventMapProps) {
+  // Expo Router evaluates every route module at launch. Deferring the native
+  // lookup keeps the rest of the app available if this module is not in an
+  // outdated development/preview build yet.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { GoogleMaps } = require('expo-maps') as ExpoMapsModule;
   const markerEvents = events.filter(hasCoordinates);
   const selectedEvent = markerEvents.find((event) => event.id === selectedEventId) ?? markerEvents[0];
   const cameraCoordinates = selectedEvent

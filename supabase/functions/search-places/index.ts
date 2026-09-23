@@ -78,11 +78,11 @@ Deno.serve(async (request: Request) => {
       return json({ error: 'A kereséshez 3–200 karakter szükséges.' }, 400);
     }
 
-    const url = new URL('https://api.geoapify.com/v1/geocode/autocomplete');
+    const url = new URL('https://api.geoapify.com/v1/geocode/search');
     url.searchParams.set('text', text);
     url.searchParams.set('format', 'json');
     url.searchParams.set('lang', 'hu');
-    url.searchParams.set('bias', 'countrycode:hu');
+    url.searchParams.set('filter', 'countrycode:hu');
     url.searchParams.set('limit', '6');
     url.searchParams.set('apiKey', geoapifyKey);
 

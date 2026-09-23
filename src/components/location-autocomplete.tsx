@@ -120,7 +120,7 @@ export default function LocationAutocomplete({
         editable={!disabled}
         maxLength={200}
         autoCorrect={false}
-        placeholder="Például: Budapest, Keleti pályaudvar"
+        placeholder="Például: Müpa Budapest vagy Kossuth Lajos utca 1, Pécs"
         placeholderTextColor={colors.textMuted}
         style={[styles.input, disabled && styles.disabled]}
         onFocus={beginSearch}
@@ -186,7 +186,7 @@ export default function LocationAutocomplete({
       ) : null}
 
       <Text style={styles.hint}>
-        Opcionális. Saját helyszínnév is megadható.
+        Opcionális. Írd be a hely nevét a várossal vagy a pontos címmel együtt.
       </Text>
 
       <Text style={styles.attribution}>
