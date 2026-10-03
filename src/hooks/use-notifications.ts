@@ -29,9 +29,7 @@ export function useNotifications() {
         })
         .catch((loadError: unknown) => {
           if (!active) return;
-          setError(
-            loadError instanceof Error ? loadError : new Error(errorMessage),
-          );
+          setError(loadError instanceof Error ? loadError : new Error(errorMessage));
         })
         .finally(() => {
           if (active) setLoading(false);

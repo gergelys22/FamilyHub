@@ -41,7 +41,9 @@ export default function InvitationsScreen() {
       setInvites(await getMyFamilyInvites());
       setError(null);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'A meghívások betöltése sikertelen.');
+      setError(
+        caught instanceof Error ? caught.message : 'A meghívások betöltése sikertelen.',
+      );
     } finally {
       setRefreshing(false);
     }
@@ -58,7 +60,9 @@ export default function InvitationsScreen() {
       })
       .catch((caught: unknown) => {
         if (!active) return;
-        setError(caught instanceof Error ? caught.message : 'A meghívások betöltése sikertelen.');
+        setError(
+          caught instanceof Error ? caught.message : 'A meghívások betöltése sikertelen.',
+        );
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -74,10 +78,16 @@ export default function InvitationsScreen() {
     try {
       await acceptFamilyInvite(invite.id);
       setInvites((current) => current.filter((item) => item.id !== invite.id));
-      Alert.alert('Sikeres csatlakozás', `Mostantól a(z) ${invite.family_name} család tagja vagy.`);
+      Alert.alert(
+        'Sikeres csatlakozás',
+        `Mostantól a(z) ${invite.family_name} család tagja vagy.`,
+      );
       router.replace('/');
     } catch (caught) {
-      Alert.alert('Nem sikerült elfogadni', caught instanceof Error ? caught.message : 'Próbáld újra később.');
+      Alert.alert(
+        'Nem sikerült elfogadni',
+        caught instanceof Error ? caught.message : 'Próbáld újra később.',
+      );
     } finally {
       setWorkingId(null);
     }
@@ -104,7 +114,10 @@ export default function InvitationsScreen() {
       await rejectFamilyInvite(invite.id);
       setInvites((current) => current.filter((item) => item.id !== invite.id));
     } catch (caught) {
-      Alert.alert('Nem sikerült elutasítani', caught instanceof Error ? caught.message : 'Próbáld újra később.');
+      Alert.alert(
+        'Nem sikerült elutasítani',
+        caught instanceof Error ? caught.message : 'Próbáld újra később.',
+      );
     } finally {
       setWorkingId(null);
     }
@@ -113,7 +126,10 @@ export default function InvitationsScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
+        <Pressable
+          onPress={() => router.back()}
+          style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+        >
           <SymbolView
             name={{ ios: 'chevron.left', android: 'arrow_back', web: 'arrow_back' }}
             size={23}
@@ -127,18 +143,35 @@ export default function InvitationsScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.center}><ActivityIndicator color={colors.primaryLight} size="large" /></View>
+        <View style={styles.center}>
+          <ActivityIndicator color={colors.primaryLight} size="large" />
+        </View>
       ) : (
         <ScrollView
           contentContainerStyle={styles.content}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refreshInvites()} tintColor={colors.primaryLight} />}>
-          {error ? <View style={styles.errorCard}><Text style={styles.errorText}>{error}</Text></View> : null}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => void refreshInvites()}
+              tintColor={colors.primaryLight}
+            />
+          }
+        >
+          {error ? (
+            <View style={styles.errorCard}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
 
           {invites.length === 0 ? (
             <View style={styles.emptyState}>
               <View style={styles.emptyIcon}>
                 <SymbolView
-                  name={{ ios: 'envelope.open.fill', android: 'mark_email_read', web: 'mark_email_read' }}
+                  name={{
+                    ios: 'envelope.open.fill',
+                    android: 'mark_email_read',
+                    web: 'mark_email_read',
+                  }}
                   size={38}
                   tintColor={colors.textMuted}
                   type="hierarchical"
@@ -147,46 +180,68 @@ export default function InvitationsScreen() {
                 />
               </View>
               <Text style={styles.emptyTitle}>Nincs függő meghívásod</Text>
-              <Text style={styles.emptyText}>Ha meghívnak egy családi térbe, itt tudod elfogadni vagy elutasítani.</Text>
+              <Text style={styles.emptyText}>
+                Ha meghívnak egy családi térbe, itt tudod elfogadni vagy elutasítani.
+              </Text>
             </View>
-          ) : invites.map((invite) => {
-            const working = workingId === invite.id;
-            return (
-              <View key={invite.id} style={styles.card}>
-                <View style={styles.cardHeading}>
-                  <View style={styles.inviteIcon}>
-                    <SymbolView
-                      name={{ ios: 'person.2.fill', android: 'group', web: 'group' }}
-                      size={27}
-                      tintColor={colors.primaryLight}
-                      type="hierarchical"
-                      weight={{ ios: 'semibold', android: medium }}
-                      style={styles.largeSymbol}
-                    />
+          ) : (
+            invites.map((invite) => {
+              const working = workingId === invite.id;
+              return (
+                <View key={invite.id} style={styles.card}>
+                  <View style={styles.cardHeading}>
+                    <View style={styles.inviteIcon}>
+                      <SymbolView
+                        name={{ ios: 'person.2.fill', android: 'group', web: 'group' }}
+                        size={27}
+                        tintColor={colors.primaryLight}
+                        type="hierarchical"
+                        weight={{ ios: 'semibold', android: medium }}
+                        style={styles.largeSymbol}
+                      />
+                    </View>
+                    <View style={styles.flex}>
+                      <Text style={styles.familyName}>{invite.family_name}</Text>
+                      <Text style={styles.role}>
+                        Szerepkör: {roleNames[invite.intended_role]}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={styles.flex}>
-                    <Text style={styles.familyName}>{invite.family_name}</Text>
-                    <Text style={styles.role}>Szerepkör: {roleNames[invite.intended_role]}</Text>
+                  <Text style={styles.description}>
+                    Meghívtak, hogy csatlakozz ehhez a családi térhez.
+                  </Text>
+                  <View style={styles.actions}>
+                    <Pressable
+                      disabled={workingId !== null}
+                      onPress={() => confirmReject(invite)}
+                      style={({ pressed }) => [
+                        styles.secondaryButton,
+                        pressed && styles.pressed,
+                        workingId !== null && styles.disabled,
+                      ]}
+                    >
+                      <Text style={styles.secondaryButtonText}>Elutasítás</Text>
+                    </Pressable>
+                    <Pressable
+                      disabled={workingId !== null}
+                      onPress={() => void accept(invite)}
+                      style={({ pressed }) => [
+                        styles.primaryButton,
+                        pressed && styles.pressed,
+                        workingId !== null && styles.disabled,
+                      ]}
+                    >
+                      {working ? (
+                        <ActivityIndicator color="#FFFFFF" size="small" />
+                      ) : (
+                        <Text style={styles.primaryButtonText}>Elfogadás</Text>
+                      )}
+                    </Pressable>
                   </View>
                 </View>
-                <Text style={styles.description}>Meghívtak, hogy csatlakozz ehhez a családi térhez.</Text>
-                <View style={styles.actions}>
-                  <Pressable
-                    disabled={workingId !== null}
-                    onPress={() => confirmReject(invite)}
-                    style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed, workingId !== null && styles.disabled]}>
-                    <Text style={styles.secondaryButtonText}>Elutasítás</Text>
-                  </Pressable>
-                  <Pressable
-                    disabled={workingId !== null}
-                    onPress={() => void accept(invite)}
-                    style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed, workingId !== null && styles.disabled]}>
-                    {working ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.primaryButtonText}>Elfogadás</Text>}
-                  </Pressable>
-                </View>
-              </View>
-            );
-          })}
+              );
+            })
+          )}
         </ScrollView>
       )}
     </SafeAreaView>
@@ -195,30 +250,103 @@ export default function InvitationsScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
-  header: { height: 60, paddingHorizontal: spacing.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  header: {
+    height: 60,
+    paddingHorizontal: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   headerTitle: { color: colors.textPrimary, fontSize: 19, fontWeight: '800' },
   headerSpacer: { width: 42 },
-  iconButton: { width: 42, height: 42, borderRadius: radius.round, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  iconButton: {
+    width: 42,
+    height: 42,
+    borderRadius: radius.round,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   symbol: { width: 26, height: 26 },
   largeSymbol: { width: 42, height: 42 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md },
-  card: { padding: spacing.lg, gap: spacing.lg, borderRadius: radius.xl, borderWidth: 1, borderColor: '#294469', backgroundColor: '#10233E' },
+  card: {
+    padding: spacing.lg,
+    gap: spacing.lg,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: '#294469',
+    backgroundColor: '#10233E',
+  },
   cardHeading: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  inviteIcon: { width: 56, height: 56, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(59, 130, 246, 0.18)' },
+  inviteIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(59, 130, 246, 0.18)',
+  },
   flex: { flex: 1 },
   familyName: { color: colors.textPrimary, fontSize: 18, fontWeight: '900' },
-  role: { marginTop: spacing.xs, color: colors.primaryLight, fontSize: 12, fontWeight: '700' },
+  role: {
+    marginTop: spacing.xs,
+    color: colors.primaryLight,
+    fontSize: 12,
+    fontWeight: '700',
+  },
   description: { color: colors.textMuted, fontSize: 13, lineHeight: 19 },
   actions: { flexDirection: 'row', gap: spacing.md },
-  primaryButton: { flex: 1, minHeight: 48, alignItems: 'center', justifyContent: 'center', borderRadius: radius.md, backgroundColor: colors.primary },
+  primaryButton: {
+    flex: 1,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.md,
+    backgroundColor: colors.primary,
+  },
   primaryButtonText: { color: '#FFFFFF', fontSize: 13, fontWeight: '900' },
-  secondaryButton: { flex: 1, minHeight: 48, alignItems: 'center', justifyContent: 'center', borderRadius: radius.md, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.surfaceElevated },
+  secondaryButton: {
+    flex: 1,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfaceElevated,
+  },
   secondaryButtonText: { color: colors.textSecondary, fontSize: 13, fontWeight: '800' },
-  emptyState: { paddingVertical: 90, paddingHorizontal: spacing.xl, alignItems: 'center', gap: spacing.md },
-  emptyIcon: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
-  emptyTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '800', textAlign: 'center' },
-  emptyText: { maxWidth: 310, color: colors.textMuted, fontSize: 13, lineHeight: 20, textAlign: 'center' },
+  emptyState: {
+    paddingVertical: 90,
+    paddingHorizontal: spacing.xl,
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  emptyIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+  },
+  emptyTitle: {
+    color: colors.textPrimary,
+    fontSize: 18,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  emptyText: {
+    maxWidth: 310,
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
   errorCard: { padding: spacing.md, borderRadius: radius.md, backgroundColor: '#3B1622' },
   errorText: { color: '#FDA4AF', fontSize: 12 },
   pressed: { opacity: 0.72, transform: [{ scale: 0.98 }] },

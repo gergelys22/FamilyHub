@@ -21,7 +21,8 @@ export async function createFamilyInvite(
   });
 
   if (error) throw new Error(error.message);
-  if (typeof data !== 'string') throw new Error('A meghívás nem adott vissza érvényes azonosítót.');
+  if (typeof data !== 'string')
+    throw new Error('A meghívás nem adott vissza érvényes azonosítót.');
 
   return data;
 }
@@ -31,12 +32,14 @@ export async function getMyFamilyInvites(): Promise<FamilyInvite[]> {
 
   if (error) throw new Error(error.message);
 
-  return ((data ?? []) as {
-    invite_id: string;
-    family_id: string;
-    family_name: string;
-    intended_role: InviteRole;
-  }[]).map((invite) => ({
+  return (
+    (data ?? []) as {
+      invite_id: string;
+      family_id: string;
+      family_name: string;
+      intended_role: InviteRole;
+    }[]
+  ).map((invite) => ({
     id: invite.invite_id,
     family_id: invite.family_id,
     family_name: invite.family_name,

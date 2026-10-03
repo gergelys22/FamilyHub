@@ -44,7 +44,9 @@ export default function AuthCallbackScreen() {
         await supabase.auth.signOut({ scope: 'local' });
         if (!active) return;
         setState('confirmed');
-        setMessage('Az e-mail-címed megerősítése sikerült. Átirányítunk a bejelentkezéshez…');
+        setMessage(
+          'Az e-mail-címed megerősítése sikerült. Átirányítunk a bejelentkezéshez…',
+        );
         return;
       }
 
@@ -59,7 +61,9 @@ export default function AuthCallbackScreen() {
         await supabase.auth.signOut({ scope: 'local' });
         if (!active) return;
         setState('confirmed');
-        setMessage('Az e-mail-címed megerősítése sikerült. Átirányítunk a bejelentkezéshez…');
+        setMessage(
+          'Az e-mail-címed megerősítése sikerült. Átirányítunk a bejelentkezéshez…',
+        );
         return;
       }
 
@@ -77,10 +81,11 @@ export default function AuthCallbackScreen() {
         await supabase.auth.signOut({ scope: 'local' });
         if (!active) return;
         setState('confirmed');
-        setMessage('Az e-mail-címed megerősítése sikerült. Átirányítunk a bejelentkezéshez…');
+        setMessage(
+          'Az e-mail-címed megerősítése sikerült. Átirányítunk a bejelentkezéshez…',
+        );
         return;
       }
-
     }
 
     void completeConfirmation();
@@ -131,7 +136,8 @@ export default function AuthCallbackScreen() {
           <Pressable
             accessibilityRole="button"
             onPress={() => void goToSignIn()}
-            style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
+            style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+          >
             <Text style={styles.buttonText}>Tovább a bejelentkezéshez</Text>
           </Pressable>
         ) : null}
@@ -162,7 +168,12 @@ const styles = StyleSheet.create({
   iconHaloError: { backgroundColor: '#3B1622', borderColor: '#7F2439' },
   icon: { color: colors.success, fontSize: 42, fontWeight: '900' },
   iconError: { color: '#FDA4AF' },
-  title: { color: colors.textPrimary, fontSize: 25, fontWeight: '900', textAlign: 'center' },
+  title: {
+    color: colors.textPrimary,
+    fontSize: 25,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
   message: {
     maxWidth: 340,
     color: colors.textMuted,

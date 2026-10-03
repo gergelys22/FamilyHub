@@ -46,30 +46,18 @@ export function FamilyHeader({
           accessibilityLabel={`Értesítések megnyitása. ${unreadNotificationCount} olvasatlan.`}
           hitSlop={8}
           onPress={onNotificationsPress}
-          style={({ pressed }) => [
-            styles.notificationsButton,
-            pressed && styles.pressed,
-          ]}>
+          style={({ pressed }) => [styles.notificationsButton, pressed && styles.pressed]}
+        >
           <SymbolView
             name={{
-              ios:
-                unreadNotificationCount > 0
-                  ? 'bell.badge.fill'
-                  : 'bell.fill',
+              ios: unreadNotificationCount > 0 ? 'bell.badge.fill' : 'bell.fill',
               android:
-                unreadNotificationCount > 0
-                  ? 'notifications_active'
-                  : 'notifications',
-              web:
-                unreadNotificationCount > 0
-                  ? 'notifications_active'
-                  : 'notifications',
+                unreadNotificationCount > 0 ? 'notifications_active' : 'notifications',
+              web: unreadNotificationCount > 0 ? 'notifications_active' : 'notifications',
             }}
             size={23}
             tintColor={
-              unreadNotificationCount > 0
-                ? colors.primaryLight
-                : colors.textSecondary
+              unreadNotificationCount > 0 ? colors.primaryLight : colors.textSecondary
             }
             type="hierarchical"
             weight={{ ios: 'semibold', android: medium }}
@@ -88,10 +76,8 @@ export function FamilyHeader({
           accessibilityLabel="Profil megnyitása"
           hitSlop={8}
           onPress={onProfilePress}
-          style={({ pressed }) => [
-            styles.profileButton,
-            pressed && styles.pressed,
-          ]}>
+          style={({ pressed }) => [styles.profileButton, pressed && styles.pressed]}
+        >
           <Text style={styles.profileText}>{userInitial}</Text>
         </Pressable>
       </View>

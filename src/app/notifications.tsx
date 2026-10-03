@@ -5,19 +5,17 @@ import { useRouter } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import medium from 'expo-symbols/androidWeights/medium';
 import {
-    ActivityIndicator,
-    Pressable,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-function getNotificationIcon(
-  type: string,
-): SymbolViewProps['name'] {
+function getNotificationIcon(type: string): SymbolViewProps['name'] {
   switch (type) {
     case 'family_invite':
       return {
@@ -96,14 +94,13 @@ function NotificationItem({
         styles.notification,
         unread && styles.unreadNotification,
         pressed && styles.pressed,
-      ]}>
+      ]}
+    >
       <View style={[styles.iconBox, unread && styles.unreadIconBox]}>
         <SymbolView
           name={getNotificationIcon(notification.notification_type)}
           size={23}
-          tintColor={
-            unread ? colors.primaryLight : colors.textMuted
-          }
+          tintColor={unread ? colors.primaryLight : colors.textMuted}
           type="hierarchical"
           weight={{ ios: 'semibold', android: medium }}
           style={styles.symbol}
@@ -114,19 +111,15 @@ function NotificationItem({
         <View style={styles.notificationHeading}>
           <Text
             numberOfLines={1}
-            style={[
-              styles.notificationTitle,
-              unread && styles.unreadTitle,
-            ]}>
+            style={[styles.notificationTitle, unread && styles.unreadTitle]}
+          >
             {notification.title}
           </Text>
 
           {unread ? <View style={styles.unreadDot} /> : null}
         </View>
 
-        <Text style={styles.notificationBody}>
-          {notification.body}
-        </Text>
+        <Text style={styles.notificationBody}>{notification.body}</Text>
 
         <Text style={styles.notificationDate}>
           {formatNotificationDate(notification.created_at)}
@@ -149,19 +142,15 @@ export default function NotificationsScreen() {
   } = useNotifications();
 
   return (
-    <SafeAreaView
-      style={styles.safeArea}
-      edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable
           accessibilityLabel="Vissza"
           accessibilityRole="button"
           hitSlop={8}
           onPress={() => router.back()}
-          style={({ pressed }) => [
-            styles.headerButton,
-            pressed && styles.pressed,
-          ]}>
+          style={({ pressed }) => [styles.headerButton, pressed && styles.pressed]}
+        >
           <SymbolView
             name={{
               ios: 'chevron.left',
@@ -186,7 +175,8 @@ export default function NotificationsScreen() {
             styles.headerButton,
             unreadCount === 0 && styles.disabled,
             pressed && styles.pressed,
-          ]}>
+          ]}
+        >
           <SymbolView
             name={{
               ios: 'checkmark.circle.fill',
@@ -203,10 +193,7 @@ export default function NotificationsScreen() {
 
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator
-            color={colors.primaryLight}
-            size="large"
-          />
+          <ActivityIndicator color={colors.primaryLight} size="large" />
         </View>
       ) : (
         <ScrollView
@@ -218,7 +205,8 @@ export default function NotificationsScreen() {
               onRefresh={() => void refresh()}
             />
           }
-          showsVerticalScrollIndicator={false}>
+          showsVerticalScrollIndicator={false}
+        >
           {error ? (
             <View style={styles.errorCard}>
               <Text style={styles.errorText}>{error.message}</Text>
@@ -242,13 +230,10 @@ export default function NotificationsScreen() {
                 />
               </View>
 
-              <Text style={styles.emptyTitle}>
-                Nincs új értesítés
-              </Text>
+              <Text style={styles.emptyTitle}>Nincs új értesítés</Text>
 
               <Text style={styles.emptyText}>
-                Az új családi események, meghívók és emlékeztetők
-                itt jelennek meg.
+                Az új családi események, meghívók és emlékeztetők itt jelennek meg.
               </Text>
             </View>
           ) : (

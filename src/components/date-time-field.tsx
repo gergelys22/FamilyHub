@@ -1,22 +1,22 @@
 import { colors } from '@/constants/theme';
 import {
-    formatPickerValue,
-    getPickerDate,
-    type DateTimeFieldProps,
+  formatPickerValue,
+  getPickerDate,
+  type DateTimeFieldProps,
 } from '@/utils/event-date-time';
 import DateTimePicker, {
-    DateTimePickerAndroid,
+  DateTimePickerAndroid,
 } from '@react-native-community/datetimepicker';
 import { useEffect, useRef, useState } from 'react';
 import {
-    Alert,
-    Keyboard,
-    Modal,
-    Platform,
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
+  Alert,
+  Keyboard,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 
 export default function DateTimeField({
@@ -115,7 +115,8 @@ export default function DateTimeField({
           accessibilityState={{ disabled }}
           disabled={disabled}
           onPress={openPicker}
-          style={[styles.input, disabled && styles.disabled]}>
+          style={[styles.input, disabled && styles.disabled]}
+        >
           <Text style={styles.value}>{displayedValue}</Text>
           <Text style={styles.arrow}>⌄</Text>
         </Pressable>
@@ -126,7 +127,8 @@ export default function DateTimeField({
             accessibilityLabel={`${label} törlése`}
             disabled={disabled}
             onPress={() => onChange('')}
-            style={styles.clearButton}>
+            style={styles.clearButton}
+          >
             <Text style={styles.arrow}>×</Text>
           </Pressable>
         ) : null}
@@ -136,7 +138,8 @@ export default function DateTimeField({
         transparent
         visible={visible}
         animationType="fade"
-        onRequestClose={() => setVisible(false)}>
+        onRequestClose={() => setVisible(false)}
+      >
         <View style={styles.overlay}>
           <Pressable
             accessibilityLabel="Mégse"
@@ -165,7 +168,8 @@ export default function DateTimeField({
               <Pressable
                 accessibilityRole="button"
                 onPress={() => setVisible(false)}
-                style={styles.action}>
+                style={styles.action}
+              >
                 <Text style={styles.value}>Mégse</Text>
               </Pressable>
 
@@ -175,7 +179,8 @@ export default function DateTimeField({
                   onChange(formatPickerValue(draftRef.current, mode));
                   setVisible(false);
                 }}
-                style={[styles.action, styles.confirm]}>
+                style={[styles.action, styles.confirm]}
+              >
                 <Text style={styles.value}>Kész</Text>
               </Pressable>
             </View>

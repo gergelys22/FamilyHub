@@ -9,7 +9,7 @@ type TableDefinition = {
   name: 'index' | 'map' | 'memories' | 'calendar' | 'vault';
   title: string;
   icon: SymbolViewProps['name'];
-}
+};
 
 const tabs: TableDefinition[] = [
   {
@@ -93,7 +93,8 @@ function AppNavigator() {
           tabBarStyle: styles.tabBar,
           tabBarItemStyle: styles.tabItem,
           tabBarLabelStyle: styles.tabLabel,
-        }}>
+        }}
+      >
         <Tabs.Protected guard={Boolean(session)}>
           {tabs.map((tab) => (
             <Tabs.Screen
@@ -103,22 +104,20 @@ function AppNavigator() {
                 title: tab.title,
                 tabBarIcon: ({ color, focused }) => (
                   <View
-                    style={[
-                      styles.iconContainer,
-                      focused && styles.iconContainerActive,
-                    ]}>
+                    style={[styles.iconContainer, focused && styles.iconContainerActive]}
+                  >
                     <SymbolView
                       name={tab.icon}
-                      size={focused ? 25: 23}
+                      size={focused ? 25 : 23}
                       tintColor={color}
-                      type={focused ? 'hierarchical' : 'monochrome'}  
+                      type={focused ? 'hierarchical' : 'monochrome'}
                       weight={{
                         ios: focused ? 'semibold' : 'medium',
                         android: medium,
                       }}
                       style={styles.tabIcon}
                     />
-                  </View>                  
+                  </View>
                 ),
               }}
             />
@@ -140,7 +139,7 @@ function AppNavigator() {
               title: 'Esemény részletei',
               tabBarStyle: { display: 'none' },
             }}
-          />          
+          />
 
           <Tabs.Screen
             name="invite-member"
@@ -217,11 +216,11 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#071123'
-   },
+    backgroundColor: '#071123',
+  },
   scene: {
-    backgroundColor: '#071123'
-   },
+    backgroundColor: '#071123',
+  },
   tabBar: {
     backgroundColor: '#0D1930',
     borderTopColor: '#1D2B43',
@@ -236,7 +235,7 @@ const styles = StyleSheet.create({
   tabLabel: {
     marginTop: 2,
     fontSize: 10,
-    fontWeight: '700'
+    fontWeight: '700',
   },
   tabIcon: {
     width: 27,

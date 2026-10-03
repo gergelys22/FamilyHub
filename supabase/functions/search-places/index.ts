@@ -41,10 +41,7 @@ Deno.serve(async (request: Request) => {
   const geoapifyKey = Deno.env.get('GEOAPIFY_API_KEY');
 
   if (!supabaseUrl || !supabaseAnonKey || !geoapifyKey) {
-    return json(
-      { error: 'A helyszínkereső szerveroldali beállítása hiányzik.' },
-      500,
-    );
+    return json({ error: 'A helyszínkereső szerveroldali beállítása hiányzik.' }, 500);
   }
 
   try {
@@ -123,23 +120,21 @@ Deno.serve(async (request: Request) => {
           : address;
 
       const hasCoordinates =
-        typeof item.lat === 'number'
-        && Number.isFinite(item.lat)
-        && typeof item.lon === 'number'
-        && Number.isFinite(item.lon);
+        typeof item.lat === 'number' &&
+        Number.isFinite(item.lat) &&
+        typeof item.lon === 'number' &&
+        Number.isFinite(item.lon);
 
-      return [{
-        id: typeof item.place_id === 'string' ? item.place_id : label,
-        label,
-        ...(hasCoordinates
-          ? { latitude: item.lat, longitude: item.lon }
-          : {}),
-      }];
+      return [
+        {
+          id: typeof item.place_id === 'string' ? item.place_id : label,
+          label,
+          ...(hasCoordinates ? { latitude: item.lat, longitude: item.lon } : {}),
+        },
+      ];
     });
 
-    const unique = [
-      ...new Map(suggestions.map((item) => [item.label, item])).values(),
-    ];
+    const unique = [...new Map(suggestions.map((item) => [item.label, item])).values()];
 
     return json({ suggestions: unique.slice(0, 6) });
   } catch (error) {

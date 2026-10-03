@@ -33,7 +33,9 @@ function DetailRow({ icon, label, value }: DetailRowProps) {
       </View>
       <View style={styles.detailContent}>
         <Text style={styles.detailLabel}>{label}</Text>
-        <Text selectable style={styles.detailValue}>{value}</Text>
+        <Text selectable style={styles.detailValue}>
+          {value}
+        </Text>
       </View>
     </View>
   );
@@ -44,7 +46,9 @@ export default function ProfileScreen() {
   const { profile, profileError, session, signOut } = useAuth();
   const displayName = profile?.display_name || 'Felhasználó';
   const initial = displayName.trim().charAt(0).toLocaleUpperCase('hu-HU') || '?';
-  const emailConfirmed = session?.user.email_confirmed_at ? 'Megerősítve' : 'Nincs megerősítve';
+  const emailConfirmed = session?.user.email_confirmed_at
+    ? 'Megerősítve'
+    : 'Nincs megerősítve';
 
   async function handleSignOut() {
     const error = await signOut();
@@ -59,7 +63,8 @@ export default function ProfileScreen() {
           accessibilityRole="button"
           hitSlop={8}
           onPress={() => router.back()}
-          style={({ pressed }) => [styles.headerButton, pressed && styles.pressed]}>
+          style={({ pressed }) => [styles.headerButton, pressed && styles.pressed]}
+        >
           <SymbolView
             name={{ ios: 'chevron.left', android: 'arrow_back', web: 'arrow_back' }}
             size={23}
@@ -72,7 +77,10 @@ export default function ProfileScreen() {
         <View style={styles.headerPlaceholder} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.identityCard}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{initial}</Text>
@@ -94,7 +102,11 @@ export default function ProfileScreen() {
             value={session?.user.email ?? 'Nincs megadva'}
           />
           <DetailRow
-            icon={{ ios: 'checkmark.shield.fill', android: 'verified_user', web: 'verified_user' }}
+            icon={{
+              ios: 'checkmark.shield.fill',
+              android: 'verified_user',
+              web: 'verified_user',
+            }}
             label="E-mail állapota"
             value={emailConfirmed}
           />
@@ -107,16 +119,23 @@ export default function ProfileScreen() {
 
         {profileError ? (
           <View style={styles.errorCard}>
-            <Text style={styles.errorText}>A profiladatok betöltése sikertelen: {profileError}</Text>
+            <Text style={styles.errorText}>
+              A profiladatok betöltése sikertelen: {profileError}
+            </Text>
           </View>
         ) : null}
 
         <Pressable
           accessibilityRole="button"
           onPress={() => void handleSignOut()}
-          style={({ pressed }) => [styles.signOutButton, pressed && styles.pressed]}>
+          style={({ pressed }) => [styles.signOutButton, pressed && styles.pressed]}
+        >
           <SymbolView
-            name={{ ios: 'rectangle.portrait.and.arrow.right', android: 'logout', web: 'logout' }}
+            name={{
+              ios: 'rectangle.portrait.and.arrow.right',
+              android: 'logout',
+              web: 'logout',
+            }}
             size={21}
             tintColor="#FDA4AF"
             weight={{ ios: 'semibold', android: medium }}
@@ -163,7 +182,12 @@ const styles = StyleSheet.create({
     borderColor: colors.surfaceElevated,
   },
   avatarText: { color: '#3B2415', fontSize: 35, fontWeight: '900' },
-  name: { marginTop: spacing.sm, color: colors.textPrimary, fontSize: 24, fontWeight: '900' },
+  name: {
+    marginTop: spacing.sm,
+    color: colors.textPrimary,
+    fontSize: 24,
+    fontWeight: '900',
+  },
   email: { color: colors.textMuted, fontSize: 14 },
   card: {
     padding: spacing.lg,
@@ -173,8 +197,18 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.surface,
   },
-  sectionTitle: { marginBottom: spacing.xs, color: colors.textPrimary, fontSize: 16, fontWeight: '800' },
-  detailRow: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  sectionTitle: {
+    marginBottom: spacing.xs,
+    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  detailRow: {
+    minHeight: 64,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
   detailIcon: {
     width: 40,
     height: 40,

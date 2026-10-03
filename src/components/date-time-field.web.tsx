@@ -17,7 +17,8 @@ export default function DateTimeField({
           color: colors.textSecondary,
           fontSize: 12,
           fontWeight: '800',
-        }}>
+        }}
+      >
         {label}
       </Text>
 
@@ -57,10 +58,9 @@ export default function DateTimeField({
               minHeight: 48,
               alignItems: 'center',
               justifyContent: 'center',
-            }}>
-            <Text style={{ color: colors.primaryLight, fontSize: 22 }}>
-              ×
-            </Text>
+            }}
+          >
+            <Text style={{ color: colors.primaryLight, fontSize: 22 }}>×</Text>
           </Pressable>
         ) : null}
       </View>

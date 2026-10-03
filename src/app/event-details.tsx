@@ -1,9 +1,5 @@
 import { colors, radius, spacing } from '@/constants/theme';
-import {
-  deleteFamilyEvent,
-  getFamilyEvent,
-  type FamilyEvent,
-} from '@/services/events';
+import { deleteFamilyEvent, getFamilyEvent, type FamilyEvent } from '@/services/events';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import medium from 'expo-symbols/androidWeights/medium';
@@ -19,79 +15,78 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-
 const categoryData: Record<
-    string,
-    {
-        label: string,
-        color: string,
-        icon: SymbolViewProps['name'],
-    }
+  string,
+  {
+    label: string;
+    color: string;
+    icon: SymbolViewProps['name'];
+  }
 > = {
-        family: {
-            label: 'Családi',
-            color: '#8B5CF6',
-            icon: {
-                ios: 'person.2.fill',
-                android: 'group',
-                web: 'group',
-            },
-        },
-        birthday: {
-            label: 'Születésnap',
-            color: '#F55B91',
-            icon: {
-                ios: 'birthday.cake.fill',
-                android: 'cake',
-                web: 'cake',
-            },
-        },
-        medical: {
-            label: 'Orvosi',
-            color: '#34D399',
-            icon: {
-                ios: 'cross.case.fill',
-                android: 'medical_services',
-                web: 'medical_services'
-            },
-        },
-        school: {
-            label: 'Iskola',
-            color: '#38BDF8',
-            icon: {
-                ios: 'graduationcap.fill',
-                android: 'school',
-                web: 'school',
-            },
-        },
-        sport: {
-            label: 'Sport',
-            color: '#F59E0B',
-            icon: {
-                ios: 'figure.run',
-                android: 'directions_run',
-                web: 'directions_run',
-            },
-        },
-        administration: {
-            label: 'Ügyintézés',
-            color: '#FB7185',
-            icon: {
-                ios: 'doc.text.fill',
-                android: 'description',
-                web: 'description',
-            },
-        },
-        trip: {
-            label: 'Kirándulás',
-            color: '#22C55E',
-            icon: {
-                ios: 'mountain.2.fill',
-                android: 'landscape',
-                web: 'landscape',
-            },
-        },
-    };
+  family: {
+    label: 'Családi',
+    color: '#8B5CF6',
+    icon: {
+      ios: 'person.2.fill',
+      android: 'group',
+      web: 'group',
+    },
+  },
+  birthday: {
+    label: 'Születésnap',
+    color: '#F55B91',
+    icon: {
+      ios: 'birthday.cake.fill',
+      android: 'cake',
+      web: 'cake',
+    },
+  },
+  medical: {
+    label: 'Orvosi',
+    color: '#34D399',
+    icon: {
+      ios: 'cross.case.fill',
+      android: 'medical_services',
+      web: 'medical_services',
+    },
+  },
+  school: {
+    label: 'Iskola',
+    color: '#38BDF8',
+    icon: {
+      ios: 'graduationcap.fill',
+      android: 'school',
+      web: 'school',
+    },
+  },
+  sport: {
+    label: 'Sport',
+    color: '#F59E0B',
+    icon: {
+      ios: 'figure.run',
+      android: 'directions_run',
+      web: 'directions_run',
+    },
+  },
+  administration: {
+    label: 'Ügyintézés',
+    color: '#FB7185',
+    icon: {
+      ios: 'doc.text.fill',
+      android: 'description',
+      web: 'description',
+    },
+  },
+  trip: {
+    label: 'Kirándulás',
+    color: '#22C55E',
+    icon: {
+      ios: 'mountain.2.fill',
+      android: 'landscape',
+      web: 'landscape',
+    },
+  },
+};
 
 function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -120,7 +115,7 @@ export default function EventDetailsScreen() {
 
   const [event, setEvent] = useState<FamilyEvent | null>(null);
   const [loading, setLoading] = useState(Boolean(eventId));
-  
+
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(
     eventId ? null : 'Hiányzó eseményazonosító.',
@@ -142,9 +137,7 @@ export default function EventDetailsScreen() {
         if (!active) return;
 
         setError(
-          caught instanceof Error
-            ? caught.message
-            : 'Az esemény betöltése sikertelen.',
+          caught instanceof Error ? caught.message : 'Az esemény betöltése sikertelen.',
         );
       })
       .finally(() => {
@@ -159,21 +152,17 @@ export default function EventDetailsScreen() {
   function confirmDelete() {
     if (!event) return;
 
-    Alert.alert(
-      'Esemény törlése',
-      `Biztosan törlöd ezt az eseményt: ${event.title}?`,
-      [
-        {
-          text: 'Mégse',
-          style: 'cancel',
-        },
-        {
-          text: 'Törlés',
-          style: 'destructive',
-          onPress: () => void removeEvent(),
-        },
-      ],
-    );
+    Alert.alert('Esemény törlése', `Biztosan törlöd ezt az eseményt: ${event.title}?`, [
+      {
+        text: 'Mégse',
+        style: 'cancel',
+      },
+      {
+        text: 'Törlés',
+        style: 'destructive',
+        onPress: () => void removeEvent(),
+      },
+    ]);
   }
 
   async function removeEvent() {
@@ -187,9 +176,7 @@ export default function EventDetailsScreen() {
     } catch (caught) {
       Alert.alert(
         'Nem sikerült törölni',
-        caught instanceof Error
-          ? caught.message
-          : 'Próbáld újra később.',
+        caught instanceof Error ? caught.message : 'Próbáld újra később.',
       );
     } finally {
       setDeleting(false);
@@ -200,18 +187,13 @@ export default function EventDetailsScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.center}>
-          <ActivityIndicator
-            color={colors.primaryLight}
-            size="large"
-          />
+          <ActivityIndicator color={colors.primaryLight} size="large" />
         </View>
       </SafeAreaView>
     );
   }
 
-  const category =
-    categoryData[event?.category ?? 'family'] ??
-    categoryData.family;
+  const category = categoryData[event?.category ?? 'family'] ?? categoryData.family;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
@@ -220,10 +202,8 @@ export default function EventDetailsScreen() {
           accessibilityLabel="Vissza"
           accessibilityRole="button"
           onPress={() => router.back()}
-          style={({ pressed }) => [
-            styles.headerButton,
-            pressed && styles.pressed,
-          ]}>
+          style={({ pressed }) => [styles.headerButton, pressed && styles.pressed]}
+        >
           <SymbolView
             name={{
               ios: 'chevron.left',
@@ -248,7 +228,8 @@ export default function EventDetailsScreen() {
             styles.headerButton,
             pressed && styles.pressed,
             deleting && styles.disabled,
-          ]}>
+          ]}
+        >
           {deleting ? (
             <ActivityIndicator color={colors.danger} size="small" />
           ) : (
@@ -279,10 +260,8 @@ export default function EventDetailsScreen() {
           <>
             <View style={styles.heroCard}>
               <View
-                style={[
-                  styles.categoryIcon,
-                  { backgroundColor: `${category.color}25` },
-                ]}>
+                style={[styles.categoryIcon, { backgroundColor: `${category.color}25` }]}
+              >
                 <SymbolView
                   name={category.icon}
                   size={34}
@@ -300,12 +279,9 @@ export default function EventDetailsScreen() {
                     borderColor: `${category.color}80`,
                     backgroundColor: `${category.color}1F`,
                   },
-                ]}>
-                <Text
-                  style={[
-                    styles.categoryText,
-                    { color: category.color },
-                  ]}>
+                ]}
+              >
+                <Text style={[styles.categoryText, { color: category.color }]}>
                   {category.label}
                 </Text>
               </View>
@@ -313,9 +289,7 @@ export default function EventDetailsScreen() {
               <Text style={styles.title}>{event.title}</Text>
 
               {event.description ? (
-                <Text style={styles.description}>
-                  {event.description}
-                </Text>
+                <Text style={styles.description}>{event.description}</Text>
               ) : null}
             </View>
 
@@ -337,9 +311,7 @@ export default function EventDetailsScreen() {
 
                 <View style={styles.flex}>
                   <Text style={styles.detailLabel}>Dátum</Text>
-                  <Text style={styles.detailValue}>
-                    {formatDate(event.starts_at)}
-                  </Text>
+                  <Text style={styles.detailValue}>{formatDate(event.starts_at)}</Text>
                 </View>
               </View>
 
@@ -364,9 +336,7 @@ export default function EventDetailsScreen() {
                   <Text style={styles.detailLabel}>Időpont</Text>
                   <Text style={styles.detailValue}>
                     {formatTime(event.starts_at)}
-                    {event.ends_at
-                      ? ` – ${formatTime(event.ends_at)}`
-                      : ''}
+                    {event.ends_at ? ` – ${formatTime(event.ends_at)}` : ''}
                   </Text>
                 </View>
               </View>
@@ -393,9 +363,7 @@ export default function EventDetailsScreen() {
 
                     <View style={styles.flex}>
                       <Text style={styles.detailLabel}>Helyszín</Text>
-                      <Text style={styles.detailValue}>
-                        {event.location_name}
-                      </Text>
+                      <Text style={styles.detailValue}>{event.location_name}</Text>
                     </View>
                   </View>
                 </>

@@ -1,13 +1,7 @@
 import { supabase } from '@/lib/supabase';
 
 export type EventCategory =
- | 'family' 
- | 'birthday' 
- | 'medical' 
- | 'school' 
- | 'sport' 
- | 'administration' 
- | 'trip';
+  'family' | 'birthday' | 'medical' | 'school' | 'sport' | 'administration' | 'trip';
 
 export type FamilyEvent = {
   id: string;
@@ -22,10 +16,16 @@ export type FamilyEvent = {
   ends_at: string | null;
 };
 
-export async function getFamilyEvents(familyId: string, from: Date, to: Date): Promise<FamilyEvent[]> {
+export async function getFamilyEvents(
+  familyId: string,
+  from: Date,
+  to: Date,
+): Promise<FamilyEvent[]> {
   const { data, error } = await supabase
     .from('family_events')
-    .select('id, family_id, title, description, location_name, location_latitude, location_longitude, category, starts_at, ends_at')
+    .select(
+      'id, family_id, title, description, location_name, location_latitude, location_longitude, category, starts_at, ends_at',
+    )
     .eq('family_id', familyId)
     .gte('starts_at', from.toISOString())
     .lt('starts_at', to.toISOString())
@@ -35,9 +35,7 @@ export async function getFamilyEvents(familyId: string, from: Date, to: Date): P
   return (data ?? []) as FamilyEvent[];
 }
 
-export async function getFamilyEvent(
-  eventId: string,
-): Promise<FamilyEvent> {
+export async function getFamilyEvent(eventId: string): Promise<FamilyEvent> {
   const { data, error } = await supabase
     .from('family_events')
     .select(
@@ -46,10 +44,9 @@ export async function getFamilyEvent(
     .eq('id', eventId)
     .single();
 
-    if (error) throw new Error(error.message);
+  if (error) throw new Error(error.message);
 
-    return data as FamilyEvent;
-
+  return data as FamilyEvent;
 }
 
 export async function createFamilyEvent(input: {
@@ -92,7 +89,7 @@ export async function updateFamilyEvent(
     startsAt: Date;
     endsAt?: Date;
   },
-):Promise<void> {
+): Promise<void> {
   const { error } = await supabase
     .from('family_events')
     .update({
@@ -108,14 +105,11 @@ export async function updateFamilyEvent(
     })
     .eq('id', eventId);
 
-    if (error) throw new Error(error.message);  
+  if (error) throw new Error(error.message);
 }
 
 export async function deleteFamilyEvent(eventId: string): Promise<void> {
-  const { error } = await supabase
-    .from('family_events')
-    .delete()
-    .eq('id', eventId);
+  const { error } = await supabase.from('family_events').delete().eq('id', eventId);
 
   if (error) throw new Error(error.message);
 }

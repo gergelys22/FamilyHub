@@ -32,5 +32,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#102B40',
   },
   title: { color: '#F8FAFC', fontSize: 15, fontWeight: '800', textAlign: 'center' },
-  text: { marginTop: 8, color: '#9AAAC2', fontSize: 12, lineHeight: 18, textAlign: 'center' },
+  text: {
+    marginTop: 8,
+    color: '#9AAAC2',
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'center',
+  },
 });

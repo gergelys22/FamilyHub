@@ -1,7 +1,6 @@
 import type { FamilyEvent } from '@/services/events';
+import MapView, { Marker } from 'react-native-maps';
 import { StyleSheet } from 'react-native';
-
-type ExpoMapsModule = typeof import('expo-maps');
 
 type EventMapProps = {
   events: FamilyEvent[];
@@ -18,13 +17,9 @@ function hasCoordinates(event: FamilyEvent) {
 }
 
 export function EventMap({ events, selectedEventId }: EventMapProps) {
-  // Expo Router evaluates every route module at launch. Deferring the native
-  // lookup keeps the rest of the app available if this module is not in an
-  // outdated development/preview build yet.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { GoogleMaps } = require('expo-maps') as ExpoMapsModule;
   const markerEvents = events.filter(hasCoordinates);
-  const selectedEvent = markerEvents.find((event) => event.id === selectedEventId) ?? markerEvents[0];
+  const selectedEvent =
+    markerEvents.find((event) => event.id === selectedEventId) ?? markerEvents[0];
   const cameraCoordinates = selectedEvent
     ? {
         latitude: selectedEvent.location_latitude as number,
@@ -33,24 +28,30 @@ export function EventMap({ events, selectedEventId }: EventMapProps) {
     : budapest;
 
   return (
-    <GoogleMaps.View
+    <MapView
       key={selectedEvent?.id ?? 'fallback'}
       style={styles.map}
-      cameraPosition={{
-        coordinates: cameraCoordinates,
-        zoom: selectedEvent ? 14 : 10,
+      initialRegion={{
+        ...cameraCoordinates,
+        latitudeDelta: selectedEvent ? 0.025 : 0.18,
+        longitudeDelta: selectedEvent ? 0.025 : 0.18,
       }}
-      markers={markerEvents.map((event) => ({
-        id: event.id,
-        coordinates: {
-          latitude: event.location_latitude as number,
-          longitude: event.location_longitude as number,
-        },
-        title: event.title,
-        snippet: event.location_name ?? undefined,
-        showCallout: event.id === selectedEventId,
-      }))}
-    />
+      showsCompass
+      showsUserLocation={false}
+    >
+      {markerEvents.map((event) => (
+        <Marker
+          key={event.id}
+          coordinate={{
+            latitude: event.location_latitude as number,
+            longitude: event.location_longitude as number,
+          }}
+          title={event.title}
+          description={event.location_name ?? undefined}
+          pinColor={event.id === selectedEventId ? '#2563EB' : '#DC2626'}
+        />
+      ))}
+    </MapView>
   );
 }
 

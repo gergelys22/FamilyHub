@@ -23,20 +23,18 @@ function EyeIcon({ visible }: { visible: boolean }) {
       name={
         visible
           ? {
-            ios: 'eye.fill',
-            android: 'visibility',
-            web: 'visibility',
-          }
+              ios: 'eye.fill',
+              android: 'visibility',
+              web: 'visibility',
+            }
           : {
-            ios: 'eye.slash.fill',
-            android: 'visibility_off',
-            web: 'visibility_off',
-          }
+              ios: 'eye.slash.fill',
+              android: 'visibility_off',
+              web: 'visibility_off',
+            }
       }
       size={23}
-      tintColor={
-        visible ? colors.primaryLight : colors.textMuted
-      }
+      tintColor={visible ? colors.primaryLight : colors.textMuted}
       type="hierarchical"
       weight={{
         ios: 'semibold',
@@ -102,7 +100,9 @@ export default function SignInScreen() {
         setMessage(result.error);
         setIsError(true);
       } else if (result.needsEmailConfirmation) {
-        setMessage('Elküldtük a megerősítő levelet. Belépés előtt erősítsd meg az e-mail-címedet.');
+        setMessage(
+          'Elküldtük a megerősítő levelet. Belépés előtt erősítsd meg az e-mail-címedet.',
+        );
       }
       return;
     }
@@ -131,13 +131,20 @@ export default function SignInScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboard}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.keyboard}
+      >
         <View style={styles.container}>
           <View style={styles.brand}>
-            <View style={styles.logo}><Text style={styles.logoText}>⌂</Text></View>
+            <View style={styles.logo}>
+              <Text style={styles.logoText}>⌂</Text>
+            </View>
             <Text style={styles.title}>CsaládTér</Text>
             <Text style={styles.subtitle}>
-              {isRegistration ? 'Hozd létre a saját családi teredet.' : 'Jelentkezz be a családi teredhez.'}
+              {isRegistration
+                ? 'Hozd létre a saját családi teredet.'
+                : 'Jelentkezz be a családi teredhez.'}
             </Text>
           </View>
 
@@ -170,9 +177,7 @@ export default function SignInScreen() {
                 autoComplete={isRegistration ? 'new-password' : 'current-password'}
                 autoCorrect={false}
                 onChangeText={setPassword}
-                onSubmitEditing={
-                  isRegistration ? undefined : () => void submit()
-                }
+                onSubmitEditing={isRegistration ? undefined : () => void submit()}
                 placeholder="Jelszó"
                 placeholderTextColor={colors.textMuted}
                 secureTextEntry={!passwordVisible}
@@ -191,7 +196,8 @@ export default function SignInScreen() {
                   styles.visibilityButton,
                   passwordVisible && styles.visibilityButtonActive,
                   pressed && styles.visibilityButtonPressed,
-                ]}>
+                ]}
+              >
                 <EyeIcon visible={passwordVisible} />
               </Pressable>
             </View>
@@ -219,33 +225,50 @@ export default function SignInScreen() {
                   accessibilityRole="button"
                   accessibilityState={{ selected: confirmPasswordVisible }}
                   hitSlop={8}
-                  onPress={() =>
-                    setConfirmPasswordVisible((current) => !current)
-                  }
+                  onPress={() => setConfirmPasswordVisible((current) => !current)}
                   style={({ pressed }) => [
                     styles.visibilityButton,
                     confirmPasswordVisible && styles.visibilityButtonActive,
                     pressed && styles.visibilityButtonPressed,
-                  ]}>
+                  ]}
+                >
                   <EyeIcon visible={confirmPasswordVisible} />
                 </Pressable>
               </View>
             ) : null}
 
             {message ? (
-              <Text accessibilityLiveRegion="polite" style={isError ? styles.error : styles.success}>{message}</Text>
+              <Text
+                accessibilityLiveRegion="polite"
+                style={isError ? styles.error : styles.success}
+              >
+                {message}
+              </Text>
             ) : null}
 
             <Pressable
               accessibilityRole="button"
               disabled={submitting}
               onPress={() => void submit()}
-              style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed, submitting && styles.disabled]}>
-              {submitting ? <ActivityIndicator color="#FFFFFF" /> : (
-                <Text style={styles.primaryButtonText}>{isRegistration ? 'Regisztráció' : 'Bejelentkezés'}</Text>
+              style={({ pressed }) => [
+                styles.primaryButton,
+                pressed && styles.pressed,
+                submitting && styles.disabled,
+              ]}
+            >
+              {submitting ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.primaryButtonText}>
+                  {isRegistration ? 'Regisztráció' : 'Bejelentkezés'}
+                </Text>
               )}
             </Pressable>
-            <Pressable accessibilityRole="button" onPress={switchMode} style={styles.secondaryButton}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={switchMode}
+              style={styles.secondaryButton}
+            >
               <Text style={styles.secondaryButtonText}>
                 {isRegistration ? 'Már van fiókom' : 'Új fiók létrehozása'}
               </Text>
@@ -262,13 +285,41 @@ const styles = StyleSheet.create({
   keyboard: { flex: 1 },
   container: { flex: 1, justifyContent: 'center', padding: spacing.xl, gap: spacing.xl },
   brand: { alignItems: 'center', gap: spacing.sm },
-  logo: { width: 58, height: 58, borderRadius: radius.xl, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary },
+  logo: {
+    width: 58,
+    height: 58,
+    borderRadius: radius.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+  },
   logoText: { color: colors.textPrimary, fontSize: 32, fontWeight: '800' },
   title: { color: colors.textPrimary, fontSize: 30, fontWeight: '800' },
   subtitle: { color: colors.textMuted, fontSize: 14, textAlign: 'center' },
-  card: { padding: spacing.lg, gap: spacing.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.xl },
-  input: { minHeight: 52, paddingHorizontal: spacing.lg, color: colors.textPrimary, backgroundColor: colors.surfaceElevated, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md },
-  primaryButton: { minHeight: 52, alignItems: 'center', justifyContent: 'center', borderRadius: radius.md, backgroundColor: colors.primary },
+  card: {
+    padding: spacing.lg,
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.xl,
+  },
+  input: {
+    minHeight: 52,
+    paddingHorizontal: spacing.lg,
+    color: colors.textPrimary,
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+  },
+  primaryButton: {
+    minHeight: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.md,
+    backgroundColor: colors.primary,
+  },
   primaryButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
   secondaryButton: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   secondaryButtonText: { color: colors.primaryLight, fontSize: 14, fontWeight: '700' },
@@ -304,7 +355,6 @@ const styles = StyleSheet.create({
     borderColor: colors.textMuted,
     borderRadius: 12,
   },
-
 
   visibilityButton: {
     width: 44,
@@ -396,6 +446,5 @@ const styles = StyleSheet.create({
   eyeSymbol: {
     width: 25,
     height: 25,
-  }
-
+  },
 });

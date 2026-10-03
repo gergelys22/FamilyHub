@@ -3,13 +3,13 @@ import { searchPlaces, type PlaceSuggestion } from '@/services/places';
 import { Link } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Keyboard,
-    Pressable,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Keyboard,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from 'react-native';
 
 type Props = {
@@ -62,9 +62,7 @@ export default function LocationAutocomplete({
             query,
             items: [],
             error:
-              error instanceof Error
-                ? error.message
-                : 'A helyszínkeresés nem sikerült.',
+              error instanceof Error ? error.message : 'A helyszínkeresés nem sikerült.',
           });
         });
     }, 350);
@@ -140,9 +138,7 @@ export default function LocationAutocomplete({
       {open && !disabled ? (
         <View style={styles.dropdown}>
           {!eligible ? (
-            <Text style={styles.message}>
-              Írj be legalább 3 karaktert.
-            </Text>
+            <Text style={styles.message}>Írj be legalább 3 karaktert.</Text>
           ) : !currentResult ? (
             <View style={styles.loading}>
               <ActivityIndicator color={colors.primaryLight} />
@@ -156,14 +152,14 @@ export default function LocationAutocomplete({
                 accessibilityRole="button"
                 onPressIn={clearBlurTimer}
                 onPress={beginSearch}
-                style={styles.retry}>
+                style={styles.retry}
+              >
                 <Text style={styles.retryText}>Újrapróbálás</Text>
               </Pressable>
             </View>
           ) : currentResult.items.length === 0 ? (
             <Text style={styles.message}>
-              Nincs találat. Pontosítsd a keresést, vagy hagyd meg a beírt
-              helyszínt.
+              Nincs találat. Pontosítsd a keresést, vagy hagyd meg a beírt helyszínt.
             </Text>
           ) : (
             currentResult.items.map((item) => (
@@ -173,10 +169,8 @@ export default function LocationAutocomplete({
                 accessibilityLabel={`Helyszín kiválasztása: ${item.label}`}
                 onPressIn={clearBlurTimer}
                 onPress={() => selectPlace(item)}
-                style={({ pressed }) => [
-                  styles.suggestion,
-                  pressed && styles.pressed,
-                ]}>
+                style={({ pressed }) => [styles.suggestion, pressed && styles.pressed]}
+              >
                 <Text style={styles.placeIcon}>⌖</Text>
                 <Text style={styles.suggestionText}>{item.label}</Text>
               </Pressable>

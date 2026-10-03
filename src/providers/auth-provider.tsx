@@ -1,6 +1,13 @@
 import type { Session } from '@supabase/supabase-js';
 import * as Linking from 'expo-linking';
-import { createContext, PropsWithChildren, useContext, useEffect, useMemo, useState } from 'react';
+import {
+  createContext,
+  PropsWithChildren,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 
 import { supabase } from '@/lib/supabase';
 
@@ -17,7 +24,11 @@ type AuthContextValue = {
   loading: boolean;
   profileError: string | null;
   signIn: (email: string, password: string) => Promise<string | null>;
-  signUp: (displayName: string, email: string, password: string) => Promise<{
+  signUp: (
+    displayName: string,
+    email: string,
+    password: string,
+  ) => Promise<{
     error: string | null;
     needsEmailConfirmation: boolean;
   }>;
