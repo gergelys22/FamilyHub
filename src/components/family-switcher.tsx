@@ -1,3 +1,4 @@
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -7,16 +8,19 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useFocusEffect, useRouter } from 'expo-router';
 
-import { colors, radius, spacing } from '@/constants/theme';
+import { colors, radius, shadows, spacing } from '@/constants/theme';
 import { Family, getMyFamilies } from '@/services/families';
 
 type FamilySwitcherProps = {
   onActiveFamilyChange?: (family: Family | null) => void;
+  compact?: boolean;
 };
 
-export function FamilySwitcher({ onActiveFamilyChange }: FamilySwitcherProps) {
+export function FamilySwitcher({
+  onActiveFamilyChange,
+  compact = false,
+}: FamilySwitcherProps) {
   const router = useRouter();
   const [families, setFamilies] = useState<Family[]>([]);
   const [activeFamilyId, setActiveFamilyId] = useState<string | null>(null);
@@ -138,6 +142,63 @@ export function FamilySwitcher({ onActiveFamilyChange }: FamilySwitcherProps) {
   const activeFamily =
     families.find((family) => family.id === activeFamilyId) ?? families[0];
 
+  if (compact) {
+    return (
+      <View style={styles.compactCard}>
+        <View style={styles.compactActiveFamilyRow}>
+          <View style={styles.compactFamilyIcon}>
+            <Text style={styles.compactFamilyIconText}>⌂</Text>
+          </View>
+          <View style={styles.flex}>
+            <Text style={styles.compactLabel}>AKTÍV CSALÁDI KÖR</Text>
+            <Text numberOfLines={1} style={styles.compactFamilyName}>
+              {activeFamily.name}
+            </Text>
+          </View>
+          {families.length > 1 ? (
+            <View style={styles.compactCountBadge}>
+              <Text style={styles.countText}>{families.length}</Text>
+            </View>
+          ) : null}
+        </View>
+
+        {families.length > 1 ? (
+          <ScrollView
+            horizontal
+            contentContainerStyle={styles.compactFamilyOptions}
+            showsHorizontalScrollIndicator={false}
+          >
+            {families.map((family) => {
+              const selected = family.id === activeFamily.id;
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  key={family.id}
+                  onPress={() => selectFamily(family)}
+                  style={[
+                    styles.compactFamilyChip,
+                    selected && styles.compactFamilyChipSelected,
+                  ]}
+                >
+                  <Text
+                    numberOfLines={1}
+                    style={[
+                      styles.compactFamilyChipText,
+                      selected && styles.compactFamilyChipTextSelected,
+                    ]}
+                  >
+                    {family.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        ) : null}
+      </View>
+    );
+  }
+
   return (
     <View style={styles.card}>
       <View pointerEvents="none" style={styles.cardGlow} />
@@ -218,10 +279,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     padding: spacing.lg,
     gap: spacing.md,
-    borderRadius: radius.xl,
-    backgroundColor: '#0E1D35',
     borderWidth: 1,
-    borderColor: '#244068',
+    borderColor: colors.border,
+    borderRadius: radius.xl,
+    backgroundColor: colors.surface,
+    ...shadows.card,
   },
   cardGlow: {
     position: 'absolute',
@@ -230,54 +292,155 @@ const styles = StyleSheet.create({
     width: 180,
     height: 180,
     borderRadius: 90,
-    backgroundColor: colors.primary,
-    opacity: 0.14,
+    backgroundColor: colors.primarySoft,
+    opacity: 0.9,
   },
-  centeredCard: { minHeight: 112, alignItems: 'center', justifyContent: 'center' },
-  loadingText: { color: colors.textMuted, fontSize: 12 },
+  centeredCard: {
+    minHeight: 112,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  compactCard: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
+    ...shadows.card,
+  },
+  compactActiveFamilyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  compactFamilyIcon: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.md,
+    backgroundColor: colors.primarySoft,
+  },
+  compactFamilyIconText: {
+    color: colors.primary,
+    fontSize: 20,
+    fontWeight: '900',
+  },
+  compactLabel: {
+    color: colors.textMuted,
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.7,
+  },
+  compactFamilyName: {
+    marginTop: 1,
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  compactCountBadge: {
+    minWidth: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.round,
+    backgroundColor: colors.surfaceElevated,
+  },
+  compactFamilyOptions: {
+    gap: spacing.sm,
+  },
+  compactFamilyChip: {
+    maxWidth: 150,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 7,
+    borderRadius: radius.round,
+    backgroundColor: colors.surfaceElevated,
+  },
+  compactFamilyChipSelected: {
+    backgroundColor: colors.primary,
+  },
+  compactFamilyChipText: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  compactFamilyChipTextSelected: {
+    color: colors.white,
+  },
+  loadingText: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.success },
+  eyebrowRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  liveDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: colors.success,
+  },
   eyebrow: {
-    color: colors.primaryLight,
+    color: colors.primary,
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 0.8,
   },
   countBadge: {
-    minWidth: 25,
-    height: 25,
-    paddingHorizontal: 7,
+    minWidth: 26,
+    height: 26,
+    paddingHorizontal: 8,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.round,
-    backgroundColor: '#19345E',
-    borderWidth: 1,
-    borderColor: '#315687',
+    backgroundColor: colors.surfaceElevated,
   },
-  countText: { color: colors.textSecondary, fontSize: 11, fontWeight: '800' },
-  activeFamilyRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  countText: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  activeFamilyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
   familyIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.lg,
+    width: 50,
+    height: 50,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: radius.lg,
     backgroundColor: colors.primary,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
+    ...shadows.floating,
   },
-  familyIconText: { color: '#FFFFFF', fontSize: 25, fontWeight: '900' },
-  familyName: { color: colors.textPrimary, fontSize: 19, fontWeight: '900' },
-  familyMeta: { marginTop: 2, color: colors.textMuted, fontSize: 11 },
-  flex: { flex: 1 },
+  familyIconText: {
+    color: colors.white,
+    fontSize: 25,
+    fontWeight: '900',
+  },
+  familyName: {
+    color: colors.textPrimary,
+    fontSize: 19,
+    fontWeight: '900',
+  },
+  familyMeta: {
+    marginTop: 2,
+    color: colors.textMuted,
+    fontSize: 11,
+  },
+  flex: {
+    flex: 1,
+  },
   secureBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -285,11 +448,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: radius.round,
-    backgroundColor: '#0B3B35',
+    backgroundColor: '#E5FAF5',
   },
-  secureIcon: { color: colors.success, fontSize: 10, fontWeight: '900' },
-  secureText: { color: '#6EE7B7', fontSize: 9, fontWeight: '800' },
-  familyOptions: { gap: spacing.sm, paddingRight: spacing.sm },
+  secureIcon: {
+    color: colors.success,
+    fontSize: 10,
+    fontWeight: '900',
+  },
+  secureText: {
+    color: '#168C7B',
+    fontSize: 9,
+    fontWeight: '800',
+  },
+  familyOptions: {
+    gap: spacing.sm,
+    paddingRight: spacing.sm,
+  },
   familyChip: {
     maxWidth: 180,
     flexDirection: 'row',
@@ -297,51 +471,87 @@ const styles = StyleSheet.create({
     gap: 7,
     paddingHorizontal: spacing.md,
     paddingVertical: 9,
-    borderRadius: radius.round,
-    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
+    borderRadius: radius.round,
+    backgroundColor: colors.surface,
   },
-  familyChipSelected: { backgroundColor: '#17335C', borderColor: colors.primary },
-  chipDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.textMuted },
-  chipDotSelected: { backgroundColor: colors.primaryLight },
-  familyChipText: { color: colors.textMuted, fontSize: 11, fontWeight: '700' },
-  familyChipTextSelected: { color: colors.textSecondary },
+  familyChipSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primarySoft,
+  },
+  chipDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: colors.textMuted,
+  },
+  chipDotSelected: {
+    backgroundColor: colors.primary,
+  },
+  familyChipText: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  familyChipTextSelected: {
+    color: colors.primaryDark,
+  },
   addFamilyButton: {
-    minHeight: 38,
+    minHeight: 42,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 7,
-    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#2A456C',
-    backgroundColor: '#10233F',
+    borderColor: colors.borderStrong,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceElevated,
   },
-  addFamilyPlus: { color: colors.primaryLight, fontSize: 18, fontWeight: '500' },
-  addFamilyText: { color: colors.primaryLight, fontSize: 11, fontWeight: '800' },
-  emptyCard: { alignItems: 'center', paddingVertical: spacing.xl },
+  addFamilyPlus: {
+    color: colors.primary,
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  addFamilyText: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  emptyCard: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+  },
   emptyIcon: {
-    width: 54,
-    height: 54,
-    borderRadius: 18,
+    width: 56,
+    height: 56,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#17335C',
-    borderWidth: 1,
-    borderColor: '#315687',
+    borderRadius: 18,
+    backgroundColor: colors.primarySoft,
   },
-  emptyIconText: { color: colors.primaryLight, fontSize: 27, fontWeight: '900' },
-  emptyContent: { alignItems: 'center', gap: spacing.xs },
-  emptyTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: '900' },
+  emptyIconText: {
+    color: colors.primary,
+    fontSize: 27,
+    fontWeight: '900',
+  },
+  emptyContent: {
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  emptyTitle: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '900',
+  },
   emptyDescription: {
     color: colors.textMuted,
     fontSize: 12,
-    textAlign: 'center',
     lineHeight: 17,
+    textAlign: 'center',
   },
   emptyButton: {
-    minHeight: 42,
+    minHeight: 44,
     paddingHorizontal: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
@@ -349,22 +559,54 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     borderRadius: radius.md,
     backgroundColor: colors.primary,
+    ...shadows.floating,
   },
-  emptyButtonText: { color: '#FFFFFF', fontSize: 12, fontWeight: '900' },
-  emptyButtonArrow: { color: '#FFFFFF', fontSize: 17 },
-  errorCard: { flexDirection: 'row', alignItems: 'center' },
+  emptyButtonText: {
+    color: colors.white,
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  emptyButtonArrow: {
+    color: colors.white,
+    fontSize: 17,
+  },
+  errorCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   errorIcon: {
     width: 34,
     height: 34,
-    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4A1825',
+    borderRadius: 12,
+    backgroundColor: '#FFF0F2',
   },
-  errorIconText: { color: '#FDA4AF', fontSize: 16, fontWeight: '900' },
-  errorTitle: { color: colors.textPrimary, fontSize: 12, fontWeight: '800' },
-  errorMessage: { marginTop: 2, color: colors.textMuted, fontSize: 10 },
-  retryButton: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  retryText: { color: colors.primaryLight, fontSize: 11, fontWeight: '800' },
-  pressed: { opacity: 0.72 },
+  errorIconText: {
+    color: colors.danger,
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  errorTitle: {
+    color: colors.textPrimary,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  errorMessage: {
+    marginTop: 2,
+    color: colors.textMuted,
+    fontSize: 10,
+  },
+  retryButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  retryText: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  pressed: {
+    opacity: 0.72,
+  },
 });

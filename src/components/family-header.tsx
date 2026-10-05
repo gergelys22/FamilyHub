@@ -1,4 +1,4 @@
-import { colors, radius, spacing } from '@/constants/theme';
+import { colors, radius, shadows, spacing } from '@/constants/theme';
 import { SymbolView } from 'expo-symbols';
 import medium from 'expo-symbols/androidWeights/medium';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -87,55 +87,50 @@ export function FamilyHeader({
 
 const styles = StyleSheet.create({
   container: {
-    height: 64,
+    height: 68,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-
   brand: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
   },
-
   logo: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.md,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    backgroundColor: colors.primarySoft,
   },
-
   symbol: {
     width: 26,
     height: 26,
   },
-
   brandText: {
     color: colors.textPrimary,
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: '900',
+    letterSpacing: -0.4,
   },
-
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
   },
-
   notificationsButton: {
     width: 44,
     height: 44,
-    borderRadius: radius.round,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
+    borderRadius: radius.round,
+    backgroundColor: colors.surface,
+    ...shadows.card,
   },
-
   badge: {
     position: 'absolute',
     top: -3,
@@ -145,34 +140,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.surface,
     borderRadius: radius.round,
     backgroundColor: colors.danger,
-    borderWidth: 2,
-    borderColor: colors.background,
   },
-
   badgeText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 9,
     fontWeight: '900',
   },
-
   profileButton: {
     width: 44,
     height: 44,
-    borderRadius: radius.round,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#D6B38D',
+    borderWidth: 3,
+    borderColor: colors.white,
+    borderRadius: radius.round,
+    backgroundColor: '#F4C7A1',
+    ...shadows.card,
   },
-
   profileText: {
-    color: '#3B2415',
-    fontWeight: '800',
+    color: '#75431E',
+    fontWeight: '900',
   },
-
   pressed: {
-    opacity: 0.7,
-    transform: [{ scale: 0.94 }],
+    opacity: 0.75,
+    transform: [{ scale: 0.96 }],
   },
 });

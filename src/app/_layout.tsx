@@ -1,3 +1,4 @@
+import { colors } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/providers/auth-provider';
 import { Tabs } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -73,7 +74,7 @@ function AppNavigator() {
   if (loading) {
     return (
       <View style={styles.loading}>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <ActivityIndicator color="#3B82F6" size="large" />
       </View>
     );
@@ -81,14 +82,14 @@ function AppNavigator() {
 
   return (
     <>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <Tabs
         initialRouteName={session ? 'index' : 'sign-in'}
         screenOptions={{
           headerShown: false,
           sceneStyle: styles.scene,
-          tabBarActiveTintColor: '#3B82F6',
-          tabBarInactiveTintColor: '#8290A8',
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: colors.textMuted,
           tabBarHideOnKeyboard: true,
           tabBarStyle: styles.tabBar,
           tabBarItemStyle: styles.tabItem,
@@ -216,14 +217,14 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#071123',
+    backgroundColor: colors.background,
   },
   scene: {
-    backgroundColor: '#071123',
+    backgroundColor: colors.background,
   },
   tabBar: {
-    backgroundColor: '#0D1930',
-    borderTopColor: '#1D2B43',
+    backgroundColor: colors.navigationBackground,
+    borderTopColor: colors.navigationBorder,
     borderTopWidth: 1,
     height: 74,
     paddingTop: 7,
@@ -249,6 +250,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   iconContainerActive: {
-    backgroundColor: 'rgba(59, 130, 246, 0.16)',
+    backgroundColor: colors.primarySoft,
   },
 });

@@ -1,65 +1,23 @@
 import { FamilyHeader } from '@/components/family-header';
 import { FamilySwitcher } from '@/components/family-switcher';
-import { colors, radius, spacing } from '@/constants/theme';
+import { colors, radius, shadows, spacing } from '@/constants/theme';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useAuth } from '@/providers/auth-provider';
 import type { Family } from '@/services/families';
-import type { AppNotification } from '@/services/notifications';
 import { useRouter } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import medium from 'expo-symbols/androidWeights/medium';
 import { useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type IconName = SymbolViewProps['name'];
-
-const quickActions: {
-  label: string;
-  color: string;
-  icon: IconName;
-  route?: '/map' | '/invite-member' | '/create-event';
-}[] = [
-  {
-    label: 'Új esemény',
-    color: '#8B5CF6',
-    icon: {
-      ios: 'calendar.badge.plus',
-      android: 'event_upcoming',
-      web: 'event_upcoming',
-    },
-    route: '/create-event',
-  },
-  {
-    label: 'Új feladat',
-    color: '#34D399',
-    icon: { ios: 'checklist', android: 'checklist', web: 'checklist' },
-  },
-  {
-    label: 'Gyógyszer',
-    color: '#F55B91',
-    icon: { ios: 'pills.fill', android: 'medication', web: 'medication' },
-  },
-  {
-    label: 'Helyzetjelzés',
-    color: '#38BDF8',
-    icon: { ios: 'location.fill', android: 'location_on', web: 'location_on' },
-    route: '/map',
-  },
-  {
-    label: 'Meghívás',
-    color: '#7C6CF2',
-    icon: { ios: 'person.badge.plus', android: 'person_add', web: 'person_add' },
-    route: '/invite-member',
-  },
-];
+type HomeRoute =
+  | '/calendar'
+  | '/create-event'
+  | '/invite-member'
+  | '/memories'
+  | '/vault';
 
 function AppSymbol({
   name,
@@ -82,60 +40,78 @@ function AppSymbol({
   );
 }
 
-function SectionHeader({ title, action }: { title: string; action?: string }) {
+function SectionHeader({
+  title,
+  action,
+  onPress,
+}: {
+  title: string;
+  action?: string;
+  onPress?: () => void;
+}) {
   return (
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{title}</Text>
-      {action ? <Text style={styles.sectionAction}>{action} ›</Text> : null}
+      {action ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${title}: ${action}`}
+          hitSlop={8}
+          onPress={onPress}
+        >
+          <Text style={styles.sectionAction}>{action} ›</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
 
-function SummaryCard({
+function TodayStat({
   icon,
   color,
   value,
   label,
-  meta,
-  compact,
 }: {
   icon: IconName;
   color: string;
   value: number;
   label: string;
-  meta: string;
-  compact: boolean;
 }) {
   return (
-    <View style={[styles.summaryCard, compact && styles.summaryCardCompact]}>
-      <View style={[styles.summaryIcon, { backgroundColor: `${color}2B` }]}>
-        <AppSymbol name={icon} color={color} size={22} />
+    <View style={styles.todayStat}>
+      <View style={[styles.todayStatIcon, { backgroundColor: `${color}20` }]}>
+        <AppSymbol name={icon} color={color} size={18} />
       </View>
-      <View style={styles.flex}>
-        <Text style={styles.summaryValue}>{value}</Text>
-        <Text style={styles.summaryLabel}>{label}</Text>
-        <Text style={styles.summaryMeta}>{meta}</Text>
-      </View>
+      <Text style={styles.todayStatValue}>{value}</Text>
+      <Text style={styles.todayStatLabel}>{label}</Text>
     </View>
   );
 }
 
-function EventRow({
-  day,
+function NextEventCard({
   title,
   meta,
   color,
+  onPress,
 }: {
-  day: string;
   title: string;
   meta: string;
   color: string;
+  onPress: () => void;
 }) {
   return (
-    <View style={styles.listRow}>
-      <View style={[styles.dateBadge, { borderColor: `${color}88` }]}>
-        <Text style={[styles.dateMonth, { color }]}>MÁJ</Text>
-        <Text style={styles.dateDay}>{day}</Text>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Következő esemény megnyitása"
+      onPress={onPress}
+      style={({ pressed }) => [styles.nextEventCard, pressed && styles.pressed]}
+    >
+      <View style={[styles.nextEventIcon, { backgroundColor: `${color}20` }]}>
+        <AppSymbol
+          name={{ ios: 'calendar', android: 'calendar_month', web: 'calendar_month' }}
+          color={color}
+          size={23}
+        />
       </View>
       <View style={styles.flex}>
         <Text numberOfLines={1} style={styles.listTitle}>
@@ -143,86 +119,70 @@ function EventRow({
         </Text>
         <Text style={styles.listMeta}>{meta}</Text>
       </View>
-      <View style={styles.miniAvatarGroup}>
-        <View style={styles.miniAvatar}>
-          <Text style={styles.miniAvatarText}>G</Text>
-        </View>
-        <View style={[styles.miniAvatar, styles.miniAvatarOverlap]}>
-          <Text style={styles.miniAvatarText}>+2</Text>
-        </View>
+      <View style={styles.todayBadge}>
+        <Text style={styles.todayBadgeText}>MA</Text>
       </View>
-    </View>
+      <AppSymbol
+        name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
+        color={colors.primary}
+        size={16}
+      />
+    </Pressable>
   );
 }
 
-function NotificationRow({ notification }: { notification: AppNotification }) {
-  const unread = !notification.read_at;
-  return (
-    <View style={styles.listRow}>
-      <View style={[styles.noticeIcon, unread && styles.noticeIconUnread]}>
-        <AppSymbol
-          name={{ ios: 'bell.fill', android: 'notifications', web: 'notifications' }}
-          color={unread ? '#6EE7B7' : colors.textMuted}
-          size={19}
-        />
-      </View>
-      <View style={styles.flex}>
-        <Text numberOfLines={1} style={styles.listTitle}>
-          {notification.title}
-        </Text>
-        <Text numberOfLines={1} style={styles.listMeta}>
-          {notification.body}
-        </Text>
-      </View>
-      {unread ? <View style={styles.unreadDot} /> : null}
-    </View>
-  );
-}
-
-function MemoryPreview({
-  color,
-  icon,
+function QuickAccessCard({
   title,
-  meta,
+  subtitle,
+  icon,
+  color,
+  onPress,
 }: {
-  color: string;
-  icon: IconName;
   title: string;
-  meta: string;
+  subtitle: string;
+  icon: IconName;
+  color: string;
+  onPress: () => void;
 }) {
   return (
-    <View
-      style={[
-        styles.memoryCard,
-        { backgroundColor: `${color}24`, borderColor: `${color}55` },
-      ]}
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${title} megnyitása`}
+      onPress={onPress}
+      style={({ pressed }) => [styles.quickAccessCard, pressed && styles.pressed]}
     >
-      <View style={styles.memoryGlow} />
-      <AppSymbol name={icon} color={color} size={31} />
-      <View>
-        <Text numberOfLines={2} style={styles.memoryTitle}>
-          {title}
-        </Text>
-        <Text style={styles.memoryMeta}>{meta}</Text>
+      <View style={[styles.quickAccessIcon, { backgroundColor: `${color}1C` }]}>
+        <AppSymbol name={icon} color={color} size={25} />
       </View>
-    </View>
+      <View style={styles.flex}>
+        <Text style={styles.quickAccessTitle}>{title}</Text>
+        <Text style={styles.quickAccessSubtitle}>{subtitle}</Text>
+      </View>
+      <AppSymbol
+        name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
+        color={colors.textMuted}
+        size={15}
+      />
+    </Pressable>
   );
 }
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { width } = useWindowDimensions();
-  const wide = width >= 760;
   const { profile, profileError } = useAuth();
-  const { notifications, unreadCount } = useNotifications();
+  const { unreadCount } = useNotifications();
   const [activeFamily, setActiveFamily] = useState<Family | null>(null);
   const displayName = profile?.display_name?.trim() || 'Felhasználó';
   const userInitial = displayName.charAt(0).toLocaleUpperCase('hu-HU') || '?';
   const firstName = displayName.split(/\s+/)[0];
-  const visibleNotifications = notifications.slice(0, 3);
+  const todayLabel = new Intl.DateTimeFormat('hu-HU', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long',
+  }).format(new Date());
 
-  function openQuickAction(route?: '/map' | '/invite-member' | '/create-event') {
-    if (!route) return;
+  function openRoute(route: HomeRoute) {
     if (route === '/invite-member' && activeFamily) {
       router.push({
         pathname: route,
@@ -232,19 +192,21 @@ export default function HomeScreen() {
     }
     if (route === '/create-event' && activeFamily) {
       router.push({
-        pathname: './create-event',
+        pathname: route,
         params: { familyId: activeFamily.id, familyName: activeFamily.name },
       });
       return;
     }
-    if (route === '/map') router.push(route);
+    if (route !== '/invite-member' && route !== '/create-event') {
+      router.push(route);
+    }
   }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View pointerEvents="none" style={styles.backgroundGlow} />
       <ScrollView
-        contentContainerStyle={[styles.content, wide && styles.contentWide]}
+        contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
         <FamilyHeader
@@ -254,16 +216,28 @@ export default function HomeScreen() {
           onProfilePress={() => router.push('/profile')}
         />
 
-        <View style={styles.hero}>
+        <View style={styles.heroCard}>
+          <View pointerEvents="none" style={styles.heroGlow} />
+          <View style={styles.heroTopRow}>
+            <View style={styles.heroSun}>
+              <AppSymbol
+                name={{ ios: 'sun.max.fill', android: 'wb_sunny', web: 'wb_sunny' }}
+                color={colors.warning}
+                size={18}
+              />
+            </View>
+            <Text style={styles.heroDate}>{todayLabel}</Text>
+          </View>
           <Text style={styles.greeting}>
             Szia, {firstName}! <Text style={styles.wave}>👋</Text>
           </Text>
           <Text style={styles.heroSubtitle}>
             Nézd meg, mi történik ma a családi térben.
           </Text>
+          <Text style={styles.heroQuote}>Együtt minden nap otthon. ♡</Text>
         </View>
 
-        <FamilySwitcher onActiveFamilyChange={setActiveFamily} />
+        <FamilySwitcher compact onActiveFamilyChange={setActiveFamily} />
 
         {profileError ? (
           <View style={styles.errorCard}>
@@ -294,7 +268,7 @@ export default function HomeScreen() {
               </View>
               <Pressable
                 accessibilityRole="button"
-                onPress={() => openQuickAction('/invite-member')}
+                onPress={() => openRoute('/invite-member')}
                 style={({ pressed }) => [styles.person, pressed && styles.pressed]}
               >
                 <View style={styles.addPerson}>
@@ -310,201 +284,106 @@ export default function HomeScreen() {
           </View>
         ) : null}
 
-        <SectionHeader title="Mai összefoglaló" action="Részletek" />
-        <View style={styles.summaryGrid}>
-          <SummaryCard
-            compact={!wide}
-            value={0}
-            label="Feladat"
-            meta="ma"
-            color="#3B82F6"
-            icon={{ ios: 'checkmark.circle.fill', android: 'task_alt', web: 'task_alt' }}
-          />
-          <SummaryCard
-            compact={!wide}
-            value={2}
-            label="Esemény"
-            meta="ma"
-            color="#8B5CF6"
-            icon={{ ios: 'calendar', android: 'calendar_month', web: 'calendar_month' }}
-          />
-          <SummaryCard
-            compact={!wide}
-            value={unreadCount}
-            label="Értesítés"
-            meta="új"
-            color="#4ADE80"
-            icon={{ ios: 'bell.fill', android: 'notifications', web: 'notifications' }}
-          />
-          <SummaryCard
-            compact={!wide}
-            value={0}
-            label="Emlék"
-            meta="ma"
-            color="#FB7A28"
-            icon={{ ios: 'heart.fill', android: 'favorite', web: 'favorite' }}
-          />
-        </View>
-
-        <SectionHeader title="Gyors műveletek" />
-        <ScrollView
-          horizontal
-          contentContainerStyle={styles.quickActions}
-          showsHorizontalScrollIndicator={false}
-        >
-          {quickActions.map((action) => (
-            <Pressable
-              accessibilityRole="button"
-              key={action.label}
-              onPress={() => openQuickAction(action.route)}
-              style={({ pressed }) => [styles.quickCard, pressed && styles.pressed]}
-            >
-              <View style={[styles.quickIcon, { backgroundColor: `${action.color}22` }]}>
-                <AppSymbol name={action.icon} color={action.color} size={24} />
-              </View>
-              <Text style={styles.quickLabel}>{action.label}</Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-
-        <View style={[styles.dashboardColumns, !wide && styles.dashboardColumnsStacked]}>
-          <View style={[styles.panel, styles.dashboardPanel]}>
-            <SectionHeader title="Közelgő események" action="Összes" />
-            <EventRow
-              day="25"
-              title="Családi program"
-              meta="Szombat 18:00"
-              color="#8B5CF6"
-            />
-            <View style={styles.divider} />
-            <EventRow day="28" title="Közös vacsora" meta="Kedd 19:00" color="#F55B91" />
-          </View>
-
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.push('/notifications')}
-            style={[styles.panel, styles.dashboardPanel]}
-          >
-            <SectionHeader title="Aktív értesítések" action={`Összes (${unreadCount})`} />
-            {visibleNotifications.length ? (
-              visibleNotifications.map((notification, index) => (
-                <View key={notification.id}>
-                  {index > 0 ? <View style={styles.divider} /> : null}
-                  <NotificationRow notification={notification} />
-                </View>
-              ))
-            ) : (
-              <View style={styles.emptyNotice}>
+        <View style={styles.todayCard}>
+          <View pointerEvents="none" style={styles.todayCardGlow} />
+          <View style={styles.todayCardHeader}>
+            <View style={styles.todayTitleRow}>
+              <View style={styles.todayTitleIcon}>
                 <AppSymbol
-                  name={{
-                    ios: 'bell.slash.fill',
-                    android: 'notifications_off',
-                    web: 'notifications_off',
-                  }}
-                  color={colors.textMuted}
-                  size={24}
-                />
-                <Text style={styles.emptyNoticeText}>Nincs aktív értesítés.</Text>
-              </View>
-            )}
-          </Pressable>
-        </View>
-
-        <View style={[styles.dashboardColumns, !wide && styles.dashboardColumnsStacked]}>
-          <View style={[styles.panel, styles.dashboardPanel]}>
-            <SectionHeader title="Gyógyszer-emlékeztető" action="Beállítások" />
-            <View style={styles.medicineRow}>
-              <View style={styles.medicineIcon}>
-                <AppSymbol
-                  name={{ ios: 'pills.fill', android: 'medication', web: 'medication' }}
-                  color="#F472B6"
-                  size={27}
+                  name={{ ios: 'sun.max.fill', android: 'wb_sunny', web: 'wb_sunny' }}
+                  color={colors.warning}
+                  size={20}
                 />
               </View>
-              <View style={styles.flex}>
-                <Text style={styles.listTitle}>Nincs mai emlékeztető</Text>
-                <Text style={styles.listMeta}>A gyógyszer-modul hamarosan elérhető.</Text>
-              </View>
+              <Text style={styles.todayTitle}>Ma a családban</Text>
             </View>
+            <Text style={styles.todaySubtitle}>Minden fontos egy helyen</Text>
           </View>
-
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.push('/map')}
-            style={[styles.panel, styles.mapPreview]}
-          >
-            <SectionHeader title="Család térképe" action="Megnyitás" />
-            <View style={styles.mapCanvas}>
-              <View style={[styles.mapRoad, styles.mapRoadOne]} />
-              <View style={[styles.mapRoad, styles.mapRoadTwo]} />
-              <View style={[styles.mapMarker, { left: '20%', top: 25 }]}>
-                <Text style={styles.markerText}>{userInitial}</Text>
-              </View>
-              <View
-                style={[
-                  styles.mapMarker,
-                  styles.mapMarkerSecondary,
-                  { right: '19%', bottom: 20 },
-                ]}
-              >
-                <Text style={styles.markerText}>+</Text>
-              </View>
-              <View style={styles.homeMarker}>
-                <AppSymbol
-                  name={{ ios: 'house.fill', android: 'home', web: 'home' }}
-                  color="#FFFFFF"
-                  size={19}
-                />
-              </View>
-            </View>
-          </Pressable>
+          <View style={styles.todayStats}>
+            <TodayStat
+              value={2}
+              label="esemény"
+              color={colors.primary}
+              icon={{ ios: 'calendar', android: 'calendar_month', web: 'calendar_month' }}
+            />
+            <TodayStat
+              value={unreadCount}
+              label="értesítés"
+              color={colors.purple}
+              icon={{ ios: 'bell.fill', android: 'notifications', web: 'notifications' }}
+            />
+            <TodayStat
+              value={0}
+              label="feladat"
+              color={colors.teal}
+              icon={{ ios: 'checkmark.circle.fill', android: 'task_alt', web: 'task_alt' }}
+            />
+          </View>
         </View>
 
-        <View style={styles.panel}>
-          <SectionHeader title="Friss emlékek" action="Összes" />
-          <ScrollView
-            horizontal
-            contentContainerStyle={styles.memoriesRow}
-            showsHorizontalScrollIndicator={false}
-          >
-            <MemoryPreview
-              color="#38BDF8"
-              icon={{ ios: 'mountain.2.fill', android: 'landscape', web: 'landscape' }}
-              title="Kirándulás a hegyekben"
-              meta="Hamarosan"
+        <View>
+          <SectionHeader
+            title="Következő esemény"
+            action="Naptár"
+            onPress={() => openRoute('/calendar')}
+          />
+          <NextEventCard
+            color={colors.primary}
+            title="Családi program"
+            meta="Ma · 09:30 · Közös helyszín"
+            onPress={() => openRoute('/calendar')}
+          />
+        </View>
+
+        <View>
+          <SectionHeader title="Gyors hozzáférés" />
+          <View style={styles.quickAccessGrid}>
+            <QuickAccessCard
+              color={colors.purple}
+              icon={{ ios: 'photo.on.rectangle.angled', android: 'photo_library', web: 'photo_library' }}
+              subtitle="Képek és videók"
+              title="Emlékek"
+              onPress={() => openRoute('/memories')}
             />
-            <MemoryPreview
-              color="#F59E0B"
-              icon={{ ios: 'sun.max.fill', android: 'sunny', web: 'sunny' }}
-              title="Nyári családi pillanatok"
-              meta="Hamarosan"
+            <QuickAccessCard
+              color={colors.teal}
+              icon={{ ios: 'lock.shield.fill', android: 'shield_lock', web: 'shield_lock' }}
+              subtitle="Biztonságos adatok"
+              title="Páncélterem"
+              onPress={() => openRoute('/vault')}
             />
-            <MemoryPreview
-              color="#F55B91"
-              icon={{ ios: 'birthday.cake.fill', android: 'cake', web: 'cake' }}
-              title="Születésnapi emlékek"
-              meta="Hamarosan"
-            />
-          </ScrollView>
+          </View>
         </View>
       </ScrollView>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Új esemény létrehozása"
+        onPress={() => openRoute('/create-event')}
+        style={({ pressed }) => [styles.floatingAddButton, pressed && styles.pressed]}
+      >
+        <AppSymbol
+          name={{ ios: 'plus', android: 'add', web: 'add' }}
+          color={colors.white}
+          size={28}
+        />
+      </Pressable>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#071326' },
+  safeArea: { flex: 1, backgroundColor: colors.background },
   backgroundGlow: {
     position: 'absolute',
-    top: -120,
-    right: -100,
-    width: 330,
-    height: 330,
-    borderRadius: 165,
-    backgroundColor: '#0B4A8F',
-    opacity: 0.2,
+    top: -132,
+    right: -112,
+    width: 340,
+    height: 340,
+    borderRadius: 170,
+    backgroundColor: '#DDEBFF',
+    opacity: 0.9,
   },
-  content: { paddingHorizontal: spacing.lg, paddingBottom: 32, gap: spacing.lg },
+  content: { paddingHorizontal: spacing.lg, paddingBottom: 36, gap: spacing.lg },
   contentWide: {
     width: '100%',
     maxWidth: 1120,
@@ -512,14 +391,61 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   hero: { gap: spacing.xs, paddingVertical: spacing.xs },
+  heroCard: {
+    minHeight: 172,
+    padding: spacing.xl,
+    justifyContent: 'center',
+    gap: spacing.sm,
+    overflow: 'hidden',
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: '#D7E5FB',
+    backgroundColor: '#EAF3FF',
+    ...shadows.card,
+  },
+  heroGlow: {
+    position: 'absolute',
+    top: -74,
+    right: -36,
+    width: 190,
+    height: 190,
+    borderRadius: 95,
+    backgroundColor: '#FFFFFF',
+    opacity: 0.62,
+  },
+  heroTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  heroSun: {
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 15,
+    backgroundColor: '#FFF5D9',
+  },
+  heroDate: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'capitalize',
+  },
   greeting: {
     color: colors.textPrimary,
-    fontSize: 31,
+    fontSize: 28,
     fontWeight: '900',
     letterSpacing: -0.8,
   },
   wave: { fontSize: 28 },
   heroSubtitle: { color: colors.textMuted, fontSize: 14, lineHeight: 20 },
+  heroQuote: {
+    marginTop: spacing.xs,
+    color: colors.primaryDark,
+    fontSize: 11,
+    fontWeight: '800',
+  },
   sectionHeader: {
     minHeight: 28,
     flexDirection: 'row',
@@ -533,15 +459,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '900',
   },
-  sectionAction: { color: '#9AAAC2', fontSize: 11, fontWeight: '600' },
+  sectionAction: { color: colors.primary, fontSize: 11, fontWeight: '800' },
   errorCard: {
     padding: spacing.md,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#7F2439',
-    backgroundColor: '#3B1622',
+    borderColor: '#F9C5CC',
+    backgroundColor: '#FFF1F3',
   },
-  errorText: { color: '#FDA4AF', fontSize: 12 },
+  errorText: { color: '#C64052', fontSize: 12 },
   peopleRow: { gap: spacing.lg, paddingTop: spacing.md, paddingRight: spacing.lg },
   person: { width: 66, alignItems: 'center', gap: spacing.sm },
   avatarRing: {
@@ -550,7 +476,9 @@ const styles = StyleSheet.create({
     padding: 3,
     borderRadius: 31,
     borderWidth: 2,
-    borderColor: '#38BDF8',
+    borderColor: colors.primaryLight,
+    backgroundColor: colors.white,
+    ...shadows.card,
   },
   avatar: {
     flex: 1,
@@ -568,7 +496,7 @@ const styles = StyleSheet.create({
     height: 14,
     borderRadius: 7,
     borderWidth: 3,
-    borderColor: '#071326',
+    borderColor: colors.white,
     backgroundColor: colors.success,
   },
   personName: { color: colors.textSecondary, fontSize: 11, fontWeight: '700' },
@@ -580,8 +508,121 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 31,
     borderWidth: 1,
-    borderColor: '#315079',
-    backgroundColor: '#152945',
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.primarySoft,
+    ...shadows.card,
+  },
+  todayCard: {
+    padding: spacing.lg,
+    gap: spacing.lg,
+    overflow: 'hidden',
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: '#D7E5FB',
+    backgroundColor: colors.surface,
+    ...shadows.card,
+  },
+  todayCardGlow: {
+    position: 'absolute',
+    top: -55,
+    right: -45,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: '#FFF5D9',
+    opacity: 0.45,
+  },
+  todayCardHeader: { gap: spacing.xs },
+  todayTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  todayTitleIcon: {
+    width: 34,
+    height: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 17,
+    backgroundColor: '#FFF5D9',
+  },
+  todayTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: '900' },
+  todaySubtitle: { color: colors.textMuted, fontSize: 11 },
+  todayStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  todayStat: { flex: 1, alignItems: 'center', gap: spacing.xs },
+  todayStatIcon: {
+    width: 38,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 19,
+  },
+  todayStatValue: { color: colors.textPrimary, fontSize: 20, fontWeight: '900' },
+  todayStatLabel: { color: colors.textMuted, fontSize: 10, fontWeight: '700' },
+  nextEventCard: {
+    minHeight: 76,
+    padding: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    ...shadows.card,
+  },
+  nextEventIcon: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.md,
+  },
+  todayBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.round,
+    backgroundColor: colors.primarySoft,
+  },
+  todayBadgeText: { color: colors.primary, fontSize: 9, fontWeight: '900' },
+  quickAccessGrid: { flexDirection: 'row', gap: spacing.md },
+  quickAccessCard: {
+    flex: 1,
+    minHeight: 92,
+    padding: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    ...shadows.card,
+  },
+  quickAccessIcon: {
+    width: 42,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.md,
+  },
+  quickAccessTitle: { color: colors.textPrimary, fontSize: 12, fontWeight: '900' },
+  quickAccessSubtitle: { marginTop: 3, color: colors.textMuted, fontSize: 9 },
+  floatingAddButton: {
+    position: 'absolute',
+    right: spacing.lg,
+    bottom: spacing.xl,
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 28,
+    backgroundColor: colors.primary,
+    ...shadows.floating,
   },
   summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   summaryCard: {
@@ -594,8 +635,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: '#294469',
-    backgroundColor: '#112541',
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    ...shadows.card,
   },
   summaryCardCompact: { minWidth: '46%', minHeight: 96, padding: spacing.md },
   summaryIcon: {
@@ -618,8 +660,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: '#294469',
-    backgroundColor: '#112541',
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    ...shadows.card,
   },
   quickIcon: {
     width: 43,
@@ -643,8 +686,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: '#294469',
-    backgroundColor: '#10233E',
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    ...shadows.card,
   },
   listRow: { minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   dateBadge: {
@@ -654,13 +698,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: radius.md,
     borderWidth: 1,
-    backgroundColor: '#142843',
+    backgroundColor: colors.primarySoft,
   },
   dateMonth: { fontSize: 9, fontWeight: '900' },
   dateDay: { color: colors.textPrimary, fontSize: 18, fontWeight: '900' },
   listTitle: { color: colors.textSecondary, fontSize: 12, fontWeight: '800' },
   listMeta: { marginTop: 3, color: colors.textMuted, fontSize: 10, lineHeight: 15 },
-  divider: { height: 1, backgroundColor: '#203A5C' },
+  divider: { height: 1, backgroundColor: colors.border },
   flex: { flex: 1 },
   miniAvatarGroup: { flexDirection: 'row', paddingRight: 4 },
   miniAvatar: {
@@ -670,10 +714,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 14,
     borderWidth: 2,
-    borderColor: '#10233E',
+    borderColor: colors.white,
     backgroundColor: '#D6B38D',
   },
-  miniAvatarOverlap: { marginLeft: -8, backgroundColor: '#253C5D' },
+  miniAvatarOverlap: { marginLeft: -8, backgroundColor: colors.primaryLight },
   miniAvatarText: { color: '#FFFFFF', fontSize: 8, fontWeight: '900' },
   noticeIcon: {
     width: 39,
@@ -681,9 +725,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.md,
-    backgroundColor: '#1A304B',
+    backgroundColor: colors.primarySoft,
   },
-  noticeIconUnread: { backgroundColor: '#0C4A45' },
+  noticeIconUnread: { backgroundColor: '#DCF8F2' },
   unreadDot: {
     width: 7,
     height: 7,
@@ -709,20 +753,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 29,
-    backgroundColor: '#4A1F48',
+    backgroundColor: '#FDEBF2',
   },
   mapPreview: { flex: 1, minHeight: 190 },
   mapCanvas: {
     height: 125,
     overflow: 'hidden',
     borderRadius: radius.lg,
-    backgroundColor: '#15304B',
+    borderWidth: 1,
+    borderColor: '#D2E1F7',
+    backgroundColor: '#EAF4FF',
   },
   mapRoad: {
     position: 'absolute',
     height: 5,
     borderRadius: 3,
-    backgroundColor: '#315A75',
+    backgroundColor: '#B3CCE9',
     opacity: 0.8,
   },
   mapRoadOne: { top: 56, left: -25, width: '125%', transform: [{ rotate: '-12deg' }] },
@@ -735,10 +781,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 19,
     borderWidth: 3,
-    borderColor: '#60A5FA',
-    backgroundColor: '#D6B38D',
+    borderColor: colors.primary,
+    backgroundColor: '#F2C8A7',
   },
-  mapMarkerSecondary: { borderColor: '#A78BFA', backgroundColor: '#263D61' },
+  mapMarkerSecondary: { borderColor: colors.purple, backgroundColor: '#DCCFFF' },
   markerText: { color: '#FFFFFF', fontSize: 11, fontWeight: '900' },
   homeMarker: {
     position: 'absolute',
@@ -749,7 +795,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 19,
-    backgroundColor: '#3B6DF6',
+    backgroundColor: colors.primary,
+    ...shadows.floating,
   },
   memoriesRow: { gap: spacing.md, paddingTop: spacing.xs, paddingRight: spacing.lg },
   memoryCard: {
@@ -769,7 +816,7 @@ const styles = StyleSheet.create({
     height: 110,
     borderRadius: 55,
     backgroundColor: '#FFFFFF',
-    opacity: 0.05,
+    opacity: 0.52,
   },
   memoryTitle: {
     color: colors.textPrimary,

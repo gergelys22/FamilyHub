@@ -1,6 +1,6 @@
 // app/(tabs)/memories.tsx
 import { FamilyHeader } from '@/components/family-header';
-import { colors } from '@/constants/theme';
+import { colors, radius, shadows, spacing } from '@/constants/theme';
 import { useMemories } from '@/hooks/use-memories';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useAuth } from '@/providers/auth-provider';
@@ -40,8 +40,14 @@ function MemoryTabs({
         const isActive = key === active;
         const content = (
           <>
-            <Ionicons name={icon} size={20} color={isActive ? '#fff' : colors.textSecondary} />
-            <Text style={[styles.tabText, isActive && styles.tabTextActive]}>{label}</Text>
+            <Ionicons
+              name={icon}
+              size={20}
+              color={isActive ? '#fff' : colors.textSecondary}
+            />
+            <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
+              {label}
+            </Text>
           </>
         );
 
@@ -93,7 +99,9 @@ const DEFAULT_TAG_STYLE = { icon: 'pricetag-outline' as IconName, color: '#9AA7C
 function Tag({ label }: { label: string }) {
   const { icon, color } = TAG_STYLES[label] ?? DEFAULT_TAG_STYLE;
   return (
-    <View style={[styles.tag, { borderColor: color + '55', backgroundColor: color + '1F' }]}>
+    <View
+      style={[styles.tag, { borderColor: color + '55', backgroundColor: color + '1F' }]}
+    >
       <Ionicons name={icon} size={14} color={color} />
       <Text style={[styles.tagText, { color }]}>{label}</Text>
     </View>
@@ -252,7 +260,10 @@ export default function MemoriesScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View pointerEvents="none" style={styles.backgroundGlow} />
 
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
           <FamilyHeader
             userInitial={userInitial}
             unreadNotificationCount={unreadCount}
@@ -260,7 +271,9 @@ export default function MemoriesScreen() {
             onProfilePress={() => router.push('/profile')}
           />
           <Text style={styles.title}>Emlékek</Text>
-          <Text style={styles.subtitle}>Közös pillanataink, amelyek összekötnek minket.</Text>
+          <Text style={styles.subtitle}>
+            Közös pillanataink, amelyek összekötnek minket.
+          </Text>
 
           <MemoryScreenOptions />
         </ScrollView>
@@ -274,104 +287,149 @@ export default function MemoriesScreen() {
 /* ------------------------------------------------------------------ */
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
-  safeArea: { flex: 1 },
+  root: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  safeArea: {
+    flex: 1,
+  },
   content: {
     flexGrow: 1,
-    alignItems: 'stretch',
-    paddingHorizontal: 20,
-    paddingBottom: 32,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xxl,
   },
   backgroundGlow: {
     position: 'absolute',
-    top: 88,
-    right: -130,
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: '#0B4A8F',
-    opacity: 0.2,
+    top: 72,
+    right: -120,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: '#DCEAFF',
+    opacity: 0.85,
   },
   title: {
-    fontSize: 32,
-    fontWeight: '900',
+    marginTop: spacing.sm,
     color: colors.textPrimary,
-    letterSpacing: -0.7,
-    marginTop: 8,
+    fontSize: 30,
+    fontWeight: '900',
+    letterSpacing: -0.8,
   },
   subtitle: {
-    fontSize: 16,
-    fontWeight: '500',
+    marginTop: spacing.xs,
     color: colors.textSecondary,
-    marginTop: 8,
+    fontSize: 14,
+    lineHeight: 20,
   },
-
-  options: { width: '100%', marginTop: 20, gap: 20 },
-
-  /* tabs */
+  options: {
+    width: '100%',
+    marginTop: spacing.xl,
+    gap: spacing.lg,
+  },
   tabs: {
     flexDirection: 'row',
     padding: 4,
-    borderRadius: 28,
-    backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: colors.border,
+    borderRadius: radius.round,
+    backgroundColor: colors.surfaceElevated,
   },
-  tabWrap: { flex: 1 },
+  tabWrap: {
+    flex: 1,
+  },
   tab: {
+    minHeight: 42,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: 24,
+    gap: 6,
+    borderRadius: radius.round,
   },
-  tabText: { fontSize: 15, fontWeight: '600', color: colors.textSecondary },
-  tabTextActive: { color: '#fff' },
-
-  /* timeline */
+  tabText: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  tabTextActive: {
+    color: colors.white,
+  },
   sectionHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
   },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: colors.textPrimary },
-  filter: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-
-  row: { flexDirection: 'row', gap: 10, marginBottom: 12 },
-  dateCol: { width: 44, alignItems: 'center' },
+  sectionTitle: {
+    color: colors.textPrimary,
+    fontSize: 19,
+    fontWeight: '900',
+  },
+  filter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 7,
+    borderRadius: radius.round,
+    backgroundColor: colors.surfaceElevated,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  dateCol: {
+    width: 44,
+    alignItems: 'center',
+  },
   dot: {
     width: 12,
     height: 12,
-    borderRadius: 6,
-    backgroundColor: '#3B82F6',
-    marginBottom: 14,
+    marginBottom: spacing.md,
+    borderWidth: 3,
+    borderColor: colors.white,
+    borderRadius: radius.round,
+    backgroundColor: colors.primary,
+    ...shadows.card,
   },
-  month: { fontSize: 12, color: colors.textSecondary },
-  day: { fontSize: 20, fontWeight: '800', color: colors.textPrimary },
+  month: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  day: {
+    color: colors.textPrimary,
+    fontSize: 21,
+    fontWeight: '900',
+  },
   line: {
     flex: 1,
-    width: 1,
-    marginTop: 8,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    width: 2,
+    marginTop: spacing.sm,
+    borderRadius: radius.round,
+    backgroundColor: colors.border,
   },
-
   card: {
     flex: 1,
     flexDirection: 'row',
-    gap: 12,
-    padding: 12,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    gap: spacing.md,
+    padding: spacing.sm,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
+    ...shadows.card,
   },
-  photo: { width: 120, height: 140, borderRadius: 14 },
+  photo: {
+    width: 116,
+    height: 142,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceMuted,
+  },
   photoPlaceholder: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
   },
   photoBadge: {
     position: 'absolute',
@@ -379,49 +437,86 @@ const styles = StyleSheet.create({
     bottom: 6,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderRadius: radius.round,
+    backgroundColor: 'rgba(23, 43, 77, 0.76)',
   },
-  photoBadgeText: { color: '#fff', fontSize: 12, fontWeight: '600' },
-
-  cardBody: { flex: 1, gap: 4 },
-  titleRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 4 },
-  cardTitle: { flex: 1, fontSize: 16, fontWeight: '700', color: colors.textPrimary },
-  meta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  metaText: { fontSize: 13, color: colors.textSecondary },
-
-  avatars: { flexDirection: 'row', marginTop: 6 },
+  photoBadgeText: {
+    color: colors.white,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  cardBody: {
+    flex: 1,
+    gap: 5,
+    paddingVertical: 2,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.xs,
+  },
+  cardTitle: {
+    flex: 1,
+    color: colors.textPrimary,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  meta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  metaText: {
+    color: colors.textSecondary,
+    fontSize: 12,
+  },
+  avatars: {
+    flexDirection: 'row',
+    marginTop: 4,
+  },
   avatar: {
     width: 28,
     height: 28,
-    borderRadius: 14,
     borderWidth: 2,
-    borderColor: '#0B1B3A',
+    borderColor: colors.white,
+    borderRadius: radius.round,
+    backgroundColor: colors.surfaceMuted,
   },
-  avatarOverlap: { marginLeft: -8 },
+  avatarOverlap: {
+    marginLeft: -8,
+  },
   avatarMore: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: colors.primarySoft,
   },
-
-  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
+  tagRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 4,
+  },
   tag: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 14,
+    borderRadius: radius.round,
     borderWidth: 1,
   },
-  tagText: { fontSize: 12, fontWeight: '600' },
-
+  tagText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
   loadMore: {
+    minHeight: 44,
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    paddingVertical: 8,
+    marginTop: spacing.xs,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceElevated,
   },
 });

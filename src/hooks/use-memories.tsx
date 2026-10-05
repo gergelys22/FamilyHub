@@ -3,10 +3,33 @@ import { supabase } from '@/lib/supabase'; // igazítsd a projektedhez
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 const PAGE_SIZE = 10;
-const MONTHS = ['JAN', 'FEB', 'MÁR', 'ÁPR', 'MÁJ', 'JÚN', 'JÚL', 'AUG', 'SZE', 'OKT', 'NOV', 'DEC'];
+const MONTHS = [
+  'JAN',
+  'FEB',
+  'MÁR',
+  'ÁPR',
+  'MÁJ',
+  'JÚN',
+  'JÚL',
+  'AUG',
+  'SZE',
+  'OKT',
+  'NOV',
+  'DEC',
+];
 const MONTH_NAMES = [
-  'Január', 'Február', 'Március', 'Április', 'Május', 'Június',
-  'Július', 'Augusztus', 'Szeptember', 'Október', 'November', 'December',
+  'Január',
+  'Február',
+  'Március',
+  'Április',
+  'Május',
+  'Június',
+  'Július',
+  'Augusztus',
+  'Szeptember',
+  'Október',
+  'November',
+  'December',
 ];
 
 type MemoryRow = {
@@ -89,12 +112,14 @@ export function useMemories() {
     const from = offsetRef.current;
     const { data, error } = await supabase
       .from('memories')
-      .select(`
+      .select(
+        `
         id, title, memory_date, location_name,
         memory_media ( storage_path, sort_order ),
         memory_tags ( label ),
         memory_people ( user_id, profiles ( avatar_url ) )
-      `)
+      `,
+      )
       .order('memory_date', { ascending: false })
       .order('created_at', { ascending: false })
       .range(from, from + PAGE_SIZE - 1)
