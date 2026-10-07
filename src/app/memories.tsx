@@ -1,30 +1,24 @@
-// app/(tabs)/memories.tsx
-import { FamilyHeader } from '@/components/family-header';
 import { colors, radius, shadows, spacing } from '@/constants/theme';
 import { useMemories } from '@/hooks/use-memories';
-import { useNotifications } from '@/hooks/use-notifications';
-import { useAuth } from '@/providers/auth-provider';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
-type MemoryView = 'timeline' | 'familyTree' | 'albums';
+type MemoryView = 'all' | 'photos' | 'videos' | 'events';
 type Memory = ReturnType<typeof useMemories>['memories'][number];
-
-const MAX_AVATARS = 4;
 
 /* ------------------------------------------------------------------ */
 /* Tabváltó                                                            */
 /* ------------------------------------------------------------------ */
 
 const TABS: { key: MemoryView; label: string; icon: IconName }[] = [
-  { key: 'timeline', label: 'Idővonal', icon: 'time-outline' },
-  { key: 'familyTree', label: 'Családfa', icon: 'git-network-outline' },
-  { key: 'albums', label: 'Albumok', icon: 'folder-open-outline' },
+  { key: 'all', label: 'Összes', icon: 'sparkles-outline' },
+  { key: 'photos', label: 'Fotók', icon: 'image-outline' },
+  { key: 'videos', label: 'Videók', icon: 'videocam-outline' },
+  { key: 'events', label: 'Események', icon: 'calendar-outline' },
 ];
 
 function MemoryTabs({
@@ -82,104 +76,38 @@ function MemoryTabs({
 /* Idővonal                                                            */
 /* ------------------------------------------------------------------ */
 
-// Az adatbázisban csak a címke szövege van, a megjelenés a kliensben dől el.
-const TAG_STYLES: Record<string, { icon: IconName; color: string }> = {
-  Nyár: { icon: 'sunny-outline', color: '#F5B942' },
-  Utazás: { icon: 'briefcase-outline', color: '#7C8CFF' },
-  Balaton: { icon: 'water-outline', color: '#4FC3F7' },
-  Születésnap: { icon: 'gift-outline', color: '#FF6B81' },
-  Család: { icon: 'heart', color: '#FF4D6D' },
-  Otthon: { icon: 'home-outline', color: '#B0B8C9' },
-  Kirándulás: { icon: 'trail-sign-outline', color: '#B0B8C9' },
-  Természet: { icon: 'leaf-outline', color: '#4ADE80' },
-  Hétvége: { icon: 'calendar-outline', color: '#FB923C' },
-};
-const DEFAULT_TAG_STYLE = { icon: 'pricetag-outline' as IconName, color: '#9AA7C0' };
-
-function Tag({ label }: { label: string }) {
-  const { icon, color } = TAG_STYLES[label] ?? DEFAULT_TAG_STYLE;
+function MemoryCard({ item, featured = false }: { item: Memory; featured?: boolean }) {
   return (
-    <View
-      style={[styles.tag, { borderColor: color + '55', backgroundColor: color + '1F' }]}
-    >
-      <Ionicons name={icon} size={14} color={color} />
-      <Text style={[styles.tagText, { color }]}>{label}</Text>
-    </View>
-  );
-}
-
-function MemoryCard({ item }: { item: Memory }) {
-  const visibleAvatars = item.avatars.slice(0, MAX_AVATARS);
-  const extraPeople = item.avatars.length - visibleAvatars.length;
-
-  return (
-    <View style={styles.row}>
-      <View style={styles.dateCol}>
-        <View style={styles.dot} />
-        <Text style={styles.month}>{item.month}</Text>
-        <Text style={styles.day}>{item.day}</Text>
-        <View style={styles.line} />
-      </View>
-
-      <View style={styles.card}>
-        <View>
-          {item.photo ? (
-            <Image source={{ uri: item.photo }} style={styles.photo} />
-          ) : (
-            <View style={[styles.photo, styles.photoPlaceholder]}>
-              <Ionicons name="image-outline" size={32} color={colors.textSecondary} />
-            </View>
-          )}
-          {item.extraPhotos > 0 && (
-            <View style={styles.photoBadge}>
-              <Text style={styles.photoBadgeText}>+{item.extraPhotos}</Text>
-            </View>
-          )}
-        </View>
-
-        <View style={styles.cardBody}>
-          <View style={styles.titleRow}>
-            <Text style={styles.cardTitle} numberOfLines={2}>
-              {item.title}
-            </Text>
-            <Ionicons name="ellipsis-vertical" size={18} color={colors.textSecondary} />
+    <View style={[styles.memoryCard, featured && styles.featuredCard]}>
+      <View style={styles.memoryImageWrap}>
+        {item.photo ? (
+          <Image
+            source={{ uri: item.photo }}
+            style={[styles.memoryImage, featured && styles.featuredCardImage]}
+          />
+        ) : (
+          <View
+            style={[
+              styles.memoryImage,
+              featured && styles.featuredCardImage,
+              styles.photoPlaceholder,
+            ]}
+          >
+            <Ionicons name="image-outline" size={32} color={colors.textSecondary} />
           </View>
-
-          {!!item.location && (
-            <View style={styles.meta}>
-              <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
-              <Text style={styles.metaText} numberOfLines={1}>
-                {item.location}
-              </Text>
-            </View>
-          )}
-          <Text style={styles.metaText}>{item.when}</Text>
-
-          {visibleAvatars.length > 0 && (
-            <View style={styles.avatars}>
-              {visibleAvatars.map((uri, i) => (
-                <Image
-                  key={`${uri}-${i}`}
-                  source={{ uri }}
-                  style={[styles.avatar, i > 0 && styles.avatarOverlap]}
-                />
-              ))}
-              {extraPeople > 0 && (
-                <View style={[styles.avatar, styles.avatarMore, styles.avatarOverlap]}>
-                  <Text style={styles.metaText}>+{extraPeople}</Text>
-                </View>
-              )}
-            </View>
-          )}
-
-          {item.tags.length > 0 && (
-            <View style={styles.tagRow}>
-              {item.tags.map((label) => (
-                <Tag key={label} label={label} />
-              ))}
-            </View>
-          )}
+        )}
+        {item.extraPhotos > 0 && (
+          <View style={styles.photoBadge}>
+            <Text style={styles.photoBadgeText}>+{item.extraPhotos}</Text>
+          </View>
+        )}
+      </View>
+      <View style={styles.memoryInfo}>
+        <View style={styles.titleRow}>
+          <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
+          <Text style={styles.memoryHeart}>♥</Text>
         </View>
+        <Text style={styles.metaText}>{item.when}</Text>
       </View>
     </View>
   );
@@ -190,17 +118,10 @@ function TimelineView() {
 
   return (
     <View>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Idővonal</Text>
-        <Pressable style={styles.filter}>
-          <Text style={styles.metaText}>Szűrők</Text>
-          <Ionicons name="filter-outline" size={18} color={colors.textSecondary} />
-        </Pressable>
+      {memories.length > 0 && <MemoryCard item={memories[0]} featured />}
+      <View style={styles.memoryGrid}>
+        {memories.slice(1).map((m) => <MemoryCard key={m.id} item={m} />)}
       </View>
-
-      {memories.map((m) => (
-        <MemoryCard key={m.id} item={m} />
-      ))}
 
       {!loading && !error && memories.length === 0 && (
         <Text style={styles.metaText}>Még nincs emlék. Add hozzá az elsőt!</Text>
@@ -223,22 +144,24 @@ function TimelineView() {
 /* Egyelőre üres nézetek                                               */
 /* ------------------------------------------------------------------ */
 
-const FamilyTree = () => <Text style={styles.metaText}>Családfa</Text>;
-const Albums = () => <Text style={styles.metaText}>Albumok</Text>;
+const EmptyMemoryView = ({ label }: { label: string }) => (
+  <Text style={styles.metaText}>{label}</Text>
+);
 
 /* ------------------------------------------------------------------ */
 /* Váltó + tartalom                                                    */
 /* ------------------------------------------------------------------ */
 
 export function MemoryScreenOptions() {
-  const [active, setActive] = useState<MemoryView>('timeline');
+  const [active, setActive] = useState<MemoryView>('all');
 
   return (
     <View style={styles.options}>
       <MemoryTabs active={active} onChange={setActive} />
-      {active === 'timeline' && <TimelineView />}
-      {active === 'familyTree' && <FamilyTree />}
-      {active === 'albums' && <Albums />}
+      {active === 'all' && <TimelineView />}
+      {active === 'photos' && <TimelineView />}
+      {active === 'videos' && <EmptyMemoryView label="Még nincs videó." />}
+      {active === 'events' && <TimelineView />}
     </View>
   );
 }
@@ -248,15 +171,8 @@ export function MemoryScreenOptions() {
 /* ------------------------------------------------------------------ */
 
 export default function MemoriesScreen() {
-  const router = useRouter();
-  const { profile } = useAuth();
-  const { unreadCount } = useNotifications();
-
-  const displayName = profile?.display_name?.trim() || 'Felhasználó';
-  const userInitial = displayName.charAt(0).toLocaleUpperCase('hu-HU');
-
   return (
-    <LinearGradient colors={['#0A1F44', '#06122B']} style={styles.root}>
+    <View style={styles.root}>
       <SafeAreaView style={styles.safeArea}>
         <View pointerEvents="none" style={styles.backgroundGlow} />
 
@@ -264,21 +180,24 @@ export default function MemoriesScreen() {
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
-          <FamilyHeader
-            userInitial={userInitial}
-            unreadNotificationCount={unreadCount}
-            onNotificationsPress={() => router.push('/notifications')}
-            onProfilePress={() => router.push('/profile')}
-          />
-          <Text style={styles.title}>Emlékek</Text>
-          <Text style={styles.subtitle}>
-            Közös pillanataink, amelyek összekötnek minket.
-          </Text>
+          <View style={styles.pageHeader}>
+            <Text style={styles.title}>Emlékek</Text>
+            <Pressable style={styles.moreButton}>
+              <Ionicons name="ellipsis-horizontal" size={22} color={colors.primary} />
+            </Pressable>
+          </View>
 
           <MemoryScreenOptions />
         </ScrollView>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Új emlék hozzáadása"
+          style={({ pressed }) => [styles.floatingAdd, pressed && styles.pressed]}
+        >
+          <Ionicons name="add" size={31} color={colors.white} />
+        </Pressable>
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -294,11 +213,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
-  content: {
-    flexGrow: 1,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xxl,
-  },
+  content: { flexGrow: 1, paddingHorizontal: spacing.lg, paddingBottom: 100 },
   backgroundGlow: {
     position: 'absolute',
     top: 72,
@@ -306,40 +221,45 @@ const styles = StyleSheet.create({
     width: 260,
     height: 260,
     borderRadius: 130,
-    backgroundColor: '#DCEAFF',
-    opacity: 0.85,
+    backgroundColor: '#E7F0FF',
+    opacity: 0.75,
+  },
+  pageHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: spacing.sm,
+  },
+  moreButton: {
+    width: 42,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.round,
+    backgroundColor: '#F0F5FF',
   },
   title: {
-    marginTop: spacing.sm,
     color: colors.textPrimary,
     fontSize: 30,
     fontWeight: '900',
     letterSpacing: -0.8,
   },
-  subtitle: {
-    marginTop: spacing.xs,
-    color: colors.textSecondary,
-    fontSize: 14,
-    lineHeight: 20,
-  },
   options: {
     width: '100%',
-    marginTop: spacing.xl,
-    gap: spacing.lg,
+    marginTop: spacing.md,
+    gap: spacing.md,
   },
   tabs: {
     flexDirection: 'row',
     padding: 4,
-    borderWidth: 1,
-    borderColor: colors.border,
     borderRadius: radius.round,
-    backgroundColor: colors.surfaceElevated,
+    backgroundColor: '#EEF4FC',
   },
   tabWrap: {
     flex: 1,
   },
   tab: {
-    minHeight: 42,
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -354,78 +274,42 @@ const styles = StyleSheet.create({
   tabTextActive: {
     color: colors.white,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.sm,
+  memoryCard: {
+    width: '48.5%',
+    marginBottom: spacing.lg,
   },
-  sectionTitle: {
-    color: colors.textPrimary,
-    fontSize: 19,
-    fontWeight: '900',
-  },
-  filter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 7,
-    borderRadius: radius.round,
-    backgroundColor: colors.surfaceElevated,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: spacing.sm,
+  featuredCard: {
+    width: '100%',
     marginBottom: spacing.md,
   },
-  dateCol: {
-    width: 44,
-    alignItems: 'center',
-  },
-  dot: {
-    width: 12,
-    height: 12,
-    marginBottom: spacing.md,
-    borderWidth: 3,
-    borderColor: colors.white,
-    borderRadius: radius.round,
-    backgroundColor: colors.primary,
-    ...shadows.card,
-  },
-  month: {
-    color: colors.textSecondary,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  day: {
-    color: colors.textPrimary,
-    fontSize: 21,
-    fontWeight: '900',
-  },
-  line: {
-    flex: 1,
-    width: 2,
-    marginTop: spacing.sm,
-    borderRadius: radius.round,
-    backgroundColor: colors.border,
-  },
-  card: {
-    flex: 1,
-    flexDirection: 'row',
-    gap: spacing.md,
-    padding: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
+  memoryImageWrap: {
+    overflow: 'hidden',
     borderRadius: radius.lg,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceMuted,
     ...shadows.card,
   },
-  photo: {
-    width: 116,
-    height: 142,
-    borderRadius: radius.md,
+  memoryImage: {
+    width: '100%',
+    height: 148,
     backgroundColor: colors.surfaceMuted,
+  },
+  featuredCardImage: {
+    height: 226,
+  },
+  memoryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  memoryInfo: {
+    paddingHorizontal: spacing.sm,
+    paddingTop: spacing.sm,
+    gap: 3,
+  },
+  memoryHeart: {
+    color: colors.danger,
+    fontSize: 18,
+    fontWeight: '900',
   },
   photoPlaceholder: {
     alignItems: 'center',
@@ -444,11 +328,6 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 11,
     fontWeight: '800',
-  },
-  cardBody: {
-    flex: 1,
-    gap: 5,
-    paddingVertical: 2,
   },
   titleRow: {
     flexDirection: 'row',
@@ -519,4 +398,17 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     backgroundColor: colors.surfaceElevated,
   },
+  floatingAdd: {
+    position: 'absolute',
+    right: spacing.lg,
+    bottom: spacing.xl,
+    width: 58,
+    height: 58,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 29,
+    backgroundColor: colors.primary,
+    ...shadows.floating,
+  },
+  pressed: { opacity: 0.75, transform: [{ scale: 0.96 }] },
 });

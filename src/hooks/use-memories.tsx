@@ -38,8 +38,6 @@ type MemoryRow = {
   memory_date: string; // 'YYYY-MM-DD'
   location_name: string | null;
   memory_media: { storage_path: string; sort_order: number }[];
-  memory_tags: { label: string }[];
-  memory_people: { user_id: string; profiles: { avatar_url: string | null } | null }[];
 };
 
 export type Memory = {
@@ -86,10 +84,8 @@ function toMemory(row: MemoryRow): Memory {
     when: formatWhen(row.memory_date),
     photo: media[0] ? photoUrl(media[0].storage_path) : null,
     extraPhotos: Math.max(media.length - 1, 0),
-    avatars: row.memory_people
-      .map((p) => p.profiles?.avatar_url)
-      .filter((u): u is string => !!u),
-    tags: row.memory_tags.map((t) => t.label),
+    avatars: [],
+    tags: [],
   };
 }
 
@@ -115,9 +111,7 @@ export function useMemories() {
       .select(
         `
         id, title, memory_date, location_name,
-        memory_media ( storage_path, sort_order ),
-        memory_tags ( label ),
-        memory_people ( user_id, profiles ( avatar_url ) )
+        memory_media ( storage_path, sort_order )
       `,
       )
       .order('memory_date', { ascending: false })

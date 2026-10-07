@@ -4,20 +4,47 @@ import { colors, radius, shadows, spacing } from '@/constants/theme';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useAuth } from '@/providers/auth-provider';
 import type { Family } from '@/services/families';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { SymbolView, type SymbolViewProps } from 'expo-symbols';
-import medium from 'expo-symbols/androidWeights/medium';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-type IconName = SymbolViewProps['name'];
+type IconName = {
+  ios: string;
+  android?: string;
+  web?: string;
+};
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 type HomeRoute =
   | '/calendar'
   | '/create-event'
   | '/invite-member'
   | '/memories'
   | '/vault';
+
+function getCrossPlatformIcon(name: IconName): IoniconName {
+  switch (name.ios) {
+    case 'sun.max.fill':
+      return 'sunny';
+    case 'calendar':
+      return 'calendar';
+    case 'bell.fill':
+      return 'notifications';
+    case 'bubble.left.and.bubble.right.fill':
+      return 'chatbubbles';
+    case 'photo.on.rectangle.angled':
+      return 'images';
+    case 'lock.shield.fill':
+      return 'shield-checkmark';
+    case 'chevron.right':
+      return 'chevron-forward';
+    case 'plus':
+      return 'add';
+    default:
+      return 'help-circle-outline';
+  }
+}
 
 function AppSymbol({
   name,
@@ -29,13 +56,10 @@ function AppSymbol({
   size?: number;
 }) {
   return (
-    <SymbolView
-      name={name}
+    <Ionicons
+      name={getCrossPlatformIcon(name)}
       size={size}
-      tintColor={color}
-      type="hierarchical"
-      weight={{ ios: 'semibold', android: medium }}
-      style={{ width: size + 3, height: size + 3 }}
+      color={color}
     />
   );
 }
@@ -106,11 +130,11 @@ function NextEventCard({
       onPress={onPress}
       style={({ pressed }) => [styles.nextEventCard, pressed && styles.pressed]}
     >
-      <View style={[styles.nextEventIcon, { backgroundColor: `${color}20` }]}>
+      <View style={[styles.nextEventIcon, { backgroundColor: color }]}>
         <AppSymbol
           name={{ ios: 'calendar', android: 'calendar_month', web: 'calendar_month' }}
-          color={color}
-          size={23}
+          color={colors.white}
+          size={27}
         />
       </View>
       <View style={styles.flex}>
@@ -151,18 +175,18 @@ function QuickAccessCard({
       onPress={onPress}
       style={({ pressed }) => [styles.quickAccessCard, pressed && styles.pressed]}
     >
-      <View style={[styles.quickAccessIcon, { backgroundColor: `${color}1C` }]}>
-        <AppSymbol name={icon} color={color} size={25} />
+      <View
+        style={[
+          styles.quickAccessIcon,
+          { backgroundColor: color === colors.purple ? '#E8D7FF' : '#C9F4E9' },
+        ]}
+      >
+        <AppSymbol name={icon} color={color} size={29} />
       </View>
-      <View style={styles.flex}>
+      <View style={styles.quickAccessContent}>
         <Text style={styles.quickAccessTitle}>{title}</Text>
         <Text style={styles.quickAccessSubtitle}>{subtitle}</Text>
       </View>
-      <AppSymbol
-        name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
-        color={colors.textMuted}
-        size={15}
-      />
     </Pressable>
   );
 }
@@ -218,26 +242,15 @@ export default function HomeScreen() {
 
         <View style={styles.heroCard}>
           <View pointerEvents="none" style={styles.heroGlow} />
-          <View style={styles.heroTopRow}>
-            <View style={styles.heroSun}>
-              <AppSymbol
-                name={{ ios: 'sun.max.fill', android: 'wb_sunny', web: 'wb_sunny' }}
-                color={colors.warning}
-                size={18}
-              />
-            </View>
-            <Text style={styles.heroDate}>{todayLabel}</Text>
-          </View>
           <Text style={styles.greeting}>
-            Szia, {firstName}! <Text style={styles.wave}>👋</Text>
+            Jó reggelt, {firstName}! <Text style={styles.wave}>👋</Text>
           </Text>
-          <Text style={styles.heroSubtitle}>
-            Nézd meg, mi történik ma a családi térben.
-          </Text>
-          <Text style={styles.heroQuote}>Együtt minden nap otthon. ♡</Text>
+          <Text style={styles.heroDate}>{todayLabel}</Text>
         </View>
 
-        <FamilySwitcher compact onActiveFamilyChange={setActiveFamily} />
+        <View style={styles.familySwitcherSource}>
+          <FamilySwitcher compact onActiveFamilyChange={setActiveFamily} />
+        </View>
 
         {profileError ? (
           <View style={styles.errorCard}>
@@ -247,42 +260,35 @@ export default function HomeScreen() {
           </View>
         ) : null}
 
-        {activeFamily ? (
-          <View>
-            <SectionHeader title="Családtagok" action="Meghívás" />
-            <ScrollView
-              horizontal
-              contentContainerStyle={styles.peopleRow}
-              showsHorizontalScrollIndicator={false}
-            >
-              <View style={styles.person}>
-                <View style={styles.avatarRing}>
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>{userInitial}</Text>
-                  </View>
-                  <View style={styles.onlineDot} />
+        <View>
+          <ScrollView
+            horizontal
+            contentContainerStyle={styles.peopleRow}
+            showsHorizontalScrollIndicator={false}
+          >
+            <View style={styles.person}>
+              <View style={styles.avatarRing}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>{userInitial}</Text>
                 </View>
-                <Text numberOfLines={1} style={styles.personName}>
-                  {firstName}
-                </Text>
+                <View style={styles.onlineDot} />
               </View>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => openRoute('/invite-member')}
-                style={({ pressed }) => [styles.person, pressed && styles.pressed]}
-              >
-                <View style={styles.addPerson}>
-                  <AppSymbol
-                    name={{ ios: 'plus', android: 'add', web: 'add' }}
-                    color={colors.textSecondary}
-                    size={26}
-                  />
-                </View>
-                <Text style={styles.personMuted}>Meghívás</Text>
-              </Pressable>
-            </ScrollView>
-          </View>
-        ) : null}
+              <Text numberOfLines={1} style={styles.personName}>
+                {firstName}
+              </Text>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => openRoute('/invite-member')}
+              style={({ pressed }) => [styles.person, pressed && styles.pressed]}
+            >
+              <View style={styles.addPerson}>
+                <Text style={styles.familyCount}>+1</Text>
+              </View>
+              <Text style={styles.personMuted}>Családtag</Text>
+            </Pressable>
+          </ScrollView>
+        </View>
 
         <View style={styles.todayCard}>
           <View pointerEvents="none" style={styles.todayCardGlow} />
@@ -290,9 +296,9 @@ export default function HomeScreen() {
             <View style={styles.todayTitleRow}>
               <View style={styles.todayTitleIcon}>
                 <AppSymbol
-                  name={{ ios: 'sun.max.fill', android: 'wb_sunny', web: 'wb_sunny' }}
+                  name={{ ios: 'sun.max.fill', android: 'wb_sunny', web: 'light_mode' }}
                   color={colors.warning}
-                  size={20}
+                  size={29}
                 />
               </View>
               <Text style={styles.todayTitle}>Ma a családban</Text>
@@ -301,7 +307,7 @@ export default function HomeScreen() {
           </View>
           <View style={styles.todayStats}>
             <TodayStat
-              value={2}
+              value={3}
               label="esemény"
               color={colors.primary}
               icon={{ ios: 'calendar', android: 'calendar_month', web: 'calendar_month' }}
@@ -313,10 +319,10 @@ export default function HomeScreen() {
               icon={{ ios: 'bell.fill', android: 'notifications', web: 'notifications' }}
             />
             <TodayStat
-              value={0}
-              label="feladat"
+              value={2}
+              label="üzenet"
               color={colors.teal}
-              icon={{ ios: 'checkmark.circle.fill', android: 'task_alt', web: 'task_alt' }}
+              icon={{ ios: 'bubble.left.and.bubble.right.fill', android: 'forum', web: 'forum' }}
             />
           </View>
         </View>
@@ -329,8 +335,8 @@ export default function HomeScreen() {
           />
           <NextEventCard
             color={colors.primary}
-            title="Családi program"
-            meta="Ma · 09:30 · Közös helyszín"
+            title="Orvosi időpont"
+            meta="Ma · 09:30 · Anna"
             onPress={() => openRoute('/calendar')}
           />
         </View>
@@ -383,7 +389,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#DDEBFF',
     opacity: 0.9,
   },
-  content: { paddingHorizontal: spacing.lg, paddingBottom: 36, gap: spacing.lg },
+  content: { paddingHorizontal: spacing.lg, paddingBottom: 36, gap: spacing.md },
   contentWide: {
     width: '100%',
     maxWidth: 1120,
@@ -392,60 +398,46 @@ const styles = StyleSheet.create({
   },
   hero: { gap: spacing.xs, paddingVertical: spacing.xs },
   heroCard: {
-    minHeight: 172,
-    padding: spacing.xl,
+    minHeight: 92,
+    paddingTop: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    paddingBottom: spacing.md,
     justifyContent: 'center',
-    gap: spacing.sm,
+    gap: spacing.xs,
     overflow: 'hidden',
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: '#D7E5FB',
-    backgroundColor: '#EAF3FF',
-    ...shadows.card,
+    borderRadius: radius.lg,
+    backgroundColor: 'transparent',
   },
   heroGlow: {
     position: 'absolute',
-    top: -74,
-    right: -36,
-    width: 190,
-    height: 190,
-    borderRadius: 95,
-    backgroundColor: '#FFFFFF',
-    opacity: 0.62,
+    top: -80,
+    right: -60,
+    width: 170,
+    height: 170,
+    borderRadius: 85,
+    backgroundColor: '#FFF4D5',
+    opacity: 0.35,
   },
-  heroTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  heroSun: {
-    width: 30,
-    height: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 15,
-    backgroundColor: '#FFF5D9',
+  familySwitcherSource: {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    opacity: 0,
+    overflow: 'hidden',
   },
   heroDate: {
     color: colors.textMuted,
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
     textTransform: 'capitalize',
   },
   greeting: {
     color: colors.textPrimary,
-    fontSize: 28,
+    fontSize: 25,
     fontWeight: '900',
-    letterSpacing: -0.8,
+    letterSpacing: -0.5,
   },
-  wave: { fontSize: 28 },
-  heroSubtitle: { color: colors.textMuted, fontSize: 14, lineHeight: 20 },
-  heroQuote: {
-    marginTop: spacing.xs,
-    color: colors.primaryDark,
-    fontSize: 11,
-    fontWeight: '800',
-  },
+  wave: { fontSize: 24 },
   sectionHeader: {
     minHeight: 28,
     flexDirection: 'row',
@@ -468,13 +460,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF1F3',
   },
   errorText: { color: '#C64052', fontSize: 12 },
-  peopleRow: { gap: spacing.lg, paddingTop: spacing.md, paddingRight: spacing.lg },
-  person: { width: 66, alignItems: 'center', gap: spacing.sm },
+  peopleRow: { gap: spacing.lg, paddingVertical: spacing.xs, paddingRight: spacing.lg },
+  person: { width: 74, alignItems: 'center', gap: spacing.xs },
   avatarRing: {
-    width: 62,
-    height: 62,
+    width: 58,
+    height: 58,
     padding: 3,
-    borderRadius: 31,
+    borderRadius: 29,
     borderWidth: 2,
     borderColor: colors.primaryLight,
     backgroundColor: colors.white,
@@ -484,10 +476,10 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 28,
+    borderRadius: 25,
     backgroundColor: '#D6B38D',
   },
-  avatarText: { color: '#3B2415', fontSize: 20, fontWeight: '900' },
+  avatarText: { color: '#3B2415', fontSize: 18, fontWeight: '900' },
   onlineDot: {
     position: 'absolute',
     right: -2,
@@ -502,25 +494,23 @@ const styles = StyleSheet.create({
   personName: { color: colors.textSecondary, fontSize: 11, fontWeight: '700' },
   personMuted: { color: colors.textMuted, fontSize: 10 },
   addPerson: {
-    width: 62,
-    height: 62,
+    width: 58,
+    height: 58,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 31,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.primarySoft,
+    borderRadius: 29,
+    borderWidth: 0,
+    backgroundColor: '#EEF5FF',
     ...shadows.card,
   },
+  familyCount: { color: colors.primary, fontSize: 22, fontWeight: '900' },
   todayCard: {
+    minHeight: 140,
     padding: spacing.lg,
-    gap: spacing.lg,
+    gap: spacing.md,
     overflow: 'hidden',
     borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: '#D7E5FB',
-    backgroundColor: colors.surface,
-    ...shadows.card,
+    backgroundColor: '#E9F5FF',
   },
   todayCardGlow: {
     position: 'absolute',
@@ -529,8 +519,8 @@ const styles = StyleSheet.create({
     width: 150,
     height: 150,
     borderRadius: 75,
-    backgroundColor: '#FFF5D9',
-    opacity: 0.45,
+    backgroundColor: '#C4F4EA',
+    opacity: 0.52,
   },
   todayCardHeader: { gap: spacing.xs },
   todayTitleRow: {
@@ -546,41 +536,48 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     backgroundColor: '#FFF5D9',
   },
-  todayTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: '900' },
+  todayTitle: { color: colors.primaryDark, fontSize: 17, fontWeight: '900' },
   todaySubtitle: { color: colors.textMuted, fontSize: 11 },
   todayStats: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: spacing.sm,
   },
-  todayStat: { flex: 1, alignItems: 'center', gap: spacing.xs },
+  todayStat: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
   todayStatIcon: {
-    width: 38,
-    height: 38,
+    width: 34,
+    height: 34,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 19,
   },
-  todayStatValue: { color: colors.textPrimary, fontSize: 20, fontWeight: '900' },
-  todayStatLabel: { color: colors.textMuted, fontSize: 10, fontWeight: '700' },
+  todayStatValue: { color: colors.primary, fontSize: 13, fontWeight: '900' },
+  todayStatLabel: { color: colors.primaryDark, fontSize: 11, fontWeight: '800' },
   nextEventCard: {
-    minHeight: 76,
-    padding: spacing.md,
+    minHeight: 94,
+    padding: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#EEF2F8',
     backgroundColor: colors.surface,
     ...shadows.card,
   },
   nextEventIcon: {
-    width: 44,
-    height: 44,
+    width: 58,
+    height: 58,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
+    backgroundColor: colors.primary,
   },
   todayBadge: {
     paddingHorizontal: spacing.sm,
@@ -588,30 +585,31 @@ const styles = StyleSheet.create({
     borderRadius: radius.round,
     backgroundColor: colors.primarySoft,
   },
-  todayBadgeText: { color: colors.primary, fontSize: 9, fontWeight: '900' },
+  todayBadgeText: { color: colors.primary, fontSize: 11, fontWeight: '900' },
   quickAccessGrid: { flexDirection: 'row', gap: spacing.md },
   quickAccessCard: {
     flex: 1,
-    minHeight: 92,
-    padding: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
+    minHeight: 144,
+    padding: spacing.lg,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
     gap: spacing.sm,
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
     ...shadows.card,
   },
   quickAccessIcon: {
-    width: 42,
-    height: 42,
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.md,
   },
-  quickAccessTitle: { color: colors.textPrimary, fontSize: 12, fontWeight: '900' },
-  quickAccessSubtitle: { marginTop: 3, color: colors.textMuted, fontSize: 9 },
+  quickAccessContent: { alignSelf: 'stretch' },
+  quickAccessTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: '900' },
+  quickAccessSubtitle: { marginTop: 3, color: colors.textMuted, fontSize: 11 },
   floatingAddButton: {
     position: 'absolute',
     right: spacing.lg,

@@ -1,6 +1,6 @@
 import { FamilyHeader } from '@/components/family-header';
 import { FamilySwitcher } from '@/components/family-switcher';
-import { colors, radius, spacing } from '@/constants/theme';
+import { colors, radius, shadows, spacing } from '@/constants/theme';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useAuth } from '@/providers/auth-provider';
 import { getFamilyEvents, type FamilyEvent } from '@/services/events';
@@ -47,6 +47,17 @@ function monthBounds(date: Date) {
     from: new Date(date.getFullYear(), date.getMonth(), 1),
     to: new Date(date.getFullYear(), date.getMonth() + 1, 1),
   };
+}
+
+function getCalendarDays(date: Date) {
+  const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
+  const offset = (firstDay.getDay() + 6) % 7;
+  const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+
+  return Array.from({ length: 35 }, (_, index) => {
+    const day = index - offset + 1;
+    return day >= 1 && day <= daysInMonth ? day : null;
+  });
 }
 
 function EventCard({ event, onPress }: { event: FamilyEvent; onPress: () => void }) {
@@ -117,6 +128,8 @@ export default function CalendarScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bounds = useMemo(() => monthBounds(cursor), [cursor]);
+  const calendarDays = useMemo(() => getCalendarDays(cursor), [cursor]);
+  const today = new Date();
 
   useFocusEffect(
     useCallback(() => {
@@ -167,53 +180,80 @@ export default function CalendarScreen() {
           onNotificationsPress={() => router.push('/notifications')}
           onProfilePress={() => router.push('/profile')}
         />
-        <View>
-          <Text style={styles.title}>Családi naptár</Text>
-          <Text style={styles.subtitle}>
-            Közös események és fontos családi időpontok.
-          </Text>
-        </View>
-        <FamilySwitcher onActiveFamilyChange={setActiveFamily} />
-        <View style={styles.monthBar}>
-          <Pressable onPress={() => moveMonth(-1)} style={styles.roundButton}>
-            <Text style={styles.arrow}>‹</Text>
+        <View style={styles.pageHeader}>
+          <Text style={styles.title}>Naptár</Text>
+          <Pressable style={styles.moreButton}>
+            <Text style={styles.moreText}>•••</Text>
           </Pressable>
+        </View>
+        <View style={styles.familySwitcherHidden}>
+          <FamilySwitcher onActiveFamilyChange={setActiveFamily} />
+        </View>
+        <View style={styles.monthHeader}>
           <Text style={styles.monthTitle}>
             {cursor.toLocaleDateString('hu-HU', { year: 'numeric', month: 'long' })}
           </Text>
-          <Pressable onPress={() => moveMonth(1)} style={styles.roundButton}>
-            <Text style={styles.arrow}>›</Text>
-          </Pressable>
+          <View style={styles.monthControls}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Előző hónap"
+              onPress={() => moveMonth(-1)}
+              style={({ pressed }) => [
+                styles.monthControl,
+                pressed && styles.monthControlPressed,
+              ]}
+            >
+              <Text style={styles.monthArrow}>‹</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Következő hónap"
+              onPress={() => moveMonth(1)}
+              style={({ pressed }) => [
+                styles.monthControl,
+                pressed && styles.monthControlPressed,
+              ]}
+            >
+              <Text style={styles.monthArrow}>›</Text>
+            </Pressable>
+          </View>
         </View>
-        {activeFamily ? (
-          <Pressable
-            onPress={() =>
-              router.push({
-                pathname: './create-event',
-                params: { familyId: activeFamily.id, familyName: activeFamily.name },
-              })
-            }
-            style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}
-          >
-            <SymbolView
-              name={{
-                ios: 'calendar.badge.plus',
-                android: 'event_upcoming',
-                web: 'event_upcoming',
-              }}
-              size={24}
-              tintColor="#FFFFFF"
-              type="hierarchical"
-              weight={{ ios: 'semibold', android: medium }}
-              style={styles.symbol}
-            />
-            <Text style={styles.addButtonText}>Új esemény</Text>
-          </Pressable>
-        ) : null}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Események</Text>
-          <Text style={styles.count}>{events.length} esemény</Text>
+        <View style={styles.calendarCard}>
+          <View style={styles.weekHeader}>
+            {['H', 'K', 'Sze', 'Cs', 'P', 'Szo', 'V'].map((day) => (
+              <Text key={day} style={styles.weekDay}>{day}</Text>
+            ))}
+          </View>
+          <View style={styles.calendarGrid}>
+            {calendarDays.map((day, index) => {
+              const isToday =
+                day === today.getDate() &&
+                cursor.getMonth() === today.getMonth() &&
+                cursor.getFullYear() === today.getFullYear();
+              const hasEvent = day !== null && events.some((event) => {
+                const eventDate = new Date(event.starts_at);
+                return (
+                  eventDate.getDate() === day &&
+                  eventDate.getMonth() === cursor.getMonth() &&
+                  eventDate.getFullYear() === cursor.getFullYear()
+                );
+              });
+              return (
+                <View key={`${day ?? 'empty'}-${index}`} style={styles.dayCell}>
+                  {day !== null ? (
+                    <View style={[styles.dayCircle, isToday && styles.dayCircleActive]}>
+                      <Text style={[styles.dayText, isToday && styles.dayTextActive]}>
+                        {day}
+                      </Text>
+                    </View>
+                  ) : null}
+                  {hasEvent ? <View style={styles.eventDot} /> : null}
+                </View>
+              );
+            })}
+          </View>
         </View>
+        <Text style={styles.sectionTitle}>Mai események</Text>
         {error ? (
           <View style={styles.errorCard}>
             <Text style={styles.errorText}>{error}</Text>
@@ -259,57 +299,143 @@ export default function CalendarScreen() {
           </View>
         )}
       </ScrollView>
+      {activeFamily ? (
+        <Pressable
+          onPress={() =>
+            router.push({
+              pathname: './create-event',
+              params: { familyId: activeFamily.id, familyName: activeFamily.name },
+            })
+          }
+          style={({ pressed }) => [styles.floatingAdd, pressed && styles.pressed]}
+        >
+          <Text style={styles.floatingPlus}>+</Text>
+        </Pressable>
+      ) : null}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#071326' },
-  content: { paddingHorizontal: spacing.lg, paddingBottom: 32, gap: spacing.lg },
+  safeArea: { flex: 1, backgroundColor: '#F8FBFF' },
+  content: { paddingHorizontal: spacing.lg, paddingBottom: 100, gap: spacing.md },
   flex: { flex: 1 },
+  familySwitcherHidden: {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    opacity: 0,
+    overflow: 'hidden',
+  },
+  pageHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: spacing.sm,
+  },
+  moreButton: {
+    width: 42,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.round,
+    backgroundColor: '#EEF4FC',
+  },
+  moreText: { color: colors.primary, fontSize: 20, fontWeight: '900', letterSpacing: 2 },
   title: {
     color: colors.textPrimary,
     fontSize: 31,
     fontWeight: '900',
     letterSpacing: -0.7,
   },
-  subtitle: { marginTop: spacing.xs, color: colors.textMuted, fontSize: 13 },
-  monthBar: {
-    minHeight: 60,
-    paddingHorizontal: spacing.md,
+  monthHeader: {
+    minHeight: 52,
+    paddingHorizontal: spacing.xs,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderRadius: radius.xl,
+  },
+  monthControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  monthControl: {
+    width: 42,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.round,
+    backgroundColor: '#EEF4FC',
     borderWidth: 1,
-    borderColor: '#294469',
-    backgroundColor: '#10233E',
+    borderColor: '#E1EAF8',
+  },
+  monthControlPressed: {
+    opacity: 0.72,
+    transform: [{ scale: 0.94 }],
   },
   monthTitle: {
     color: colors.textPrimary,
-    fontSize: 16,
+    fontSize: 25,
     fontWeight: '900',
     textTransform: 'capitalize',
   },
-  roundButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 20,
-    backgroundColor: colors.surfaceElevated,
+  monthArrow: {
+    marginTop: -3,
+    color: colors.primary,
+    fontSize: 30,
+    lineHeight: 34,
+    fontWeight: '700',
   },
-  arrow: { color: colors.primaryLight, fontSize: 29, lineHeight: 31 },
-  addButton: {
-    minHeight: 54,
+  calendarCard: {
+    padding: spacing.md,
+    borderRadius: radius.xl,
+    backgroundColor: colors.white,
+    ...shadows.card,
+  },
+  weekHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingBottom: spacing.sm,
+  },
+  weekDay: {
+    width: 35,
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  calendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  dayCell: {
+    width: '14.285%',
+    height: 54,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
-    borderRadius: radius.md,
+  },
+  dayCircle: {
+    width: 38,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 19,
+  },
+  dayCircleActive: {
+    backgroundColor: colors.primary,
+    ...shadows.floating,
+  },
+  dayText: { color: colors.textPrimary, fontSize: 14, fontWeight: '800' },
+  dayTextActive: { color: colors.white },
+  eventDot: {
+    position: 'absolute',
+    bottom: 5,
+    width: 5,
+    height: 5,
+    borderRadius: 3,
     backgroundColor: colors.primary,
   },
-  addButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
   symbol: { width: 28, height: 28 },
   sectionHeader: {
     flexDirection: 'row',
@@ -327,8 +453,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: '#294469',
-    backgroundColor: '#10233E',
+    borderColor: '#E7EEF8',
+    backgroundColor: colors.white,
+    ...shadows.card,
   },
   eventAccent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4 },
   eventIcon: {
@@ -356,7 +483,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   emptyText: { color: colors.textMuted, fontSize: 12, textAlign: 'center' },
-  errorCard: { padding: spacing.md, borderRadius: radius.md, backgroundColor: '#3B1622' },
-  errorText: { color: '#FDA4AF', fontSize: 12 },
+  errorCard: { padding: spacing.md, borderRadius: radius.md, backgroundColor: '#FFF1F3' },
+  errorText: { color: colors.danger, fontSize: 12 },
+  floatingAdd: {
+    position: 'absolute',
+    right: spacing.lg,
+    bottom: spacing.xl,
+    width: 60,
+    height: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 30,
+    backgroundColor: colors.primary,
+    ...shadows.floating,
+  },
+  floatingPlus: { color: colors.white, fontSize: 36, fontWeight: '300', lineHeight: 40 },
   pressed: { opacity: 0.75, transform: [{ scale: 0.99 }] },
 });
