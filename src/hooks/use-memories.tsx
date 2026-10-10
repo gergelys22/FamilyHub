@@ -48,6 +48,7 @@ export type Memory = {
   location: string | null;
   when: string;
   photo: string | null;
+  photos: string[];
   extraPhotos: number;
   avatars: string[];
   tags: string[];
@@ -83,6 +84,7 @@ function toMemory(row: MemoryRow): Memory {
     location: row.location_name,
     when: formatWhen(row.memory_date),
     photo: media[0] ? photoUrl(media[0].storage_path) : null,
+    photos: media.map((item) => photoUrl(item.storage_path)),
     extraPhotos: Math.max(media.length - 1, 0),
     avatars: [],
     tags: [],

@@ -1,9 +1,8 @@
-import { colors, radius, spacing } from '@/constants/theme';
+import { colors, radius, shadows, spacing } from '@/constants/theme';
 import { useNotifications } from '@/hooks/use-notifications';
 import type { AppNotification } from '@/services/notifications';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { SymbolView, type SymbolViewProps } from 'expo-symbols';
-import medium from 'expo-symbols/androidWeights/medium';
 import {
   ActivityIndicator,
   Pressable,
@@ -13,68 +12,52 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-function getNotificationIcon(type: string): SymbolViewProps['name'] {
+type NotificationFilter = 'all' | 'events' | 'system';
+type IconName = React.ComponentProps<typeof Ionicons>['name'];
+
+function getNotificationIcon(type: string): {
+  name: IconName;
+  color: string;
+  backgroundColor: string;
+} {
   switch (type) {
     case 'family_invite':
-      return {
-        ios: 'person.badge.plus',
-        android: 'person_add',
-        web: 'person_add',
-      };
+      return { name: 'person-add', color: '#E97932', backgroundColor: '#FFF0E6' };
 
     case 'calendar':
-      return {
-        ios: 'calendar',
-        android: 'calendar_month',
-        web: 'calendar_month',
-      };
+      return { name: 'calendar', color: colors.primary, backgroundColor: '#E8F0FF' };
 
     case 'task':
-      return {
-        ios: 'checklist',
-        android: 'checklist',
-        web: 'checklist',
-      };
+      return { name: 'checkbox-outline', color: colors.purple, backgroundColor: '#F0ECFF' };
 
     case 'location':
-      return {
-        ios: 'location.fill',
-        android: 'location_on',
-        web: 'location_on',
-      };
+      return { name: 'location', color: colors.primary, backgroundColor: '#E8F0FF' };
 
     case 'memory':
-      return {
-        ios: 'photo.fill',
-        android: 'photo',
-        web: 'photo',
-      };
+      return { name: 'image', color: '#7652E8', backgroundColor: '#F0E9FF' };
 
     case 'medicine':
-      return {
-        ios: 'pills.fill',
-        android: 'medication',
-        web: 'medication',
-      };
+      return { name: 'medkit', color: '#16AA91', backgroundColor: '#E3FAF4' };
 
     default:
-      return {
-        ios: 'bell.fill',
-        android: 'notifications',
-        web: 'notifications',
-      };
+      return { name: 'shield-checkmark', color: colors.danger, backgroundColor: '#FFE9ED' };
   }
 }
 
 function formatNotificationDate(value: string) {
-  return new Intl.DateTimeFormat('hu-HU', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value));
+  const date = new Date(value);
+  const now = new Date();
+  const sameDay = date.toDateString() === now.toDateString();
+  if (sameDay) {
+    return date.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' });
+  }
+  const days = Math.floor((now.getTime() - date.getTime()) / 86400000);
+  if (days === 1) return 'Tegnap';
+  if (days > 1 && days < 7) return `${days} napja`;
+  return date.toLocaleDateString('hu-HU', { month: 'short', day: 'numeric' });
 }
 
 function NotificationItem({
@@ -85,6 +68,7 @@ function NotificationItem({
   onPress: () => void;
 }) {
   const unread = !notification.read_at;
+  const icon = getNotificationIcon(notification.notification_type);
 
   return (
     <Pressable
@@ -96,15 +80,8 @@ function NotificationItem({
         pressed && styles.pressed,
       ]}
     >
-      <View style={[styles.iconBox, unread && styles.unreadIconBox]}>
-        <SymbolView
-          name={getNotificationIcon(notification.notification_type)}
-          size={23}
-          tintColor={unread ? colors.primaryLight : colors.textMuted}
-          type="hierarchical"
-          weight={{ ios: 'semibold', android: medium }}
-          style={styles.symbol}
-        />
+      <View style={[styles.iconBox, { backgroundColor: icon.backgroundColor }]}>
+        <Ionicons name={icon.name} size={24} color={icon.color} />
       </View>
 
       <View style={styles.notificationContent}>
@@ -119,12 +96,8 @@ function NotificationItem({
           {unread ? <View style={styles.unreadDot} /> : null}
         </View>
 
-        <Text style={styles.notificationBody}>{notification.body}</Text>
-
-        <Text style={styles.notificationDate}>
-          {formatNotificationDate(notification.created_at)}
-        </Text>
       </View>
+      <Text style={styles.notificationDate}>{formatNotificationDate(notification.created_at)}</Text>
     </Pressable>
   );
 }
@@ -140,30 +113,22 @@ export default function NotificationsScreen() {
     markAsRead,
     markAllAsRead,
   } = useNotifications();
+  const [filter, setFilter] = useState<NotificationFilter>('all');
+  const filteredNotifications = notifications.filter((notification) => {
+    if (filter === 'all') return true;
+    if (filter === 'events') {
+      return ['calendar', 'memory', 'medicine', 'task'].includes(
+        notification.notification_type,
+      );
+    }
+    return !['calendar', 'memory', 'medicine', 'task'].includes(
+      notification.notification_type,
+    );
+  });
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <Pressable
-          accessibilityLabel="Vissza"
-          accessibilityRole="button"
-          hitSlop={8}
-          onPress={() => router.back()}
-          style={({ pressed }) => [styles.headerButton, pressed && styles.pressed]}
-        >
-          <SymbolView
-            name={{
-              ios: 'chevron.left',
-              android: 'arrow_back',
-              web: 'arrow_back',
-            }}
-            size={23}
-            tintColor={colors.textPrimary}
-            weight={{ ios: 'semibold', android: medium }}
-            style={styles.symbol}
-          />
-        </Pressable>
-
         <Text style={styles.headerTitle}>Értesítések</Text>
 
         <Pressable
@@ -177,18 +142,28 @@ export default function NotificationsScreen() {
             pressed && styles.pressed,
           ]}
         >
-          <SymbolView
-            name={{
-              ios: 'checkmark.circle.fill',
-              android: 'done_all',
-              web: 'done_all',
-            }}
-            size={23}
-            tintColor={colors.primaryLight}
-            weight={{ ios: 'semibold', android: medium }}
-            style={styles.symbol}
-          />
+          <Ionicons name="checkmark-done" size={23} color={colors.primary} />
         </Pressable>
+      </View>
+
+      <View style={styles.filters}>
+        {([
+          ['all', 'Összes'],
+          ['events', 'Események'],
+          ['system', 'Rendszer'],
+        ] as const).map(([key, label]) => (
+          <Pressable
+            key={key}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: filter === key }}
+            onPress={() => setFilter(key)}
+            style={[styles.filter, filter === key && styles.activeFilter]}
+          >
+            <Text style={[styles.filterText, filter === key && styles.activeFilterText]}>
+              {label}
+            </Text>
+          </Pressable>
+        ))}
       </View>
 
       {loading ? (
@@ -213,21 +188,10 @@ export default function NotificationsScreen() {
             </View>
           ) : null}
 
-          {notifications.length === 0 ? (
+          {filteredNotifications.length === 0 ? (
             <View style={styles.emptyState}>
               <View style={styles.emptyIcon}>
-                <SymbolView
-                  name={{
-                    ios: 'bell.slash.fill',
-                    android: 'notifications_off',
-                    web: 'notifications_off',
-                  }}
-                  size={34}
-                  tintColor={colors.textMuted}
-                  type="hierarchical"
-                  weight={{ ios: 'semibold', android: medium }}
-                  style={styles.largeSymbol}
-                />
+                <Ionicons name="notifications-off-outline" size={34} color={colors.textMuted} />
               </View>
 
               <Text style={styles.emptyTitle}>Nincs új értesítés</Text>
@@ -237,7 +201,7 @@ export default function NotificationsScreen() {
               </Text>
             </View>
           ) : (
-            notifications.map((notification) => (
+            filteredNotifications.map((notification) => (
               <NotificationItem
                 key={notification.id}
                 notification={notification}
@@ -285,14 +249,48 @@ const styles = StyleSheet.create({
 
   headerTitle: {
     color: colors.textPrimary,
-    fontSize: 19,
-    fontWeight: '800',
+    fontSize: 28,
+    fontWeight: '900',
+    letterSpacing: -0.7,
   },
 
   content: {
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
     paddingBottom: spacing.xxl,
     gap: spacing.md,
+  },
+
+  filters: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+    padding: 4,
+    flexDirection: 'row',
+    borderRadius: radius.round,
+    backgroundColor: '#EEF4FC',
+  },
+
+  filter: {
+    flex: 1,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.round,
+  },
+
+  activeFilter: {
+    backgroundColor: colors.primary,
+    ...shadows.floating,
+  },
+
+  filterText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+
+  activeFilterText: {
+    color: colors.white,
   },
 
   center: {
@@ -302,18 +300,18 @@ const styles = StyleSheet.create({
   },
 
   notification: {
-    padding: spacing.lg,
+    minHeight: 74,
+    paddingVertical: spacing.sm,
     flexDirection: 'row',
     gap: spacing.md,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
   },
 
   unreadNotification: {
-    borderColor: '#2859A3',
-    backgroundColor: '#102855',
+    backgroundColor: 'rgba(232, 240, 255, 0.45)',
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.sm,
   },
 
   iconBox: {
@@ -326,7 +324,7 @@ const styles = StyleSheet.create({
   },
 
   unreadIconBox: {
-    backgroundColor: 'rgba(59, 130, 246, 0.18)',
+    backgroundColor: colors.primarySoft,
   },
 
   symbol: {
@@ -352,9 +350,9 @@ const styles = StyleSheet.create({
 
   notificationTitle: {
     flex: 1,
-    color: colors.textSecondary,
+    color: colors.textPrimary,
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '900',
   },
 
   unreadTitle: {
@@ -363,16 +361,17 @@ const styles = StyleSheet.create({
   },
 
   notificationBody: {
-    color: colors.textMuted,
+    color: colors.textSecondary,
     fontSize: 13,
     lineHeight: 19,
   },
 
   notificationDate: {
-    marginTop: spacing.xs,
+    alignSelf: 'flex-start',
+    marginTop: spacing.sm,
     color: colors.textMuted,
-    fontSize: 10,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
   },
 
   unreadDot: {

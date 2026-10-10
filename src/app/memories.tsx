@@ -2,6 +2,7 @@ import { colors, radius, shadows, spacing } from '@/constants/theme';
 import { useMemories } from '@/hooks/use-memories';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -77,8 +78,24 @@ function MemoryTabs({
 /* ------------------------------------------------------------------ */
 
 function MemoryCard({ item, featured = false }: { item: Memory; featured?: boolean }) {
+  const router = useRouter();
+
   return (
-    <View style={[styles.memoryCard, featured && styles.featuredCard]}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${item.title} emlék részleteinek megnyitása`}
+      onPress={() =>
+        router.push({
+          pathname: '/memory-details',
+          params: { id: item.id },
+        })
+      }
+      style={({ pressed }) => [
+        styles.memoryCard,
+        featured && styles.featuredCard,
+        pressed && styles.pressed,
+      ]}
+    >
       <View style={styles.memoryImageWrap}>
         {item.photo ? (
           <Image
@@ -109,7 +126,7 @@ function MemoryCard({ item, featured = false }: { item: Memory; featured?: boole
         </View>
         <Text style={styles.metaText}>{item.when}</Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 

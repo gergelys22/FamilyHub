@@ -11,6 +11,7 @@ type VaultItemProps = {
   title: string;
   description: string;
   count: string;
+  onPress?: () => void;
 };
 
 function VaultItem({
@@ -20,11 +21,13 @@ function VaultItem({
   title,
   description,
   count,
+  onPress,
 }: VaultItemProps) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${title} megnyitása`}
+      onPress={onPress}
       style={({ pressed }) => [styles.vaultItem, pressed && styles.pressed]}
     >
       <View style={[styles.itemIcon, { backgroundColor }]}>
@@ -100,6 +103,7 @@ export default function VaultScreen() {
           title="Fontos dokumentumok"
           description="Személyes iratok és biztosítások"
           count="0"
+          onPress={() => router.push('/documents')}
         />
         <VaultItem
           icon="medkit"

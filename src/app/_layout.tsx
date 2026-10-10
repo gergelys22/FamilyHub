@@ -7,7 +7,7 @@ import medium from 'expo-symbols/androidWeights/medium';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 type TableDefinition = {
-  name: 'index' | 'map' | 'memories' | 'calendar' | 'vault';
+  name: 'index' | 'map' | 'memories' | 'calendar' | 'more';
   title: string;
   icon: SymbolViewProps['name'];
 };
@@ -50,12 +50,12 @@ const tabs: TableDefinition[] = [
     },
   },
   {
-    name: 'vault',
-    title: 'Páncélterem',
+    name: 'more',
+    title: 'Több',
     icon: {
-      ios: 'lock.shield.fill',
-      android: 'shield_lock',
-      web: 'shield_lock',
+      ios: 'line.3.horizontal',
+      android: 'menu',
+      web: 'menu',
     },
   },
 ];
@@ -125,6 +125,24 @@ function AppNavigator() {
           ))}
 
           <Tabs.Screen
+            name="vault"
+            options={{
+              href: null,
+              title: 'Páncélterem',
+              tabBarStyle: { display: 'none' },
+            }}
+          />
+
+          <Tabs.Screen
+            name="documents"
+            options={{
+              href: null,
+              title: 'Dokumentumok',
+              tabBarStyle: { display: 'none' },
+            }}
+          />
+
+          <Tabs.Screen
             name="create-family"
             options={{
               href: null,
@@ -138,6 +156,15 @@ function AppNavigator() {
             options={{
               href: null,
               title: 'Esemény részletei',
+              tabBarStyle: { display: 'none' },
+            }}
+          />
+
+          <Tabs.Screen
+            name="memory-details"
+            options={{
+              href: null,
+              title: 'Emlék részletei',
               tabBarStyle: { display: 'none' },
             }}
           />
@@ -165,6 +192,33 @@ function AppNavigator() {
             options={{
               href: null,
               title: 'Értesítések',
+              tabBarStyle: { display: 'none' },
+            }}
+          />
+
+          <Tabs.Screen
+            name="messages"
+            options={{
+              href: null,
+              title: 'Üzenetek',
+              tabBarStyle: { display: 'none' },
+            }}
+          />
+
+          <Tabs.Screen
+            name="chat-details"
+            options={{
+              href: null,
+              title: 'Beszélgetés',
+              tabBarStyle: { display: 'none' },
+            }}
+          />
+
+          <Tabs.Screen
+            name="family-member-profile"
+            options={{
+              href: null,
+              title: 'Családtag profilja',
               tabBarStyle: { display: 'none' },
             }}
           />
