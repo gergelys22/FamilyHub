@@ -66,7 +66,7 @@ export default function MoreScreen() {
           <MenuItem
             icon="git-network-outline"
             label="Családfa"
-            onPress={() => comingSoon('Családfa')}
+            onPress={() => router.push('/family-tree')}
           />
           <MenuItem
             icon="shield-checkmark-outline"
@@ -77,12 +77,12 @@ export default function MoreScreen() {
             icon="medkit-outline"
             label="Gyógyszerek"
             color={colors.pink}
-            onPress={() => comingSoon('Gyógyszerek')}
+            onPress={() => router.push('/medications')}
           />
           <MenuItem
             icon="alarm-outline"
             label="Emlékeztetők"
-            onPress={() => comingSoon('Emlékeztetők')}
+            onPress={() => router.push('/reminders')}
           />
           <MenuItem
             icon="chatbubble-ellipses-outline"
@@ -92,12 +92,12 @@ export default function MoreScreen() {
           <MenuItem
             icon="location-outline"
             label="Helymegosztás"
-            onPress={() => comingSoon('Helymegosztás')}
+            onPress={() => router.push('/location-sharing')}
           />
           <MenuItem
             icon="settings-outline"
             label="Beállítások"
-            onPress={() => comingSoon('Beállítások')}
+            onPress={() => router.push('/settings')}
           />
         </View>
 
