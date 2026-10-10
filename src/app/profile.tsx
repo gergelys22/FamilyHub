@@ -1,13 +1,16 @@
-import { colors, radius, spacing } from '@/constants/theme';
+import { colors, radius, shadows, spacing } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { SymbolView, type SymbolViewProps } from 'expo-symbols';
-import medium from 'expo-symbols/androidWeights/medium';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { supabase } from '@/lib/supabase';
+import { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type DetailRowProps = {
-  icon: SymbolViewProps['name'];
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  color: string;
   label: string;
   value: string;
 };
@@ -18,18 +21,11 @@ const profileTypeLabels = {
   ancestor: 'Ős',
 } as const;
 
-function DetailRow({ icon, label, value }: DetailRowProps) {
+function DetailRow({ icon, color, label, value }: DetailRowProps) {
   return (
     <View style={styles.detailRow}>
-      <View style={styles.detailIcon}>
-        <SymbolView
-          name={icon}
-          size={21}
-          tintColor={colors.primaryLight}
-          type="hierarchical"
-          weight={{ ios: 'medium', android: medium }}
-          style={styles.symbol}
-        />
+      <View style={[styles.detailIcon, { backgroundColor: `${color}18` }]}>
+        <Ionicons name={icon} size={21} color={color} />
       </View>
       <View style={styles.detailContent}>
         <Text style={styles.detailLabel}>{label}</Text>
@@ -49,6 +45,61 @@ export default function ProfileScreen() {
   const emailConfirmed = session?.user.email_confirmed_at
     ? 'Megerősítve'
     : 'Nincs megerősítve';
+  const profileType = profile ? profileTypeLabels[profile.profile_type] : 'Betöltés alatt';
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  async function handlePickAvatar() {
+    if (!profile || uploadingAvatar) return;
+
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        'Hozzáférés szükséges',
+        'A profilkép feltöltéséhez engedélyezned kell a fotókönyvtár hozzáférését.',
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+    });
+    if (result.canceled || !result.assets[0]?.uri) return;
+
+    setUploadingAvatar(true);
+    try {
+      const asset = result.assets[0];
+      const extension = asset.fileName?.split('.').pop()?.toLowerCase() || 'jpg';
+      const contentType = asset.mimeType || `image/${extension === 'jpg' ? 'jpeg' : extension}`;
+      const path = `${profile.id}/avatar-${Date.now()}.${extension}`;
+      const response = await fetch(asset.uri);
+      const arrayBuffer = await response.arrayBuffer();
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, arrayBuffer, { contentType, upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrl } = supabase.storage.from('avatars').getPublicUrl(path);
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ avatar_path: path, updated_at: new Date().toISOString() })
+        .eq('id', profile.id);
+      if (profileError) throw profileError;
+
+      setAvatarUri(`${publicUrl.publicUrl}?v=${Date.now()}`);
+      Alert.alert('Sikeres feltöltés', 'A profilképed frissült.');
+    } catch (caught) {
+      Alert.alert(
+        'Sikertelen feltöltés',
+        caught instanceof Error ? caught.message : 'A profilkép feltöltése nem sikerült.',
+      );
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }
 
   async function handleSignOut() {
     const error = await signOut();
@@ -65,16 +116,17 @@ export default function ProfileScreen() {
           onPress={() => router.back()}
           style={({ pressed }) => [styles.headerButton, pressed && styles.pressed]}
         >
-          <SymbolView
-            name={{ ios: 'chevron.left', android: 'arrow_back', web: 'arrow_back' }}
-            size={23}
-            tintColor={colors.textPrimary}
-            weight={{ ios: 'semibold', android: medium }}
-            style={styles.symbol}
-          />
+          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
         </Pressable>
         <Text style={styles.headerTitle}>Profil</Text>
-        <View style={styles.headerPlaceholder} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Profil szerkesztése"
+          onPress={() => Alert.alert('Profil szerkesztése', 'A profil szerkesztése hamarosan elérhető.')}
+          style={({ pressed }) => [styles.headerButton, pressed && styles.pressed]}
+        >
+          <Ionicons name="create-outline" size={22} color={colors.primary} />
+        </Pressable>
       </View>
 
       <ScrollView
@@ -82,38 +134,82 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.identityCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initial}</Text>
-          </View>
+          <View pointerEvents="none" style={styles.identityGlow} />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Profilkép kiválasztása"
+            disabled={uploadingAvatar}
+            onPress={() => void handlePickAvatar()}
+            style={({ pressed }) => [styles.avatar, pressed && styles.pressed]}
+          >
+            {avatarUri || profile?.avatar_path ? (
+              <Image
+                source={{
+                  uri:
+                    avatarUri ||
+                    supabase.storage.from('avatars').getPublicUrl(profile?.avatar_path ?? '').data
+                      .publicUrl,
+                }}
+                style={styles.avatarImage}
+              />
+            ) : (
+              <Text style={styles.avatarText}>{initial}</Text>
+            )}
+            <View style={styles.avatarBadge}>
+              <Ionicons
+                name={uploadingAvatar ? 'hourglass-outline' : 'camera'}
+                size={13}
+                color={colors.white}
+              />
+            </View>
+          </Pressable>
           <Text style={styles.name}>{displayName}</Text>
+          <View style={styles.rolePill}>
+            <Ionicons name="people-outline" size={14} color={colors.primary} />
+            <Text style={styles.roleText}>{profileType}</Text>
+          </View>
           <Text style={styles.email}>{session?.user.email ?? 'Nincs e-mail-cím'}</Text>
         </View>
 
+        <View style={styles.statusCard}>
+          <View style={styles.statusIcon}>
+            <Ionicons name="shield-checkmark" size={22} color={colors.success} />
+          </View>
+          <View style={styles.statusContent}>
+            <Text style={styles.statusTitle}>Fiókod védett</Text>
+            <Text style={styles.statusText}>A családi adataid biztonságban vannak.</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.success} />
+        </View>
+
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Fiókadatok</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Fiókadatok</Text>
+            <Ionicons name="person-circle-outline" size={22} color={colors.primary} />
+          </View>
           <DetailRow
-            icon={{ ios: 'person.fill', android: 'person', web: 'person' }}
+            icon="person-outline"
+            color={colors.primary}
             label="Megjelenített név"
             value={displayName}
           />
           <DetailRow
-            icon={{ ios: 'envelope.fill', android: 'mail', web: 'mail' }}
+            icon="mail-outline"
+            color={colors.purple}
             label="E-mail-cím"
             value={session?.user.email ?? 'Nincs megadva'}
           />
           <DetailRow
-            icon={{
-              ios: 'checkmark.shield.fill',
-              android: 'verified_user',
-              web: 'verified_user',
-            }}
+            icon="checkmark-circle-outline"
+            color={emailConfirmed === 'Megerősítve' ? colors.success : colors.warning}
             label="E-mail állapota"
             value={emailConfirmed}
           />
           <DetailRow
-            icon={{ ios: 'person.badge.key.fill', android: 'badge', web: 'badge' }}
+            icon="ribbon-outline"
+            color={colors.pink}
             label="Profiltípus"
-            value={profile ? profileTypeLabels[profile.profile_type] : 'Betöltés alatt'}
+            value={profileType}
           />
         </View>
 
@@ -130,17 +226,7 @@ export default function ProfileScreen() {
           onPress={() => void handleSignOut()}
           style={({ pressed }) => [styles.signOutButton, pressed && styles.pressed]}
         >
-          <SymbolView
-            name={{
-              ios: 'rectangle.portrait.and.arrow.right',
-              android: 'logout',
-              web: 'logout',
-            }}
-            size={21}
-            tintColor="#FDA4AF"
-            weight={{ ios: 'semibold', android: medium }}
-            style={styles.symbol}
-          />
+          <Ionicons name="log-out-outline" size={21} color={colors.danger} />
           <Text style={styles.signOutText}>Kijelentkezés</Text>
         </Pressable>
       </ScrollView>
@@ -164,45 +250,110 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
+    ...shadows.card,
   },
-  headerPlaceholder: { width: 42 },
-  headerTitle: { color: colors.textPrimary, fontSize: 19, fontWeight: '800' },
-  content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
-  identityCard: { alignItems: 'center', paddingVertical: spacing.xl, gap: spacing.sm },
+  headerTitle: { color: colors.textPrimary, fontSize: 21, fontWeight: '900' },
+  content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md },
+  identityCard: {
+    minHeight: 250,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    borderRadius: radius.xl,
+    backgroundColor: '#EEF4FF',
+    ...shadows.card,
+  },
+  identityGlow: {
+    position: 'absolute',
+    top: -100,
+    right: -45,
+    width: 230,
+    height: 230,
+    borderRadius: 115,
+    backgroundColor: '#C7D9FF',
+    opacity: 0.7,
+  },
   avatar: {
-    width: 92,
-    height: 92,
-    borderRadius: 46,
+    width: 104,
+    height: 104,
+    borderRadius: 52,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#D6B38D',
     borderWidth: 4,
-    borderColor: colors.surfaceElevated,
+    borderColor: colors.white,
+    ...shadows.card,
   },
-  avatarText: { color: '#3B2415', fontSize: 35, fontWeight: '900' },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 52,
+  },
+  avatarBadge: {
+    position: 'absolute',
+    right: -2,
+    bottom: 2,
+    width: 25,
+    height: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 13,
+    backgroundColor: colors.success,
+    borderWidth: 3,
+    borderColor: colors.white,
+  },
+  avatarText: { color: '#3B2415', fontSize: 39, fontWeight: '900' },
   name: {
     marginTop: spacing.sm,
     color: colors.textPrimary,
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '900',
   },
-  email: { color: colors.textMuted, fontSize: 14 },
+  rolePill: {
+    marginTop: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderRadius: radius.round,
+    backgroundColor: colors.white,
+  },
+  roleText: { color: colors.primary, fontSize: 11, fontWeight: '900' },
+  email: { marginTop: spacing.sm, color: colors.textMuted, fontSize: 13 },
+  statusCard: {
+    minHeight: 76,
+    padding: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    borderRadius: radius.lg,
+    backgroundColor: '#E9FBF6',
+  },
+  statusIcon: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 22,
+    backgroundColor: '#D2F6EC',
+  },
+  statusContent: { flex: 1, gap: 3 },
+  statusTitle: { color: '#117C6C', fontSize: 13, fontWeight: '900' },
+  statusText: { color: '#4B9E90', fontSize: 11, fontWeight: '700' },
   card: {
     padding: spacing.lg,
     gap: spacing.sm,
     borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
     backgroundColor: colors.surface,
+    ...shadows.card,
   },
-  sectionTitle: {
-    marginBottom: spacing.xs,
-    color: colors.textPrimary,
-    fontSize: 16,
-    fontWeight: '800',
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
+  sectionTitle: { color: colors.textPrimary, fontSize: 17, fontWeight: '900' },
   detailRow: {
     minHeight: 64,
     flexDirection: 'row',
@@ -215,9 +366,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(59, 130, 246, 0.14)',
   },
-  symbol: { width: 25, height: 25 },
   detailContent: { flex: 1, gap: 3 },
   detailLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
   detailValue: { color: colors.textSecondary, fontSize: 14, fontWeight: '700' },
@@ -231,9 +380,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: '#7F2439',
-    backgroundColor: '#3B1622',
+    borderColor: '#FFD7DE',
+    backgroundColor: '#FFF0F3',
   },
-  signOutText: { color: '#FDA4AF', fontSize: 14, fontWeight: '800' },
+  signOutText: { color: '#C33D52', fontSize: 14, fontWeight: '900' },
   pressed: { opacity: 0.7 },
 });

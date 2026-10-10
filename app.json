@@ -41,7 +41,15 @@
       ],
       "expo-font",
       "expo-status-bar",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "A FamilyHub hozzáférést kér a profilképed kiválasztásához.",
+          "cameraPermission": "A FamilyHub hozzáférést kér profilkép készítéséhez.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
