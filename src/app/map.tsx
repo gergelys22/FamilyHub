@@ -1,5 +1,5 @@
-import { FamilyHeader } from '@/components/family-header';
 import { EventMap } from '@/components/event-map';
+import { FamilyHeader } from '@/components/family-header';
 import { FamilySwitcher } from '@/components/family-switcher';
 import { colors, radius, shadows, spacing } from '@/constants/theme';
 import { useNotifications } from '@/hooks/use-notifications';
@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -44,6 +45,16 @@ const categoryIcons: Record<string, SymbolViewProps['name']> = {
   sport: { ios: 'figure.run', android: 'directions_run', web: 'directions_run' },
   administration: { ios: 'doc.text.fill', android: 'description', web: 'description' },
   trip: { ios: 'mountain.2.fill', android: 'landscape', web: 'landscape' },
+};
+
+const categoryLabels: Record<FamilyEvent['category'], string> = {
+  family: 'Családi',
+  birthday: 'Születésnap',
+  medical: 'Orvosi',
+  school: 'Iskolai',
+  sport: 'Sport',
+  administration: 'Ügyintézés',
+  trip: 'Kirándulás',
 };
 
 function dateRange() {
@@ -144,14 +155,19 @@ export default function MapScreen() {
   const [events, setEvents] = useState<FamilyEvent[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'family' | 'places' | 'events'>('family');
+  const [categoryFilter, setCategoryFilter] = useState<'all' | FamilyEvent['category']>('all');
+  const [filterVisible, setFilterVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const range = useMemo(() => dateRange(), []);
   const activeFamilyId = activeFamily?.id;
   const locationEvents = events.filter((event) => Boolean(event.location_name?.trim()));
+  const filteredLocationEvents = locationEvents.filter(
+    (event) => categoryFilter === 'all' || event.category === categoryFilter,
+  );
   const selectedEvent =
-    locationEvents.find((event) => event.id === selectedEventId) ??
-    locationEvents[0] ??
+    filteredLocationEvents.find((event) => event.id === selectedEventId) ??
+    filteredLocationEvents[0] ??
     null;
   const displayName = profile?.display_name?.trim() || 'Felhasználó';
   const userInitial = displayName.charAt(0).toLocaleUpperCase('hu-HU') || '?';
@@ -215,6 +231,17 @@ export default function MapScreen() {
     }
   }
 
+  function openSelectedEvent() {
+    if (!selectedEvent) return;
+    router.push({ pathname: '/event-details', params: { eventId: selectedEvent.id } });
+  }
+
+  function selectCategory(category: typeof categoryFilter) {
+    setCategoryFilter(category);
+    setFilterVisible(false);
+    setSelectedEventId(null);
+  }
+
   function createEvent() {
     if (!activeFamily) return;
     router.push({
@@ -240,14 +267,21 @@ export default function MapScreen() {
         <View style={styles.topBar}>
           <Text style={styles.title}>Térkép</Text>
           <View style={styles.topAction}>
-            <SymbolView
-              name={{ ios: 'square.grid.2x2.fill', android: 'apps', web: 'apps' }}
-              size={21}
-              tintColor={colors.primary}
-              type="hierarchical"
-              weight={{ ios: 'semibold', android: medium }}
-              style={styles.topActionSymbol}
-            />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="További lehetőségek"
+              onPress={() => router.push('/more')}
+              style={({ pressed }) => [styles.topActionButton, pressed && styles.pressed]}
+            >
+              <SymbolView
+                name={{ ios: 'square.grid.2x2.fill', android: 'apps', web: 'apps' }}
+                size={21}
+                tintColor={colors.primary}
+                type="hierarchical"
+                weight={{ ios: 'semibold', android: medium }}
+                style={styles.topActionSymbol}
+              />
+            </Pressable>
           </View>
         </View>
 
@@ -291,15 +325,23 @@ export default function MapScreen() {
               <View style={styles.errorCard}>
                 <Text style={styles.errorText}>{error}</Text>
               </View>
-            ) : locationEvents.length ? (
+            ) : filteredLocationEvents.length ? (
               <>
                 <View style={styles.mapCard}>
                   <EventMap
-                    events={locationEvents}
+                    events={filteredLocationEvents}
                     selectedEventId={selectedEvent?.id ?? null}
                   />
 
-                  <View style={styles.mapFilterButton}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Események szűrése"
+                    onPress={() => setFilterVisible(true)}
+                    style={({ pressed }) => [
+                      styles.mapFilterButton,
+                      pressed && styles.pressed,
+                    ]}
+                  >
                     <SymbolView
                       name={{ ios: 'line.3.horizontal.decrease', android: 'filter_list', web: 'filter_list' }}
                       size={21}
@@ -308,10 +350,18 @@ export default function MapScreen() {
                       weight={{ ios: 'semibold', android: medium }}
                       style={styles.captionSymbol}
                     />
-                  </View>
+                  </Pressable>
 
                   <View style={styles.mapControls}>
-                    <Pressable style={styles.mapControlButton}>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Kijelölt hely megjelenítése"
+                      onPress={() => setSelectedEventId(selectedEvent?.id ?? null)}
+                      style={({ pressed }) => [
+                        styles.mapControlButton,
+                        pressed && styles.pressed,
+                      ]}
+                    >
                       <SymbolView
                         name={{ ios: 'location.fill', android: 'my_location', web: 'my_location' }}
                         size={21}
@@ -321,7 +371,15 @@ export default function MapScreen() {
                         style={styles.captionSymbol}
                       />
                     </Pressable>
-                    <Pressable style={styles.mapControlButton}>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Első hely kiválasztása"
+                      onPress={() => setSelectedEventId(filteredLocationEvents[0]?.id ?? null)}
+                      style={({ pressed }) => [
+                        styles.mapControlButton,
+                        pressed && styles.pressed,
+                      ]}
+                    >
                       <SymbolView
                         name={{ ios: 'location.north.fill', android: 'near_me', web: 'near_me' }}
                         size={21}
@@ -334,7 +392,15 @@ export default function MapScreen() {
                   </View>
                 </View>
                 {selectedEvent ? (
-                  <View style={styles.selectedCard}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`${selectedEvent.title} esemény részletei`}
+                    onPress={openSelectedEvent}
+                    style={({ pressed }) => [
+                      styles.selectedCard,
+                      pressed && styles.pressed,
+                    ]}
+                  >
                     <View style={styles.selectedPlaceIcon}>
                       <SymbolView
                         name={{ ios: 'house.fill', android: 'home', web: 'home' }}
@@ -364,11 +430,11 @@ export default function MapScreen() {
                         {selectedEvent.location_name}
                       </Text>
                     </View>
-                  </View>
+                  </Pressable>
                 ) : null}
 
                 <View style={styles.listHidden}>
-                  {locationEvents.map((event) => (
+                  {filteredLocationEvents.map((event) => (
                     <EventLocationCard
                       key={event.id}
                       event={event}
@@ -424,6 +490,49 @@ export default function MapScreen() {
                 </Pressable>
               </View>
             )}
+
+            <Modal
+              visible={filterVisible}
+              transparent
+              animationType="fade"
+              onRequestClose={() => setFilterVisible(false)}
+            >
+              <View style={styles.filterOverlay}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Szűrő bezárása"
+                  onPress={() => setFilterVisible(false)}
+                  style={styles.filterBackdrop}
+                />
+                <View style={styles.filterCard}>
+                  <Text style={styles.filterTitle}>Események szűrése</Text>
+                  {[
+                    ['all', 'Minden kategória'],
+                    ...Object.keys(categoryColors).map((category) => [
+                      category,
+                      categoryLabels[category as FamilyEvent['category']],
+                    ]),
+                  ].map(([value, label]) => (
+                    <Pressable
+                      key={value}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: categoryFilter === value }}
+                      onPress={() => selectCategory(value as typeof categoryFilter)}
+                      style={({ pressed }) => [
+                        styles.filterOption,
+                        categoryFilter === value && styles.filterOptionSelected,
+                        pressed && styles.pressed,
+                      ]}
+                    >
+                      <Text style={styles.filterOptionText}>{label}</Text>
+                      {categoryFilter === value ? (
+                        <Text style={styles.filterCheck}>✓</Text>
+                      ) : null}
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            </Modal>
 
             <View style={styles.infoCard}>
               <View style={styles.infoIcon}>
@@ -483,6 +592,13 @@ const styles = StyleSheet.create({
     borderRadius: radius.round,
     backgroundColor: colors.surface,
     ...shadows.card,
+  },
+  topActionButton: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.round,
   },
   topActionSymbol: { width: 24, height: 24 },
   title: {
@@ -662,6 +778,44 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     ...shadows.card,
   },
+  filterOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    padding: spacing.lg,
+    backgroundColor: 'rgba(7, 17, 35, 0.42)',
+  },
+  filterBackdrop: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  },
+  filterCard: {
+    padding: spacing.md,
+    borderRadius: radius.xl,
+    backgroundColor: colors.surface,
+    zIndex: 1,
+    ...shadows.card,
+  },
+  filterTitle: {
+    paddingHorizontal: spacing.sm,
+    paddingBottom: spacing.sm,
+    color: colors.textPrimary,
+    fontSize: 17,
+    fontWeight: '900',
+  },
+  filterOption: {
+    minHeight: 44,
+    paddingHorizontal: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: radius.md,
+  },
+  filterOptionSelected: { backgroundColor: '#E8F0FF' },
+  filterOptionText: { color: colors.textSecondary, fontSize: 13, fontWeight: '700' },
+  filterCheck: { color: colors.primary, fontSize: 18, fontWeight: '900' },
   captionSymbol: { width: 19, height: 19 },
   mapCaptionText: { color: colors.textSecondary, fontSize: 10, fontWeight: '700' },
   selectedCard: {

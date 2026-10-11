@@ -11,6 +11,7 @@ import medium from 'expo-symbols/androidWeights/medium';
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -127,6 +128,8 @@ export default function CalendarScreen() {
   const [events, setEvents] = useState<FamilyEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [refreshToken, setRefreshToken] = useState(0);
   const bounds = useMemo(() => monthBounds(cursor), [cursor]);
   const calendarDays = useMemo(() => getCalendarDays(cursor), [cursor]);
   const today = new Date();
@@ -157,7 +160,7 @@ export default function CalendarScreen() {
       return () => {
         active = false;
       };
-    }, [activeFamily, bounds.from, bounds.to]),
+    }, [activeFamily, bounds.from, bounds.to, refreshToken]),
   );
 
   function moveMonth(offset: number) {
@@ -182,7 +185,13 @@ export default function CalendarScreen() {
         />
         <View style={styles.pageHeader}>
           <Text style={styles.title}>Naptár</Text>
-          <Pressable style={styles.moreButton}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Naptár műveletei"
+            accessibilityState={{ expanded: menuVisible }}
+            onPress={() => setMenuVisible(true)}
+            style={({ pressed }) => [styles.moreButton, pressed && styles.pressed]}
+          >
             <Text style={styles.moreText}>•••</Text>
           </Pressable>
         </View>
@@ -299,6 +308,97 @@ export default function CalendarScreen() {
           </View>
         )}
       </ScrollView>
+      <Modal
+        visible={menuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMenuVisible(false)}
+      >
+        <View style={styles.menuOverlay}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Menü bezárása"
+            onPress={() => setMenuVisible(false)}
+            style={styles.menuBackdrop}
+          />
+          <View style={styles.menuCard}>
+            <Text style={styles.menuTitle}>Naptár műveletei</Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => {
+                setRefreshToken((current) => current + 1);
+                setMenuVisible(false);
+              }}
+              style={({ pressed }) => [styles.menuItem, pressed && styles.pressed]}
+            >
+              <SymbolView
+                name={{ ios: 'arrow.clockwise', android: 'refresh', web: 'refresh' }}
+                size={21}
+                tintColor={colors.primary}
+                type="hierarchical"
+                weight={{ ios: 'semibold', android: medium }}
+                style={styles.symbol}
+              />
+              <Text style={styles.menuItemText}>Események frissítése</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => {
+                const now = new Date();
+                setCursor(new Date(now.getFullYear(), now.getMonth(), 1));
+                setMenuVisible(false);
+              }}
+              style={({ pressed }) => [styles.menuItem, pressed && styles.pressed]}
+            >
+              <SymbolView
+                name={{ ios: 'calendar', android: 'today', web: 'today' }}
+                size={21}
+                tintColor={colors.primary}
+                type="hierarchical"
+                weight={{ ios: 'semibold', android: medium }}
+                style={styles.symbol}
+              />
+              <Text style={styles.menuItemText}>Ugrás a mai naphoz</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              disabled={!activeFamily}
+              onPress={() => {
+                if (!activeFamily) return;
+                setMenuVisible(false);
+                router.push({
+                  pathname: './create-event',
+                  params: { familyId: activeFamily.id, familyName: activeFamily.name },
+                });
+              }}
+              style={({ pressed }) => [
+                styles.menuItem,
+                !activeFamily && styles.menuItemDisabled,
+                pressed && styles.pressed,
+              ]}
+            >
+              <SymbolView
+                name={{ ios: 'calendar.badge.plus', android: 'event_upcoming', web: 'event_upcoming' }}
+                size={21}
+                tintColor={activeFamily ? colors.primary : colors.textMuted}
+                type="hierarchical"
+                weight={{ ios: 'semibold', android: medium }}
+                style={styles.symbol}
+              />
+              <Text style={[styles.menuItemText, !activeFamily && styles.menuItemTextDisabled]}>
+                Új esemény létrehozása
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setMenuVisible(false)}
+              style={({ pressed }) => [styles.menuCancel, pressed && styles.pressed]}
+            >
+              <Text style={styles.menuCancelText}>Mégse</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
       {activeFamily ? (
         <Pressable
           onPress={() =>
@@ -342,6 +442,63 @@ const styles = StyleSheet.create({
     backgroundColor: '#EEF4FC',
   },
   moreText: { color: colors.primary, fontSize: 20, fontWeight: '900', letterSpacing: 2 },
+  menuOverlay: {
+    flex: 1,
+    alignItems: 'flex-end',
+    paddingTop: 58,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: 'rgba(7, 17, 35, 0.22)',
+  },
+  menuBackdrop: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  },
+  menuCard: {
+    width: 260,
+    padding: spacing.sm,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
+    zIndex: 1,
+    ...shadows.card,
+  },
+  menuTitle: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    color: colors.textPrimary,
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  menuItem: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+  },
+  menuItemDisabled: { opacity: 0.55 },
+  menuItemText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  menuItemTextDisabled: { color: colors.textMuted },
+  menuCancel: {
+    minHeight: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  menuCancelText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: '800',
+  },
   title: {
     color: colors.textPrimary,
     fontSize: 31,

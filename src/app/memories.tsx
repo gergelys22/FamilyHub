@@ -206,6 +206,7 @@ export function MemoryScreenOptions({ refreshToken }: { refreshToken: number }) 
 export default function MemoriesScreen() {
   const { profile } = useAuth();
   const [refreshToken, setRefreshToken] = useState(0);
+  const [menuVisible, setMenuVisible] = useState(false);
   const [visible, setVisible] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -318,7 +319,13 @@ export default function MemoriesScreen() {
         >
           <View style={styles.pageHeader}>
             <Text style={styles.title}>Emlékek</Text>
-            <Pressable style={styles.moreButton}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Emlékek műveletei"
+              accessibilityState={{ expanded: menuVisible }}
+              onPress={() => setMenuVisible(true)}
+              style={({ pressed }) => [styles.moreButton, pressed && styles.pressed]}
+            >
               <Ionicons name="ellipsis-horizontal" size={22} color={colors.primary} />
             </Pressable>
           </View>
@@ -333,6 +340,53 @@ export default function MemoriesScreen() {
         >
           <Ionicons name="add" size={31} color={colors.white} />
         </Pressable>
+        <Modal
+          visible={menuVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setMenuVisible(false)}
+        >
+          <View style={styles.menuOverlay}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Menü bezárása"
+              onPress={() => setMenuVisible(false)}
+              style={styles.menuBackdrop}
+            />
+            <View style={styles.menuCard}>
+              <Text style={styles.menuTitle}>Emlékek műveletei</Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  setRefreshToken((current) => current + 1);
+                  setMenuVisible(false);
+                }}
+                style={({ pressed }) => [styles.menuItem, pressed && styles.pressed]}
+              >
+                <Ionicons name="refresh-outline" size={21} color={colors.primary} />
+                <Text style={styles.menuItemText}>Emlékek frissítése</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  setMenuVisible(false);
+                  void openCreateModal();
+                }}
+                style={({ pressed }) => [styles.menuItem, pressed && styles.pressed]}
+              >
+                <Ionicons name="add-circle-outline" size={21} color={colors.primary} />
+                <Text style={styles.menuItemText}>Új emlék hozzáadása</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setMenuVisible(false)}
+                style={({ pressed }) => [styles.menuCancel, pressed && styles.pressed]}
+              >
+                <Text style={styles.menuCancelText}>Mégse</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
         <Modal visible={visible} transparent animationType="slide" onRequestClose={() => setVisible(false)}>
           <View style={styles.modalOverlay}>
             <View style={styles.modal}>
@@ -400,6 +454,61 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: radius.round,
     backgroundColor: '#F0F5FF',
+  },
+  menuOverlay: {
+    flex: 1,
+    alignItems: 'flex-end',
+    paddingTop: 58,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: 'rgba(7, 17, 35, 0.22)',
+  },
+  menuBackdrop: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  },
+  menuCard: {
+    width: 250,
+    padding: spacing.sm,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
+    ...shadows.card,
+    zIndex: 1,
+  },
+  menuTitle: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    color: colors.textPrimary,
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  menuItem: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+  },
+  menuItemText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  menuCancel: {
+    minHeight: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  menuCancelText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: '800',
   },
   title: {
     color: colors.textPrimary,
