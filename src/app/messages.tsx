@@ -61,10 +61,7 @@ function ConversationRow({
           <Text style={styles.name}>{conversation.name}</Text>
           <Text style={styles.time}>{conversation.time}</Text>
         </View>
-        <Text
-          numberOfLines={1}
-          style={styles.preview}
-        >
+        <Text numberOfLines={1} style={styles.preview}>
           {conversation.preview}
         </Text>
       </View>
@@ -76,14 +73,20 @@ export default function MessagesScreen() {
   const router = useRouter();
   const { profile } = useAuth();
   const [familyId, setFamilyId] = useState<string | null>(null);
-  const { conversations: chatConversations, loading, error } = useChatConversations(familyId);
+  const {
+    conversations: chatConversations,
+    loading,
+    error,
+  } = useChatConversations(familyId);
   const [search, setSearch] = useState('');
   const displayName = profile?.display_name || 'Gergely';
   useEffect(() => {
     void getMyFamilies().then((families) => setFamilyId(families[0]?.id ?? null));
   }, []);
   const conversations: Conversation[] = chatConversations.map((conversation) => {
-    const firstMember = conversation.members.find((member) => member.id !== profile?.id) ?? conversation.members[0];
+    const firstMember =
+      conversation.members.find((member) => member.id !== profile?.id) ??
+      conversation.members[0];
     const name = conversation.is_group
       ? conversation.title || 'Családi csoport'
       : firstMember?.display_name || 'Beszélgetés';
@@ -92,9 +95,14 @@ export default function MessagesScreen() {
       name,
       preview: conversation.lastMessage?.body || 'Még nincs üzenet',
       time: conversation.lastMessage
-        ? new Date(conversation.lastMessage.created_at).toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' })
+        ? new Date(conversation.lastMessage.created_at).toLocaleTimeString('hu-HU', {
+            hour: '2-digit',
+            minute: '2-digit',
+          })
         : '',
-      initial: conversation.is_group ? '♥' : (firstMember?.display_name?.charAt(0) || '?').toUpperCase(),
+      initial: conversation.is_group
+        ? '♥'
+        : (firstMember?.display_name?.charAt(0) || '?').toUpperCase(),
       color: conversation.is_group ? '#BCDDF0' : '#D6B38D',
       textColor: conversation.is_group ? '#2C6E9E' : '#5F351D',
       group: conversation.is_group,
@@ -103,7 +111,9 @@ export default function MessagesScreen() {
   const query = search.trim().toLocaleLowerCase('hu-HU');
   const filteredConversations = query
     ? conversations.filter((conversation) =>
-        `${conversation.name} ${conversation.preview}`.toLocaleLowerCase('hu-HU').includes(query),
+        `${conversation.name} ${conversation.preview}`
+          .toLocaleLowerCase('hu-HU')
+          .includes(query),
       )
     : conversations;
 
@@ -114,7 +124,7 @@ export default function MessagesScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Üzenetek beállításai"
-          onPress={() => Alert.alert('Üzenetek', 'Az üzenetbeállítások hamarosan elérhetők.')}
+          onPress={() => router.push('/settings')}
           style={({ pressed }) => [styles.headerButton, pressed && styles.pressed]}
         >
           <Ionicons name="options-outline" size={22} color={colors.primary} />
@@ -149,9 +159,13 @@ export default function MessagesScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {loading ? (
-          <View style={styles.emptyState}><Text style={styles.emptyText}>Beszélgetések betöltése…</Text></View>
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>Beszélgetések betöltése…</Text>
+          </View>
         ) : error ? (
-          <View style={styles.emptyState}><Text style={styles.emptyText}>{error.message}</Text></View>
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>{error.message}</Text>
+          </View>
         ) : filteredConversations.length > 0 ? (
           filteredConversations.map((conversation) => (
             <ConversationRow
@@ -170,7 +184,9 @@ export default function MessagesScreen() {
             <Ionicons name="chatbubbles-outline" size={42} color={colors.textMuted} />
             <Text style={styles.emptyTitle}>Nincs találat</Text>
             <Text style={styles.emptyText}>
-              {search ? 'Próbálj másik nevet vagy kifejezést keresni.' : 'Még nincs létrehozott beszélgetés.'}
+              {search
+                ? 'Próbálj másik nevet vagy kifejezést keresni.'
+                : 'Még nincs létrehozott beszélgetés.'}
             </Text>
           </View>
         )}
@@ -179,7 +195,12 @@ export default function MessagesScreen() {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Új üzenet írása"
-        onPress={() => Alert.alert('Új üzenet', `Hamarosan üzenetet írhatsz a családodnak, ${displayName}.`)}
+        onPress={() =>
+          Alert.alert(
+            'Új üzenet',
+            `Hamarosan üzenetet írhatsz a családodnak, ${displayName}.`,
+          )
+        }
         style={({ pressed }) => [styles.composeButton, pressed && styles.pressed]}
       >
         <Ionicons name="create-outline" size={27} color={colors.white} />

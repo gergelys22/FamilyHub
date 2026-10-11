@@ -106,9 +106,12 @@ export default function SettingsScreen() {
           <SettingRow
             icon="phone-portrait-outline"
             title="Megbízható eszközök"
-            description="Eszközök kezelése"
+            description="Az aktuális eszköz munkamenete"
             onPress={() =>
-              Alert.alert('Megbízható eszközök', 'Az eszközkezelés hamarosan elérhető.')
+              Alert.alert(
+                'Megbízható eszközök',
+                'A FamilyHub nem tárol külön eszközlistát. A bejelentkezett munkamenetet a kijelentkezés gombbal zárhatod le.',
+              )
             }
           />
           <SettingRow

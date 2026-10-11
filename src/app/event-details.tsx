@@ -1,4 +1,4 @@
-import { colors, radius, spacing } from '@/constants/theme';
+import { colors, radius, shadows, spacing } from '@/constants/theme';
 import { deleteFamilyEvent, getFamilyEvent, type FamilyEvent } from '@/services/events';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
@@ -106,6 +106,29 @@ function formatTime(value: string) {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(value));
+}
+
+function formatDay(value: string) {
+  return new Intl.DateTimeFormat('hu-HU', {
+    day: '2-digit',
+  }).format(new Date(value));
+}
+
+function formatMonth(value: string) {
+  return new Intl.DateTimeFormat('hu-HU', {
+    month: 'short',
+  })
+    .format(new Date(value))
+    .replace('.', '')
+    .toUpperCase();
+}
+
+function getEventState(value: string) {
+  const date = new Date(value);
+  const now = new Date();
+  if (date < now) return 'Lezajlott';
+  if (date.toDateString() === now.toDateString()) return 'Ma';
+  return 'Közelgő esemény';
 }
 
 export default function EventDetailsScreen() {
@@ -252,15 +275,41 @@ export default function EventDetailsScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         {error ? (
           <View style={styles.errorCard}>
+            <View style={styles.errorIcon}>
+              <SymbolView
+                name={{
+                  ios: 'exclamationmark.triangle.fill',
+                  android: 'warning',
+                  web: 'warning',
+                }}
+                size={20}
+                tintColor={colors.danger}
+                style={styles.symbol}
+              />
+            </View>
             <Text style={styles.errorText}>{error}</Text>
           </View>
         ) : null}
 
         {event ? (
           <>
-            <View style={styles.heroCard}>
+            <View style={[styles.heroCard, { borderTopColor: category.color }]}>
+              <View style={styles.heroTopRow}>
+                <View
+                  style={[
+                    styles.categoryBadge,
+                    { backgroundColor: `${category.color}18` },
+                  ]}
+                >
+                  <Text style={[styles.categoryText, { color: category.color }]}>
+                    {category.label}
+                  </Text>
+                </View>
+                <Text style={styles.stateText}>{getEventState(event.starts_at)}</Text>
+              </View>
+
               <View
-                style={[styles.categoryIcon, { backgroundColor: `${category.color}25` }]}
+                style={[styles.categoryIcon, { backgroundColor: `${category.color}18` }]}
               >
                 <SymbolView
                   name={category.icon}
@@ -272,20 +321,6 @@ export default function EventDetailsScreen() {
                 />
               </View>
 
-              <View
-                style={[
-                  styles.categoryBadge,
-                  {
-                    borderColor: `${category.color}80`,
-                    backgroundColor: `${category.color}1F`,
-                  },
-                ]}
-              >
-                <Text style={[styles.categoryText, { color: category.color }]}>
-                  {category.label}
-                </Text>
-              </View>
-
               <Text style={styles.title}>{event.title}</Text>
 
               {event.description ? (
@@ -294,8 +329,11 @@ export default function EventDetailsScreen() {
             </View>
 
             <View style={styles.detailsCard}>
+              <Text style={styles.sectionTitle}>Az esemény adatai</Text>
               <View style={styles.detailRow}>
-                <View style={styles.detailIcon}>
+                <View
+                  style={[styles.detailIcon, { backgroundColor: colors.primarySoft }]}
+                >
                   <SymbolView
                     name={{
                       ios: 'calendar',
@@ -303,7 +341,7 @@ export default function EventDetailsScreen() {
                       web: 'calendar_month',
                     }}
                     size={22}
-                    tintColor={colors.primaryLight}
+                    tintColor={colors.primary}
                     weight={{ ios: 'semibold', android: medium }}
                     style={styles.symbol}
                   />
@@ -311,14 +349,29 @@ export default function EventDetailsScreen() {
 
                 <View style={styles.flex}>
                   <Text style={styles.detailLabel}>Dátum</Text>
-                  <Text style={styles.detailValue}>{formatDate(event.starts_at)}</Text>
+                  <View style={styles.dateValueRow}>
+                    <View
+                      style={[
+                        styles.dateChip,
+                        { backgroundColor: `${category.color}18` },
+                      ]}
+                    >
+                      <Text style={[styles.dateDay, { color: category.color }]}>
+                        {formatDay(event.starts_at)}
+                      </Text>
+                      <Text style={[styles.dateMonth, { color: category.color }]}>
+                        {formatMonth(event.starts_at)}
+                      </Text>
+                    </View>
+                    <Text style={styles.detailValue}>{formatDate(event.starts_at)}</Text>
+                  </View>
                 </View>
               </View>
 
               <View style={styles.divider} />
 
               <View style={styles.detailRow}>
-                <View style={styles.detailIcon}>
+                <View style={[styles.detailIcon, { backgroundColor: '#FFF3D9' }]}>
                   <SymbolView
                     name={{
                       ios: 'clock.fill',
@@ -326,7 +379,7 @@ export default function EventDetailsScreen() {
                       web: 'schedule',
                     }}
                     size={22}
-                    tintColor={colors.primaryLight}
+                    tintColor={colors.warning}
                     weight={{ ios: 'semibold', android: medium }}
                     style={styles.symbol}
                   />
@@ -346,7 +399,7 @@ export default function EventDetailsScreen() {
                   <View style={styles.divider} />
 
                   <View style={styles.detailRow}>
-                    <View style={styles.detailIcon}>
+                    <View style={[styles.detailIcon, { backgroundColor: '#E5F9F4' }]}>
                       <SymbolView
                         name={{
                           ios: 'location.fill',
@@ -354,7 +407,7 @@ export default function EventDetailsScreen() {
                           web: 'location_on',
                         }}
                         size={22}
-                        tintColor={colors.primaryLight}
+                        tintColor={colors.success}
                         type="hierarchical"
                         weight={{ ios: 'semibold', android: medium }}
                         style={styles.symbol}
@@ -410,22 +463,30 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
-    paddingBottom: spacing.xxl,
+    paddingBottom: 48,
     gap: spacing.lg,
   },
   heroCard: {
-    padding: spacing.xl,
+    padding: spacing.lg,
     alignItems: 'center',
     gap: spacing.md,
     borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: '#294469',
-    backgroundColor: '#10233E',
+    borderColor: colors.border,
+    borderTopWidth: 5,
+    backgroundColor: colors.surface,
+    ...shadows.card,
+  },
+  heroTopRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   categoryIcon: {
-    width: 76,
-    height: 76,
-    borderRadius: 24,
+    width: 78,
+    height: 78,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -433,30 +494,41 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: radius.round,
-    borderWidth: 1,
   },
   categoryText: {
     fontSize: 11,
     fontWeight: '800',
   },
+  stateText: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '800',
+  },
   title: {
     color: colors.textPrimary,
-    fontSize: 24,
+    fontSize: 25,
     fontWeight: '900',
     textAlign: 'center',
   },
   description: {
-    color: colors.textMuted,
+    color: colors.textSecondary,
     fontSize: 13,
     lineHeight: 20,
     textAlign: 'center',
   },
   detailsCard: {
-    paddingHorizontal: spacing.lg,
+    padding: spacing.lg,
     borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: '#294469',
-    backgroundColor: '#10233E',
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    ...shadows.card,
+  },
+  sectionTitle: {
+    marginBottom: spacing.xs,
+    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '900',
   },
   detailRow: {
     minHeight: 82,
@@ -470,7 +542,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(59, 130, 246, 0.16)',
   },
   detailLabel: {
     color: colors.textMuted,
@@ -483,6 +554,28 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
     textTransform: 'capitalize',
+  },
+  dateValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  dateChip: {
+    width: 42,
+    minHeight: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.sm,
+  },
+  dateDay: {
+    fontSize: 16,
+    fontWeight: '900',
+    lineHeight: 17,
+  },
+  dateMonth: {
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.5,
   },
   divider: {
     height: 1,
@@ -501,12 +594,27 @@ const styles = StyleSheet.create({
   },
   errorCard: {
     padding: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
     borderRadius: radius.md,
-    backgroundColor: '#3B1622',
+    borderWidth: 1,
+    borderColor: '#FFD2D8',
+    backgroundColor: '#FFF1F3',
+  },
+  errorIcon: {
+    width: 34,
+    height: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.round,
+    backgroundColor: '#FFE0E5',
   },
   errorText: {
-    color: '#FDA4AF',
+    flex: 1,
+    color: '#B23A4A',
     fontSize: 12,
+    lineHeight: 18,
   },
   pressed: {
     opacity: 0.7,

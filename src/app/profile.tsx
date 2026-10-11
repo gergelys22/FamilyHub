@@ -3,7 +3,15 @@ import { useAuth } from '@/providers/auth-provider';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Alert,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -45,7 +53,9 @@ export default function ProfileScreen() {
   const emailConfirmed = session?.user.email_confirmed_at
     ? 'Megerősítve'
     : 'Nincs megerősítve';
-  const profileType = profile ? profileTypeLabels[profile.profile_type] : 'Betöltés alatt';
+  const profileType = profile
+    ? profileTypeLabels[profile.profile_type]
+    : 'Betöltés alatt';
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
@@ -98,7 +108,8 @@ export default function ProfileScreen() {
     try {
       const asset = result.assets[0];
       const extension = asset.fileName?.split('.').pop()?.toLowerCase() || 'jpg';
-      const contentType = asset.mimeType || `image/${extension === 'jpg' ? 'jpeg' : extension}`;
+      const contentType =
+        asset.mimeType || `image/${extension === 'jpg' ? 'jpeg' : extension}`;
       const path = `${profile.id}/avatar-${Date.now()}.${extension}`;
       const response = await fetch(asset.uri);
       const arrayBuffer = await response.arrayBuffer();
@@ -150,7 +161,7 @@ export default function ProfileScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Profil szerkesztése"
-          onPress={() => Alert.alert('Profil szerkesztése', 'A profil szerkesztése hamarosan elérhető.')}
+          onPress={() => router.push('/settings')}
           style={({ pressed }) => [styles.headerButton, pressed && styles.pressed]}
         >
           <Ionicons name="create-outline" size={22} color={colors.primary} />

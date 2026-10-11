@@ -2,10 +2,11 @@ import { colors, radius, shadows, spacing } from '@/constants/theme';
 import { useMemories } from '@/hooks/use-memories';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Image,
   Pressable,
+  Share,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,6 +20,7 @@ export default function MemoryDetailsScreen() {
   const { memories, loading, hasMore, error, loadMore } = useMemories();
   const memory = useMemo(() => memories.find((item) => item.id === id), [id, memories]);
   const photos = memory?.photos ?? [];
+  const [favorite, setFavorite] = useState(false);
 
   useEffect(() => {
     if (id && !loading && !memory && hasMore) {
@@ -29,7 +31,10 @@ export default function MemoryDetailsScreen() {
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.hero}>
             {memory?.photo ? (
               <Image source={{ uri: memory.photo }} style={styles.heroImage} />
@@ -80,33 +85,54 @@ export default function MemoryDetailsScreen() {
                 <View style={styles.actions}>
                   <Pressable
                     accessibilityRole="button"
-                    onPress={() => undefined}
+                    onPress={() => {
+                      const photo = photos[0] ?? memory.photo;
+                      if (photo) {
+                        void Share.share({
+                          message: `${memory.title}\n${photo}`,
+                        });
+                      }
+                    }}
                     style={({ pressed }) => [styles.action, pressed && styles.pressed]}
                   >
                     <Ionicons name="download-outline" size={21} color={colors.primary} />
-                    <Text style={styles.actionText}>Letöltés</Text>
+                    <Text style={styles.actionText}>Kép megosztása</Text>
                   </Pressable>
                   <Pressable
                     accessibilityRole="button"
-                    onPress={() => undefined}
+                    onPress={() => {
+                      if (!memory) return;
+                      void Share.share({
+                        title: memory.title,
+                        message: `${memory.title}\n${memory.location ?? ''}`.trim(),
+                      });
+                    }}
                     style={({ pressed }) => [styles.action, pressed && styles.pressed]}
                   >
-                    <Ionicons name="share-social-outline" size={21} color={colors.primary} />
+                    <Ionicons
+                      name="share-social-outline"
+                      size={21}
+                      color={colors.primary}
+                    />
                     <Text style={styles.actionText}>Megosztás</Text>
                   </Pressable>
                   <Pressable
                     accessibilityRole="button"
-                    onPress={() => undefined}
+                    onPress={() => setFavorite((current) => !current)}
                     style={({ pressed }) => [styles.action, pressed && styles.pressed]}
                   >
-                    <Ionicons name="heart-outline" size={21} color={colors.danger} />
+                    <Ionicons
+                      name={favorite ? 'heart' : 'heart-outline'}
+                      size={21}
+                      color={colors.danger}
+                    />
                     <Text style={styles.actionText}>Kedvenc</Text>
                   </Pressable>
                 </View>
               </>
             ) : (
               <Text style={styles.description}>
-                {loading ? 'Emlék betöltése…' : error ?? 'Az emlék nem található.'}
+                {loading ? 'Emlék betöltése…' : (error ?? 'Az emlék nem található.')}
               </Text>
             )}
           </View>
@@ -152,7 +178,12 @@ const styles = StyleSheet.create({
   },
   title: { flex: 1, color: colors.textPrimary, fontSize: 25, fontWeight: '900' },
   heart: { color: colors.danger, fontSize: 26, fontWeight: '900' },
-  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: spacing.sm },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: spacing.sm,
+  },
   location: { color: colors.textSecondary, fontSize: 13, fontWeight: '700' },
   description: {
     marginTop: spacing.lg,
