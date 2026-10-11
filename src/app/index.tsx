@@ -1,18 +1,26 @@
 import { FamilyHeader } from '@/components/family-header';
 import { FamilySwitcher } from '@/components/family-switcher';
 import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
-import { useTheme } from '@/providers/theme-provider';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useAuth } from '@/providers/auth-provider';
+import { useTheme } from '@/providers/theme-provider';
+import { getChatConversations } from '@/services/chat';
+import { getFamilyEvents, type FamilyEvent } from '@/services/events';
 import type { Family } from '@/services/families';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { getFamilyEvents, type FamilyEvent } from '@/services/events';
-import { getChatConversations } from '@/services/chat';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+function getGreeting(date: Date = new Date()): string {
+  const hour = date.getHours();
+  if (hour >= 5 && hour < 12) return 'Jó reggelt';
+  if (hour >= 12 && hour < 18) return 'Jó napot';
+  if (hour >= 18 && hour < 22) return 'Jó estét';
+  return 'Stia';
+}
 
 type IconName = {
   ios: string;
@@ -220,6 +228,7 @@ export default function HomeScreen() {
   const palette = isDark ? darkColors : colors;
   const router = useRouter();
   const { profile, profileError } = useAuth();
+  const greeting = getGreeting();
   const { unreadCount } = useNotifications();
   const [activeFamily, setActiveFamily] = useState<Family | null>(null);
   const [upcomingEvents, setUpcomingEvents] = useState<FamilyEvent[]>([]);
@@ -308,7 +317,7 @@ export default function HomeScreen() {
             style={styles.heroGlow}
           />
           <Text style={[styles.greeting, { color: palette.textPrimary }]}>
-            Jó reggelt, {firstName}! <Text style={styles.wave}>👋</Text>
+            {greeting}, {firstName}! <Text style={styles.wave}>👋</Text>
           </Text>
           <Text style={[styles.heroDate, { color: palette.textSecondary }]}>{todayLabel}</Text>
         </View>
