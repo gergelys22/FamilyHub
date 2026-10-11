@@ -228,6 +228,7 @@ function AppNavigator() {
           <Tabs.Screen name="reminders" options={{ href: null, title: 'Emlékeztetők', tabBarStyle: { display: 'none' } }} />
           <Tabs.Screen name="location-sharing" options={{ href: null, title: 'Helymegosztás', tabBarStyle: { display: 'none' } }} />
           <Tabs.Screen name="settings" options={{ href: null, title: 'Beállítások', tabBarStyle: { display: 'none' } }} />
+          <Tabs.Screen name="privacy" options={{ href: null, title: 'Adatvédelem', tabBarStyle: { display: 'none' } }} />
 
           <Tabs.Screen
             name="invitations"

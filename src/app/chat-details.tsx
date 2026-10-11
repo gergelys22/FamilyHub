@@ -84,7 +84,9 @@ export default function ChatDetailsScreen() {
         <ScrollView contentContainerStyle={styles.messages} showsVerticalScrollIndicator={false}>
           <View style={styles.encryption}>
             <Ionicons name="lock-closed-outline" size={14} color={colors.textMuted} />
-            <Text style={styles.encryptionText}>A beszélgetés biztonságos</Text>
+            <Text style={styles.encryptionText}>
+              Csak a beszélgetés résztvevői férnek hozzá
+            </Text>
           </View>
           {loading ? <Text style={styles.status}>Üzenetek betöltése…</Text> : null}
           {error ? <Text style={styles.error}>{error.message}</Text> : null}

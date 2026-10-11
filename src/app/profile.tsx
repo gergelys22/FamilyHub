@@ -5,7 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { supabase } from '@/lib/supabase';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type DetailRowProps = {
@@ -49,6 +49,31 @@ export default function ProfileScreen() {
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
+  useEffect(() => {
+    let active = true;
+    if (!profile?.avatar_path) {
+      return () => {
+        active = false;
+      };
+    }
+
+    void supabase.storage
+      .from('avatars')
+      .createSignedUrl(profile.avatar_path, 300)
+      .then(({ data, error }) => {
+        if (!active) return;
+        if (error) {
+          setAvatarUri(null);
+          return;
+        }
+        setAvatarUri(data.signedUrl);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [profile?.avatar_path]);
+
   async function handlePickAvatar() {
     if (!profile || uploadingAvatar) return;
 
@@ -82,14 +107,17 @@ export default function ProfileScreen() {
         .upload(path, arrayBuffer, { contentType, upsert: true });
       if (uploadError) throw uploadError;
 
-      const { data: publicUrl } = supabase.storage.from('avatars').getPublicUrl(path);
+      const { data: signedUrl, error: signedUrlError } = await supabase.storage
+        .from('avatars')
+        .createSignedUrl(path, 300);
+      if (signedUrlError) throw signedUrlError;
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ avatar_path: path, updated_at: new Date().toISOString() })
         .eq('id', profile.id);
       if (profileError) throw profileError;
 
-      setAvatarUri(`${publicUrl.publicUrl}?v=${Date.now()}`);
+      setAvatarUri(signedUrl.signedUrl);
       Alert.alert('Sikeres feltöltés', 'A profilképed frissült.');
     } catch (caught) {
       Alert.alert(
@@ -142,13 +170,10 @@ export default function ProfileScreen() {
             onPress={() => void handlePickAvatar()}
             style={({ pressed }) => [styles.avatar, pressed && styles.pressed]}
           >
-            {avatarUri || profile?.avatar_path ? (
+            {avatarUri ? (
               <Image
                 source={{
-                  uri:
-                    avatarUri ||
-                    supabase.storage.from('avatars').getPublicUrl(profile?.avatar_path ?? '').data
-                      .publicUrl,
+                  uri: avatarUri,
                 }}
                 style={styles.avatarImage}
               />

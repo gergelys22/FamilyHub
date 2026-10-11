@@ -1,6 +1,22 @@
 insert into storage.buckets (id, name, public)
-values ('avatars', 'avatars', true)
-on conflict (id) do update set public = excluded.public;
+values ('avatars', 'avatars', false)
+on conflict (id) do update set public = false;
+
+drop policy if exists avatars_select_family on storage.objects;
+create policy avatars_select_family on storage.objects
+for select to authenticated
+using (
+  bucket_id = 'avatars'
+  and exists (
+    select 1
+    from public.profiles avatar_profile
+    where avatar_profile.id::text = (storage.foldername(name))[1]
+      and (
+        avatar_profile.auth_user_id = (select auth.uid())
+        or (select private.shares_family_with(avatar_profile.id))
+      )
+  )
+);
 
 drop policy if exists avatars_insert_own on storage.objects;
 create policy avatars_insert_own on storage.objects

@@ -1,7 +1,7 @@
 import { colors, radius, shadows, spacing } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type MenuItemProps = {
@@ -24,10 +24,6 @@ function MenuItem({ icon, label, color = colors.primary, onPress }: MenuItemProp
       <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
     </Pressable>
   );
-}
-
-function comingSoon(label: string) {
-  Alert.alert(label, 'Ez a funkció hamarosan elérhető lesz.');
 }
 
 export default function MoreScreen() {
@@ -103,7 +99,7 @@ export default function MoreScreen() {
 
         <Pressable
           accessibilityRole="button"
-          onPress={() => comingSoon('Adatvédelem és biztonság')}
+          onPress={() => router.push('/privacy')}
           style={({ pressed }) => [styles.securityCard, pressed && styles.pressed]}
         >
           <View style={styles.securityIcon}>
@@ -111,7 +107,7 @@ export default function MoreScreen() {
           </View>
           <View style={styles.securityContent}>
             <Text style={styles.securityTitle}>Adatvédelem és biztonság</Text>
-            <Text style={styles.securityText}>2FA aktív</Text>
+            <Text style={styles.securityText}>Adatkezelési tájékoztató</Text>
           </View>
           <Ionicons name="chevron-forward" size={19} color="#20BFA7" />
         </Pressable>
