@@ -1,4 +1,5 @@
-import { colors, radius, shadows, spacing } from '@/constants/theme';
+import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
+import { useTheme } from '@/providers/theme-provider';
 import { SymbolView } from 'expo-symbols';
 import medium from 'expo-symbols/androidWeights/medium';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -16,6 +17,8 @@ export function FamilyHeader({
   onNotificationsPress,
   onProfilePress,
 }: FamilyHeaderProps) {
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
   const badgeText =
     unreadNotificationCount > 99 ? '99+' : String(unreadNotificationCount);
 
@@ -30,14 +33,14 @@ export function FamilyHeader({
               web: 'family_home',
             }}
             size={22}
-            tintColor={colors.textPrimary}
+            tintColor={palette.textPrimary}
             type="hierarchical"
             weight={{ ios: 'semibold', android: medium }}
             style={styles.symbol}
           />
         </View>
 
-        <Text style={styles.brandText}>CsaládTér</Text>
+        <Text style={[styles.brandText, { color: palette.textPrimary }]}>CsaládTér</Text>
       </View>
 
       <View style={styles.actions}>
@@ -46,7 +49,11 @@ export function FamilyHeader({
           accessibilityLabel={`Értesítések megnyitása. ${unreadNotificationCount} olvasatlan.`}
           hitSlop={8}
           onPress={onNotificationsPress}
-          style={({ pressed }) => [styles.notificationsButton, pressed && styles.pressed]}
+          style={({ pressed }) => [
+            styles.notificationsButton,
+            { borderColor: palette.border, backgroundColor: palette.surface },
+            pressed && styles.pressed,
+          ]}
         >
           <SymbolView
             name={{
@@ -57,7 +64,7 @@ export function FamilyHeader({
             }}
             size={23}
             tintColor={
-              unreadNotificationCount > 0 ? colors.primaryLight : colors.textSecondary
+              unreadNotificationCount > 0 ? palette.primaryLight : palette.textSecondary
             }
             type="hierarchical"
             weight={{ ios: 'semibold', android: medium }}
@@ -76,7 +83,11 @@ export function FamilyHeader({
           accessibilityLabel="Profil megnyitása"
           hitSlop={8}
           onPress={onProfilePress}
-          style={({ pressed }) => [styles.profileButton, pressed && styles.pressed]}
+          style={({ pressed }) => [
+            styles.profileButton,
+            { borderColor: palette.surface },
+            pressed && styles.pressed,
+          ]}
         >
           <Text style={styles.profileText}>{userInitial}</Text>
         </Pressable>

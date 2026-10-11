@@ -1,5 +1,7 @@
-import { colors, radius, shadows, spacing } from '@/constants/theme';
+import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
+import { useTheme } from '@/providers/theme-provider';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,6 +14,7 @@ type VaultItemProps = {
   description: string;
   count: string;
   onPress?: () => void;
+  palette: typeof colors | typeof darkColors;
 };
 
 function VaultItem({
@@ -22,24 +25,25 @@ function VaultItem({
   description,
   count,
   onPress,
+  palette,
 }: VaultItemProps) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${title} megnyitása`}
       onPress={onPress}
-      style={({ pressed }) => [styles.vaultItem, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.vaultItem, { backgroundColor: palette.surface }, pressed && styles.pressed]}
     >
       <View style={[styles.itemIcon, { backgroundColor }]}>
         <Ionicons name={icon} size={26} color={color} />
       </View>
       <View style={styles.itemContent}>
-        <Text style={styles.itemTitle}>{title}</Text>
-        <Text style={styles.itemDescription}>{description}</Text>
+        <Text style={[styles.itemTitle, { color: palette.textPrimary }]}>{title}</Text>
+        <Text style={[styles.itemDescription, { color: palette.textMuted }]}>{description}</Text>
       </View>
       <View style={styles.itemEnd}>
         <Text style={styles.itemCount}>{count}</Text>
-        <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        <Ionicons name="chevron-forward" size={18} color={palette.textMuted} />
       </View>
     </Pressable>
   );
@@ -47,9 +51,11 @@ function VaultItem({
 
 export default function VaultScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -57,7 +63,7 @@ export default function VaultScreen() {
         <View style={styles.header}>
           <View>
             <Text style={styles.eyebrow}>CSALÁDI BIZTONSÁG</Text>
-            <Text style={styles.title}>Páncélterem</Text>
+            <Text style={[styles.title, { color: palette.textPrimary }]}>Páncélterem</Text>
           </View>
           <Pressable
             accessibilityRole="button"
@@ -68,13 +74,19 @@ export default function VaultScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.heroCard}>
-          <View pointerEvents="none" style={styles.heroGlow} />
+        <View style={[styles.heroCard, { backgroundColor: palette.surface }]}>
+          <LinearGradient
+            pointerEvents="none"
+            colors={['#3E78FF', '#112B5200']}
+            start={{ x: 1, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={styles.heroGlow}
+          />
           <View style={styles.shieldCircle}>
             <Ionicons name="shield-checkmark" size={52} color={colors.white} />
           </View>
-          <Text style={styles.heroTitle}>Minden fontos adat védve</Text>
-          <Text style={styles.heroText}>
+          <Text style={[styles.heroTitle, { color: palette.textPrimary }]}>Minden fontos adat védve</Text>
+          <Text style={[styles.heroText, { color: palette.textSecondary }]}>
             A családod érzékeny dokumentumai és sürgősségi információi egy biztonságos helyen.
           </Text>
           <View style={styles.statusRow}>
@@ -92,8 +104,8 @@ export default function VaultScreen() {
         </View>
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Védett tartalmak</Text>
-          <Text style={styles.sectionMeta}>3 kategória</Text>
+          <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>Védett tartalmak</Text>
+          <Text style={[styles.sectionMeta, { color: palette.textMuted }]}>3 kategória</Text>
         </View>
 
         <VaultItem
@@ -104,6 +116,7 @@ export default function VaultScreen() {
           description="Személyes iratok és biztosítások"
           count="0"
           onPress={() => router.push('/documents')}
+          palette={palette}
         />
         <VaultItem
           icon="medkit"
@@ -112,6 +125,7 @@ export default function VaultScreen() {
           title="Egészségügyi adatok"
           description="Gyógyszerek, allergiák és orvosi adatok"
           count="0"
+          palette={palette}
         />
         <VaultItem
           icon="call"
@@ -120,6 +134,7 @@ export default function VaultScreen() {
           title="Sürgősségi kapcsolatok"
           description="Fontos telefonszámok egy helyen"
           count="0"
+          palette={palette}
         />
 
         <View style={styles.tipCard}>
@@ -182,12 +197,10 @@ const styles = StyleSheet.create({
   },
   heroGlow: {
     position: 'absolute',
-    top: -90,
-    right: -40,
-    width: 250,
-    height: 250,
-    borderRadius: 125,
-    backgroundColor: '#3E78FF',
+    top: 0,
+    right: 0,
+    width: '78%',
+    height: 220,
     opacity: 0.22,
   },
   shieldCircle: {

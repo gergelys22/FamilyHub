@@ -1,4 +1,5 @@
-import { colors, radius, shadows, spacing } from '@/constants/theme';
+import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
+import { useTheme } from '@/providers/theme-provider';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -26,52 +27,63 @@ function SettingRow({
   right?: React.ReactNode;
   onPress?: () => void;
 }) {
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.row,
+        { borderBottomColor: palette.border },
+        pressed && styles.pressed,
+      ]}
     >
       <View style={styles.rowIcon}>
-        <Ionicons name={icon} size={21} color={colors.primary} />
+        <Ionicons name={icon} size={21} color={palette.primary} />
       </View>
       <View style={styles.rowContent}>
-        <Text style={styles.rowTitle}>{title}</Text>
-        {description ? <Text style={styles.rowDescription}>{description}</Text> : null}
+        <Text style={[styles.rowTitle, { color: palette.textPrimary }]}>{title}</Text>
+        {description ? (
+          <Text style={[styles.rowDescription, { color: palette.textMuted }]}>
+            {description}
+          </Text>
+        ) : null}
       </View>
-      {right ?? <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />}
+      {right ?? <Ionicons name="chevron-forward" size={18} color={palette.textMuted} />}
     </Pressable>
   );
 }
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const [dark, setDark] = React.useState(false);
+  const { isDark, setDarkMode } = useTheme();
+  const palette = isDark ? darkColors : colors;
   const [largeText, setLargeText] = React.useState(false);
   const [twoFactor, setTwoFactor] = React.useState(false);
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.headerButton}>
-          <Ionicons name="chevron-back" size={25} color={colors.textPrimary} />
+        <Pressable onPress={() => router.back()} style={[styles.headerButton, { backgroundColor: palette.surface }]}>
+          <Ionicons name="chevron-back" size={25} color={palette.textPrimary} />
         </Pressable>
-        <Text style={styles.title}>Beállítások</Text>
-        <Ionicons name="settings-outline" size={22} color={colors.primary} />
+        <Text style={[styles.title, { color: palette.textPrimary }]}>Beállítások</Text>
+        <Ionicons name="settings-outline" size={22} color={palette.primary} />
       </View>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.section}>Megjelenés</Text>
-        <View style={styles.card}>
+        <Text style={[styles.section, { color: palette.textMuted }]}>Megjelenés</Text>
+        <View style={[styles.card, { backgroundColor: palette.surface }]}>
           <SettingRow
             icon="moon-outline"
             title="Sötét mód"
             description="Sötét színséma használata"
             right={
               <Switch
-                value={dark}
-                onValueChange={setDark}
-                trackColor={{ false: colors.border, true: colors.primaryLight }}
+                value={isDark}
+                onValueChange={setDarkMode}
+                trackColor={{ false: palette.border, true: palette.primaryLight }}
               />
             }
           />
@@ -83,13 +95,13 @@ export default function SettingsScreen() {
               <Switch
                 value={largeText}
                 onValueChange={setLargeText}
-                trackColor={{ false: colors.border, true: colors.primaryLight }}
+                trackColor={{ false: palette.border, true: palette.primaryLight }}
               />
             }
           />
         </View>
-        <Text style={styles.section}>Biztonság</Text>
-        <View style={styles.card}>
+        <Text style={[styles.section, { color: palette.textMuted }]}>Biztonság</Text>
+        <View style={[styles.card, { backgroundColor: palette.surface }]}>
           <SettingRow
             icon="shield-checkmark-outline"
             title="Kétlépcsős azonosítás"
@@ -98,7 +110,7 @@ export default function SettingsScreen() {
               <Switch
                 value={twoFactor}
                 onValueChange={setTwoFactor}
-                trackColor={{ false: colors.border, true: '#9BE5D5' }}
+                trackColor={{ false: palette.border, true: '#42C7AA' }}
                 thumbColor={twoFactor ? colors.success : undefined}
               />
             }
@@ -121,8 +133,8 @@ export default function SettingsScreen() {
             onPress={() => router.push('/privacy')}
           />
         </View>
-        <Text style={styles.section}>Alkalmazás</Text>
-        <View style={styles.card}>
+        <Text style={[styles.section, { color: palette.textMuted }]}>Alkalmazás</Text>
+        <View style={[styles.card, { backgroundColor: palette.surface }]}>
           <SettingRow
             icon="notifications-outline"
             title="Értesítések"
@@ -139,7 +151,7 @@ export default function SettingsScreen() {
           />
         </View>
         <View style={styles.version}>
-          <Text style={styles.versionText}>FamilyHub · 1.0.0</Text>
+          <Text style={[styles.versionText, { color: palette.textMuted }]}>FamilyHub · 1.0.0</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

@@ -1,4 +1,6 @@
 import type { FamilyEvent } from '@/services/events';
+import { colors, darkColors } from '@/constants/theme';
+import { useTheme } from '@/providers/theme-provider';
 import { StyleSheet, Text, View } from 'react-native';
 
 type EventMapProps = {
@@ -7,14 +9,16 @@ type EventMapProps = {
 };
 
 export function EventMap({ events }: EventMapProps) {
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
   const markerCount = events.filter(
     (event) => event.location_latitude !== null && event.location_longitude !== null,
   ).length;
 
   return (
-    <View style={styles.fallback}>
-      <Text style={styles.title}>Google Maps az Android alkalmazásban</Text>
-      <Text style={styles.text}>
+    <View style={[styles.fallback, { backgroundColor: palette.surfaceMuted }]}>
+      <Text style={[styles.title, { color: palette.textPrimary }]}>Google Maps az Android alkalmazásban</Text>
+      <Text style={[styles.text, { color: palette.textSecondary }]}>
         {markerCount
           ? `${markerCount} eseményhez tartozik térképi jelölő.`
           : 'Válassz ki egy helyet a helyszínkeresőből, hogy jelölő kerüljön a térképre.'}

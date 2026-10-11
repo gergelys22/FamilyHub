@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, radius, spacing } from '@/constants/theme';
@@ -56,8 +57,22 @@ export default function CreateFamilyScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardView}
       >
-        <View pointerEvents="none" style={styles.glowTop} />
-        <View pointerEvents="none" style={styles.glowSide} />
+        <LinearGradient
+          pointerEvents="none"
+          colors={['#173B8F', '#173B8F00']}
+          locations={[0, 1]}
+          start={{ x: 1, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={styles.glowTop}
+        />
+        <LinearGradient
+          pointerEvents="none"
+          colors={['#5523A6', '#5523A600']}
+          locations={[0, 1]}
+          start={{ x: 0, y: 1 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.glowSide}
+        />
 
         <View style={styles.header}>
           <Pressable
@@ -205,22 +220,18 @@ const styles = StyleSheet.create({
   keyboardView: { flex: 1 },
   glowTop: {
     position: 'absolute',
-    top: -120,
-    right: -80,
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: '#173B8F',
+    top: 0,
+    right: 0,
+    width: '72%',
+    height: 220,
     opacity: 0.22,
   },
   glowSide: {
     position: 'absolute',
     top: 240,
-    left: -150,
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: '#5523A6',
+    left: 0,
+    width: '64%',
+    height: 220,
     opacity: 0.12,
   },
   header: {

@@ -1,4 +1,5 @@
-import { colors, radius, spacing } from '@/constants/theme';
+import { colors, darkColors, radius, spacing } from '@/constants/theme';
+import { useTheme } from '@/providers/theme-provider';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -14,24 +15,26 @@ const sections = [
 
 export default function PrivacyScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.headerButton} accessibilityRole="button" accessibilityLabel="Vissza">
-          <Ionicons name="chevron-back" size={25} color={colors.textPrimary} />
+        <Pressable onPress={() => router.back()} style={[styles.headerButton, { backgroundColor: palette.surface }]} accessibilityRole="button" accessibilityLabel="Vissza">
+          <Ionicons name="chevron-back" size={25} color={palette.textPrimary} />
         </Pressable>
-        <Text style={styles.title}>Adatvédelem</Text>
+        <Text style={[styles.title, { color: palette.textPrimary }]}>Adatvédelem</Text>
         <Ionicons name="shield-checkmark-outline" size={22} color={colors.success} />
       </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.intro}>
           <Ionicons name="information-circle" size={23} color={colors.primary} />
-          <Text style={styles.introText}>Ez a tájékoztató a FamilyHub jelenlegi, szakdolgozati és szűk családi prototípusára vonatkozik.</Text>
+          <Text style={[styles.introText, { color: palette.textSecondary }]}>Ez a tájékoztató a FamilyHub jelenlegi, szakdolgozati és szűk családi prototípusára vonatkozik.</Text>
         </View>
         {sections.map(([title, text]) => (
-          <View key={title} style={styles.section}>
-            <Text style={styles.sectionTitle}>{title}</Text>
-            <Text style={styles.sectionText}>{text}</Text>
+          <View key={title} style={[styles.section, { backgroundColor: palette.surface }]}>
+            <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>{title}</Text>
+            <Text style={[styles.sectionText, { color: palette.textSecondary }]}>{text}</Text>
           </View>
         ))}
       </ScrollView>

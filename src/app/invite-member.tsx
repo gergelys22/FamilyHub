@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, radius, spacing } from '@/constants/theme';
@@ -126,7 +127,13 @@ export default function InviteMemberScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardView}
       >
-        <View pointerEvents="none" style={styles.glow} />
+        <LinearGradient
+          pointerEvents="none"
+          colors={['#5530B8', '#5530B800']}
+          start={{ x: 1, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={styles.glow}
+        />
 
         <View style={styles.header}>
           <Pressable
@@ -277,12 +284,10 @@ const styles = StyleSheet.create({
   keyboardView: { flex: 1 },
   glow: {
     position: 'absolute',
-    top: -120,
-    right: -100,
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: '#5530B8',
+    top: 0,
+    right: 0,
+    width: '72%',
+    height: 220,
     opacity: 0.15,
   },
   header: {

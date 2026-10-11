@@ -1,10 +1,12 @@
-import { colors, radius, shadows, spacing } from '@/constants/theme';
+import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
+import { useTheme } from '@/providers/theme-provider';
 import { useNotifications } from '@/hooks/use-notifications';
 import type { AppNotification } from '@/services/notifications';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -18,32 +20,32 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 type NotificationFilter = 'all' | 'events' | 'system';
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
-function getNotificationIcon(type: string): {
+function getNotificationIcon(type: string, palette: typeof colors | typeof darkColors): {
   name: IconName;
   color: string;
   backgroundColor: string;
 } {
   switch (type) {
     case 'family_invite':
-      return { name: 'person-add', color: '#E97932', backgroundColor: '#FFF0E6' };
+      return { name: 'person-add', color: '#E97932', backgroundColor: palette.surfaceMuted };
 
     case 'calendar':
-      return { name: 'calendar', color: colors.primary, backgroundColor: '#E8F0FF' };
+      return { name: 'calendar', color: palette.primary, backgroundColor: palette.primarySoft };
 
     case 'task':
-      return { name: 'checkbox-outline', color: colors.purple, backgroundColor: '#F0ECFF' };
+      return { name: 'checkbox-outline', color: palette.purple, backgroundColor: palette.surfaceMuted };
 
     case 'location':
-      return { name: 'location', color: colors.primary, backgroundColor: '#E8F0FF' };
+      return { name: 'location', color: palette.primary, backgroundColor: palette.primarySoft };
 
     case 'memory':
-      return { name: 'image', color: '#7652E8', backgroundColor: '#F0E9FF' };
+      return { name: 'image', color: palette.purple, backgroundColor: palette.surfaceMuted };
 
     case 'medicine':
-      return { name: 'medkit', color: '#16AA91', backgroundColor: '#E3FAF4' };
+      return { name: 'medkit', color: palette.teal, backgroundColor: palette.surfaceMuted };
 
     default:
-      return { name: 'shield-checkmark', color: colors.danger, backgroundColor: '#FFE9ED' };
+      return { name: 'shield-checkmark', color: palette.danger, backgroundColor: palette.surfaceMuted };
   }
 }
 
@@ -63,12 +65,14 @@ function formatNotificationDate(value: string) {
 function NotificationItem({
   notification,
   onPress,
+  palette,
 }: {
   notification: AppNotification;
   onPress: () => void;
+  palette: typeof colors | typeof darkColors;
 }) {
   const unread = !notification.read_at;
-  const icon = getNotificationIcon(notification.notification_type);
+  const icon = getNotificationIcon(notification.notification_type, palette);
 
   return (
     <Pressable
@@ -76,6 +80,7 @@ function NotificationItem({
       onPress={onPress}
       style={({ pressed }) => [
         styles.notification,
+        { backgroundColor: unread ? palette.primarySoft : 'transparent' },
         unread && styles.unreadNotification,
         pressed && styles.pressed,
       ]}
@@ -88,7 +93,7 @@ function NotificationItem({
         <View style={styles.notificationHeading}>
           <Text
             numberOfLines={1}
-            style={[styles.notificationTitle, unread && styles.unreadTitle]}
+            style={[styles.notificationTitle, { color: palette.textPrimary }, unread && styles.unreadTitle]}
           >
             {notification.title}
           </Text>
@@ -97,13 +102,16 @@ function NotificationItem({
         </View>
 
       </View>
-      <Text style={styles.notificationDate}>{formatNotificationDate(notification.created_at)}</Text>
+      <Text style={[styles.notificationDate, { color: palette.textMuted }]}>{formatNotificationDate(notification.created_at)}</Text>
     </Pressable>
   );
 }
 
 export default function NotificationsScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
+  const [markingAll, setMarkingAll] = useState(false);
   const {
     notifications,
     unreadCount,
@@ -127,26 +135,36 @@ export default function NotificationsScreen() {
   });
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Értesítések</Text>
+        <Text style={[styles.headerTitle, { color: palette.textPrimary }]}>Értesítések</Text>
 
         <Pressable
           accessibilityLabel="Összes megjelölése olvasottként"
           accessibilityRole="button"
-          disabled={unreadCount === 0}
-          onPress={() => void markAllAsRead()}
+          disabled={unreadCount === 0 || markingAll}
+          onPress={() => {
+            setMarkingAll(true);
+            void markAllAsRead()
+              .catch((caught: unknown) => {
+                Alert.alert(
+                  'Sikertelen művelet',
+                  caught instanceof Error ? caught.message : 'Az értesítések frissítése sikertelen.',
+                );
+              })
+              .finally(() => setMarkingAll(false));
+          }}
           style={({ pressed }) => [
-            styles.headerButton,
-            unreadCount === 0 && styles.disabled,
+            [styles.headerButton, { backgroundColor: palette.surface, borderColor: palette.border }],
+            (unreadCount === 0 || markingAll) && styles.disabled,
             pressed && styles.pressed,
           ]}
         >
-          <Ionicons name="checkmark-done" size={23} color={colors.primary} />
+          <Ionicons name={markingAll ? 'hourglass-outline' : 'checkmark-done'} size={23} color={palette.primary} />
         </Pressable>
       </View>
 
-      <View style={styles.filters}>
+      <View style={[styles.filters, { backgroundColor: palette.surfaceElevated }]}>
         {([
           ['all', 'Összes'],
           ['events', 'Események'],
@@ -157,9 +175,9 @@ export default function NotificationsScreen() {
             accessibilityRole="tab"
             accessibilityState={{ selected: filter === key }}
             onPress={() => setFilter(key)}
-            style={[styles.filter, filter === key && styles.activeFilter]}
+            style={[styles.filter, filter === key && [styles.activeFilter, { backgroundColor: palette.primary }]]}
           >
-            <Text style={[styles.filterText, filter === key && styles.activeFilterText]}>
+            <Text style={[styles.filterText, { color: palette.textSecondary }, filter === key && styles.activeFilterText]}>
               {label}
             </Text>
           </Pressable>
@@ -176,27 +194,27 @@ export default function NotificationsScreen() {
           refreshControl={
             <RefreshControl
               refreshing={loading}
-              tintColor={colors.primaryLight}
+              tintColor={palette.primaryLight}
               onRefresh={() => void refresh()}
             />
           }
           showsVerticalScrollIndicator={false}
         >
           {error ? (
-            <View style={styles.errorCard}>
-              <Text style={styles.errorText}>{error.message}</Text>
+            <View style={[styles.errorCard, { backgroundColor: palette.surfaceMuted }]}>
+              <Text style={[styles.errorText, { color: palette.danger }]}>{error.message}</Text>
             </View>
           ) : null}
 
           {filteredNotifications.length === 0 ? (
             <View style={styles.emptyState}>
-              <View style={styles.emptyIcon}>
-                <Ionicons name="notifications-off-outline" size={34} color={colors.textMuted} />
+              <View style={[styles.emptyIcon, { backgroundColor: palette.surface }]}>
+                <Ionicons name="notifications-off-outline" size={34} color={palette.textMuted} />
               </View>
 
-              <Text style={styles.emptyTitle}>Nincs új értesítés</Text>
+              <Text style={[styles.emptyTitle, { color: palette.textPrimary }]}>Nincs új értesítés</Text>
 
-              <Text style={styles.emptyText}>
+              <Text style={[styles.emptyText, { color: palette.textMuted }]}>
                 Az új családi események, meghívók és emlékeztetők itt jelennek meg.
               </Text>
             </View>
@@ -205,6 +223,7 @@ export default function NotificationsScreen() {
               <NotificationItem
                 key={notification.id}
                 notification={notification}
+                palette={palette}
                 onPress={() => {
                   if (!notification.read_at) {
                     void markAsRead(notification.id);

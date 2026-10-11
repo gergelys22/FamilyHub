@@ -1,4 +1,5 @@
-import { colors, radius, shadows, spacing } from '@/constants/theme';
+import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
+import { useTheme } from '@/providers/theme-provider';
 import { useChatMessages } from '@/hooks/use-chat';
 import { useAuth } from '@/providers/auth-provider';
 import { getChatConversation, type ChatConversation } from '@/services/chat';
@@ -19,6 +20,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ChatDetailsScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
   const { profile } = useAuth();
   const { conversationId } = useLocalSearchParams<{ conversationId?: string }>();
   const [conversation, setConversation] = useState<ChatConversation | null>(null);
@@ -45,11 +48,11 @@ export default function ChatDetailsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top', 'bottom']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboard}>
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: palette.surface, borderBottomColor: palette.border }]}>
           <Pressable onPress={() => router.back()} style={styles.headerButton}>
-            <Ionicons name="chevron-back" size={25} color={colors.textPrimary} />
+            <Ionicons name="chevron-back" size={25} color={palette.textPrimary} />
           </Pressable>
           <Pressable
             onPress={() =>
@@ -77,13 +80,13 @@ export default function ChatDetailsScreen() {
             }
             style={styles.headerButton}
           >
-            <Ionicons name="information-circle-outline" size={24} color={colors.primary} />
+            <Ionicons name="information-circle-outline" size={24} color={palette.primary} />
           </Pressable>
         </View>
 
-        <ScrollView contentContainerStyle={styles.messages} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.messages, { backgroundColor: palette.background }]} showsVerticalScrollIndicator={false}>
           <View style={styles.encryption}>
-            <Ionicons name="lock-closed-outline" size={14} color={colors.textMuted} />
+            <Ionicons name="lock-closed-outline" size={14} color={palette.textMuted} />
             <Text style={styles.encryptionText}>
               Csak a beszélgetés résztvevői férnek hozzá
             </Text>
@@ -98,8 +101,8 @@ export default function ChatDetailsScreen() {
             return (
               <View key={message.id} style={[styles.messageBlock, mine && styles.mineBlock]}>
                 {isGroup && !mine ? <Text style={styles.author}>{message.sender.display_name}</Text> : null}
-                <View style={[styles.bubble, mine ? styles.myBubble : styles.theirBubble]}>
-                  <Text style={[styles.messageText, mine && styles.myText]}>{message.body}</Text>
+                <View style={[styles.bubble, mine ? styles.myBubble : [styles.theirBubble, { backgroundColor: palette.surface }]]}>
+                  <Text style={[styles.messageText, { color: mine ? palette.white : palette.textPrimary }]}>{message.body}</Text>
                 </View>
                 <Text style={styles.time}>
                   {new Date(message.created_at).toLocaleTimeString('hu-HU', {
@@ -125,23 +128,23 @@ export default function ChatDetailsScreen() {
                     <Text style={styles.smallAvatarText}>{member.display_name.charAt(0).toUpperCase()}</Text>
                   </View>
                   <Text style={styles.participantName}>{member.display_name}</Text>
-                  <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                  <Ionicons name="chevron-forward" size={18} color={palette.textMuted} />
                 </Pressable>
               ))}
             </View>
           ) : null}
         </ScrollView>
 
-        <View style={styles.composer}>
+        <View style={[styles.composer, { backgroundColor: palette.surface, borderTopColor: palette.border }]}>
           <TextInput
             accessibilityLabel="Üzenet szövege"
             value={draft}
             onChangeText={setDraft}
             onSubmitEditing={() => void handleSend()}
             placeholder="Írj egy üzenetet..."
-            placeholderTextColor={colors.textMuted}
+            placeholderTextColor={palette.textMuted}
             returnKeyType="send"
-            style={styles.input}
+            style={[styles.input, { backgroundColor: palette.background, color: palette.textPrimary }]}
           />
           <Pressable disabled={!draft.trim()} onPress={() => void handleSend()} style={[styles.send, !draft.trim() && styles.disabled]}>
             <Ionicons name="send" size={18} color={colors.white} />

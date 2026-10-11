@@ -1,4 +1,6 @@
 import { colors, radius, shadows, spacing } from '@/constants/theme';
+import { darkColors } from '@/constants/theme';
+import { useTheme } from '@/providers/theme-provider';
 import { getFamilyMembers, getMyFamilies, type FamilyMember } from '@/services/families';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -25,6 +27,8 @@ function getAge(birthDate: string | null) {
 
 export default function LocationSharingScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
   const [sharingEnabled, setSharingEnabled] = useState(false);
   const [selectedChild, setSelectedChild] = useState<string | null>(null);
   const [members, setMembers] = useState<FamilyMember[]>([]);
@@ -39,34 +43,34 @@ export default function LocationSharingScreen() {
       .catch((caught: unknown) => setError(caught instanceof Error ? caught.message : 'A családtagok betöltése sikertelen.'));
   }, []);
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.headerButton}>
-          <Ionicons name="chevron-back" size={25} color={colors.textPrimary} />
+          <Ionicons name="chevron-back" size={25} color={palette.textPrimary} />
         </Pressable>
-        <Text style={styles.title}>Helymegosztás</Text>
+        <Text style={[styles.title, { color: palette.textPrimary }]}>Helymegosztás</Text>
         <Ionicons name="shield-checkmark-outline" size={22} color={colors.success} />
       </View>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.notice}>
+        <View style={[styles.notice, { backgroundColor: palette.primarySoft }]}>
           <Ionicons name="information-circle" size={22} color={colors.primary} />
-          <Text style={styles.noticeText}>
+          <Text style={[styles.noticeText, { color: palette.textSecondary }]}>
             A 14 éven aluli családtagok helye csak a szülők és gondviselők számára
             látható.
           </Text>
         </View>
-        <View style={styles.map}>
+        <View style={[styles.map, { backgroundColor: palette.surface }]}>
           <Ionicons name="map" size={46} color={colors.primary} />
-          <Text style={styles.mapTitle}>Családi térkép</Text>
-          <Text style={styles.mapText}>
+          <Text style={[styles.mapTitle, { color: palette.textPrimary }]}>Családi térkép</Text>
+          <Text style={[styles.mapText, { color: palette.textMuted }]}>
             A térképes követés megnyitásához válassz ki egy családtagot.
           </Text>
         </View>
-        <Text style={styles.sectionTitle}>14 éven aluli gyermekek</Text>
-        {error ? <Text style={styles.updated}>{error}</Text> : null}
+        <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>14 éven aluli gyermekek</Text>
+        {error ? <Text style={[styles.updated, { color: palette.textMuted }]}>{error}</Text> : null}
         {members.map((member) => {
           const childName = member.nickname?.trim() || member.display_name;
           const age = getAge(member.birth_date);
@@ -78,7 +82,7 @@ export default function LocationSharingScreen() {
               Alert.alert(childName, sharingEnabled ? 'Nincs elérhető friss helyadat.' : 'A helymegosztás ki van kapcsolva.');
             }}
             style={({ pressed }) => [
-              styles.card,
+              [styles.card, { backgroundColor: palette.surface }],
               selectedChild === member.profile_id && styles.selectedCard,
               pressed && styles.pressed,
             ]}
@@ -88,7 +92,7 @@ export default function LocationSharingScreen() {
               <View style={styles.online} />
             </View>
             <View style={styles.cardContent}>
-              <Text style={styles.name}>
+              <Text style={[styles.name, { color: palette.textPrimary }]}>
                 {childName} <Text style={styles.age}>{age === null ? 'Életkor nincs megadva' : `${age} éves`}</Text>
               </Text>
               <View style={styles.locationRow}>
@@ -101,7 +105,7 @@ export default function LocationSharingScreen() {
                   {sharingEnabled ? 'Nincs elérhető helyadat' : 'Helymegosztás kikapcsolva'}
                 </Text>
               </View>
-              <Text style={styles.updated}>
+              <Text style={[styles.updated, { color: palette.textMuted }]}>
                 {sharingEnabled ? 'Nincs aktív helyadat' : 'Nincs aktív helyadat'}
               </Text>
             </View>
@@ -109,13 +113,13 @@ export default function LocationSharingScreen() {
           </Pressable>
           );
         })}
-        {members.length === 0 && !error ? <Text style={styles.updated}>Nincs rögzített, 14 éven aluli családtag.</Text> : null}
-        <View style={styles.settingsCard}>
+        {members.length === 0 && !error ? <Text style={[styles.updated, { color: palette.textMuted }]}>Nincs rögzített, 14 éven aluli családtag.</Text> : null}
+        <View style={[styles.settingsCard, { backgroundColor: palette.surface }]}>
           <View style={styles.settingsText}>
-            <Text style={styles.settingsTitle}>
+            <Text style={[styles.settingsTitle, { color: palette.textPrimary }]}>
               Helymegosztás {sharingEnabled ? 'bekapcsolva' : 'kikapcsolva'}
             </Text>
-            <Text style={styles.settingsSubtitle}>A gondviselők értesítést kapnak.</Text>
+            <Text style={[styles.settingsSubtitle, { color: palette.textMuted }]}>A gondviselők értesítést kapnak.</Text>
           </View>
           <Switch
             value={sharingEnabled}

@@ -1,4 +1,5 @@
-import { colors, radius, shadows, spacing } from '@/constants/theme';
+import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
+import { useTheme } from '@/providers/theme-provider';
 import { useMemories } from '@/hooks/use-memories';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -18,6 +19,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function MemoryDetailsScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { memories, loading, hasMore, error, loadMore } = useMemories();
   const memory = useMemo(() => memories.find((item) => item.id === id), [id, memories]);
@@ -37,7 +40,7 @@ export default function MemoryDetailsScreen() {
   }, [hasMore, id, loadMore, loading, memory]);
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: palette.background }]}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView
           contentContainerStyle={styles.content}
@@ -55,7 +58,7 @@ export default function MemoryDetailsScreen() {
               </Pressable>
             ) : (
               <View style={[styles.heroImage, styles.placeholder]}>
-                <Ionicons name="image-outline" size={44} color={colors.textMuted} />
+                <Ionicons name="image-outline" size={44} color={palette.textMuted} />
               </View>
             )}
             <Pressable
@@ -68,33 +71,33 @@ export default function MemoryDetailsScreen() {
             </Pressable>
           </View>
 
-          <View style={styles.detailsCard}>
+          <View style={[styles.detailsCard, { backgroundColor: palette.surface }]}>
             {memory ? (
               <>
-                <Text style={styles.date}>{memory.when}</Text>
+                <Text style={[styles.date, { color: palette.textMuted }]}>{memory.when}</Text>
                 <View style={styles.titleRow}>
-                  <Text style={styles.title}>{memory.title}</Text>
+                  <Text style={[styles.title, { color: palette.textPrimary }]}>{memory.title}</Text>
                   <Text style={styles.heart}>♥</Text>
                 </View>
                 {memory.location && (
                   <View style={styles.locationRow}>
                     <Ionicons name="location-outline" size={17} color={colors.primary} />
-                    <Text style={styles.location}>{memory.location}</Text>
+                    <Text style={[styles.location, { color: palette.textSecondary }]}>{memory.location}</Text>
                   </View>
                 )}
                 {memory.participantNames.length > 0 ? (
                   <View style={styles.participantsRow}>
                     <Ionicons name="people-outline" size={17} color={colors.primary} />
-                    <Text style={styles.location}>
+                    <Text style={[styles.location, { color: palette.textSecondary }]}>
                       Jelen voltak: {memory.participantNames.join(', ')}
                     </Text>
                   </View>
                 ) : null}
                 {memory.description ? (
-                  <Text style={styles.description}>{memory.description}</Text>
+                  <Text style={[styles.description, { color: palette.textSecondary }]}>{memory.description}</Text>
                 ) : null}
 
-                <Text style={styles.sectionTitle}>A pillanat képei</Text>
+                <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>A pillanat képei</Text>
                 {photos.length > 0 ? (
                   <View style={styles.photoGrid}>
                     {photos.map((photo, index) => (
@@ -119,7 +122,7 @@ export default function MemoryDetailsScreen() {
                     ))}
                   </View>
                 ) : (
-                  <Text style={styles.emptyPhotos}>
+                  <Text style={[styles.emptyPhotos, { color: palette.textMuted }]}>
                     Ehhez az emlékhez nem tartozik betöltött kép.
                   </Text>
                 )}
@@ -138,7 +141,7 @@ export default function MemoryDetailsScreen() {
                     style={({ pressed }) => [styles.action, pressed && styles.pressed]}
                   >
                     <Ionicons name="download-outline" size={21} color={colors.primary} />
-                    <Text style={styles.actionText}>Kép megosztása</Text>
+                    <Text style={[styles.actionText, { color: palette.textSecondary }]}>Kép megosztása</Text>
                   </Pressable>
                   <Pressable
                     accessibilityRole="button"
@@ -156,7 +159,7 @@ export default function MemoryDetailsScreen() {
                       size={21}
                       color={colors.primary}
                     />
-                    <Text style={styles.actionText}>Megosztás</Text>
+                    <Text style={[styles.actionText, { color: palette.textSecondary }]}>Megosztás</Text>
                   </Pressable>
                   <Pressable
                     accessibilityRole="button"
@@ -168,12 +171,12 @@ export default function MemoryDetailsScreen() {
                       size={21}
                       color={colors.danger}
                     />
-                    <Text style={styles.actionText}>Kedvenc</Text>
+                    <Text style={[styles.actionText, { color: palette.textSecondary }]}>Kedvenc</Text>
                   </Pressable>
                 </View>
               </>
             ) : (
-              <Text style={styles.description}>
+              <Text style={[styles.description, { color: palette.textSecondary }]}>
                 {loading ? 'Emlék betöltése…' : (error ?? 'Az emlék nem található.')}
               </Text>
             )}

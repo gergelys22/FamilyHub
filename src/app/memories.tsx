@@ -1,4 +1,5 @@
-import { colors, radius, shadows, spacing } from '@/constants/theme';
+import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
+import { useTheme } from '@/providers/theme-provider';
 import { useMemories } from '@/hooks/use-memories';
 import { useAuth } from '@/providers/auth-provider';
 import { supabase } from '@/lib/supabase';
@@ -22,7 +23,6 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 type MemoryView = 'all' | 'photos' | 'videos' | 'events';
 type Memory = ReturnType<typeof useMemories>['memories'][number];
@@ -45,8 +45,10 @@ function MemoryTabs({
   active: MemoryView;
   onChange: (view: MemoryView) => void;
 }) {
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
   return (
-    <View style={styles.tabs} accessibilityRole="tablist">
+    <View style={[styles.tabs, { backgroundColor: palette.surfaceElevated }]} accessibilityRole="tablist">
       {TABS.map(({ key, label, icon }) => {
         const isActive = key === active;
         const content = (
@@ -54,7 +56,7 @@ function MemoryTabs({
             <Ionicons
               name={icon}
               size={20}
-              color={isActive ? '#fff' : colors.textSecondary}
+              color={isActive ? palette.white : palette.textSecondary}
             />
             <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
               {label}
@@ -80,7 +82,7 @@ function MemoryTabs({
                 {content}
               </LinearGradient>
             ) : (
-              <View style={styles.tab}>{content}</View>
+              <View style={[styles.tab, { backgroundColor: palette.surfaceElevated }]}>{content}</View>
             )}
           </Pressable>
         );
@@ -95,6 +97,8 @@ function MemoryTabs({
 
 function MemoryCard({ item, featured = false }: { item: Memory; featured?: boolean }) {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
 
   return (
     <Pressable
@@ -108,6 +112,7 @@ function MemoryCard({ item, featured = false }: { item: Memory; featured?: boole
       }
       style={({ pressed }) => [
         styles.memoryCard,
+        { backgroundColor: palette.background },
         featured && styles.featuredCard,
         pressed && styles.pressed,
       ]}
@@ -137,10 +142,10 @@ function MemoryCard({ item, featured = false }: { item: Memory; featured?: boole
       </View>
       <View style={styles.memoryInfo}>
         <View style={styles.titleRow}>
-          <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
+          <Text style={[styles.cardTitle, { color: palette.textPrimary }]} numberOfLines={1}>{item.title}</Text>
           <Text style={styles.memoryHeart}>♥</Text>
         </View>
-        <Text style={styles.metaText}>{item.when}</Text>
+        <Text style={[styles.metaText, { color: palette.textMuted }]}>{item.when}</Text>
       </View>
     </Pressable>
   );
@@ -148,6 +153,8 @@ function MemoryCard({ item, featured = false }: { item: Memory; featured?: boole
 
 function TimelineView() {
   const { memories, loading, hasMore, error, loadMore } = useMemories();
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
 
   return (
     <View>
@@ -157,13 +164,13 @@ function TimelineView() {
       </View>
 
       {!loading && !error && memories.length === 0 && (
-        <Text style={styles.metaText}>Még nincs emlék. Add hozzá az elsőt!</Text>
+        <Text style={[styles.metaText, { color: palette.textMuted }]}>Még nincs emlék. Add hozzá az elsőt!</Text>
       )}
-      {!!error && <Text style={styles.metaText}>Hiba történt: {error}</Text>}
+      {!!error && <Text style={[styles.metaText, { color: palette.textMuted }]}>Hiba történt: {error}</Text>}
 
       {hasMore && memories.length > 0 && (
         <Pressable style={styles.loadMore} onPress={loadMore} disabled={loading}>
-          <Text style={styles.metaText}>
+          <Text style={[styles.metaText, { color: palette.textMuted }]}>
             {loading ? 'Betöltés…' : 'További emlékek betöltése'}
           </Text>
           <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
@@ -205,6 +212,8 @@ export function MemoryScreenOptions({ refreshToken }: { refreshToken: number }) 
 
 export default function MemoriesScreen() {
   const { profile } = useAuth();
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
   const [refreshToken, setRefreshToken] = useState(0);
   const [menuVisible, setMenuVisible] = useState(false);
   const [visible, setVisible] = useState(false);
@@ -309,16 +318,22 @@ export default function MemoriesScreen() {
   }
 
   return (
-    <View style={styles.root}>
-      <SafeAreaView style={styles.safeArea}>
-        <View pointerEvents="none" style={styles.backgroundGlow} />
+    <View style={[styles.root, { backgroundColor: palette.background }]}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]}>
+        <LinearGradient
+          pointerEvents="none"
+          colors={isDark ? ['#12335A', '#071A3300'] : ['#E7F0FF', '#F6F9FF00']}
+          start={{ x: 1, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={styles.backgroundGlow}
+        />
 
         <ScrollView
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.pageHeader}>
-            <Text style={styles.title}>Emlékek</Text>
+            <Text style={[styles.title, { color: palette.textPrimary }]}>Emlékek</Text>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Emlékek műveletei"
@@ -326,7 +341,7 @@ export default function MemoriesScreen() {
               onPress={() => setMenuVisible(true)}
               style={({ pressed }) => [styles.moreButton, pressed && styles.pressed]}
             >
-              <Ionicons name="ellipsis-horizontal" size={22} color={colors.primary} />
+              <Ionicons name="ellipsis-horizontal" size={22} color={palette.primary} />
             </Pressable>
           </View>
 
@@ -353,8 +368,8 @@ export default function MemoriesScreen() {
               onPress={() => setMenuVisible(false)}
               style={styles.menuBackdrop}
             />
-            <View style={styles.menuCard}>
-              <Text style={styles.menuTitle}>Emlékek műveletei</Text>
+            <View style={[styles.menuCard, { backgroundColor: palette.surface }]}>
+              <Text style={[styles.menuTitle, { color: palette.textPrimary }]}>Emlékek műveletei</Text>
               <Pressable
                 accessibilityRole="button"
                 onPress={() => {
@@ -364,7 +379,7 @@ export default function MemoriesScreen() {
                 style={({ pressed }) => [styles.menuItem, pressed && styles.pressed]}
               >
                 <Ionicons name="refresh-outline" size={21} color={colors.primary} />
-                <Text style={styles.menuItemText}>Emlékek frissítése</Text>
+                <Text style={[styles.menuItemText, { color: palette.textPrimary }]}>Emlékek frissítése</Text>
               </Pressable>
               <Pressable
                 accessibilityRole="button"
@@ -375,31 +390,31 @@ export default function MemoriesScreen() {
                 style={({ pressed }) => [styles.menuItem, pressed && styles.pressed]}
               >
                 <Ionicons name="add-circle-outline" size={21} color={colors.primary} />
-                <Text style={styles.menuItemText}>Új emlék hozzáadása</Text>
+                <Text style={[styles.menuItemText, { color: palette.textPrimary }]}>Új emlék hozzáadása</Text>
               </Pressable>
               <Pressable
                 accessibilityRole="button"
                 onPress={() => setMenuVisible(false)}
                 style={({ pressed }) => [styles.menuCancel, pressed && styles.pressed]}
               >
-                <Text style={styles.menuCancelText}>Mégse</Text>
+                <Text style={[styles.menuCancelText, { color: palette.textMuted }]}>Mégse</Text>
               </Pressable>
             </View>
           </View>
         </Modal>
         <Modal visible={visible} transparent animationType="slide" onRequestClose={() => setVisible(false)}>
           <View style={styles.modalOverlay}>
-            <View style={styles.modal}>
-              <Text style={styles.modalTitle}>Új emlék</Text>
-              <TextInput value={title} onChangeText={setTitle} placeholder="Emlék címe" placeholderTextColor={colors.textMuted} style={styles.modalInput} />
-              <TextInput value={description} onChangeText={setDescription} placeholder="Leírás (opcionális)" placeholderTextColor={colors.textMuted} style={[styles.modalInput, styles.descriptionInput]} multiline />
-              <TextInput value={memoryDate} onChangeText={setMemoryDate} placeholder="2026-10-11" placeholderTextColor={colors.textMuted} style={styles.modalInput} />
-              <TextInput value={location} onChangeText={setLocation} placeholder="Helyszín (opcionális)" placeholderTextColor={colors.textMuted} style={styles.modalInput} />
+            <View style={[styles.modal, { backgroundColor: palette.surface }]}>
+              <Text style={[styles.modalTitle, { color: palette.textPrimary }]}>Új emlék</Text>
+              <TextInput value={title} onChangeText={setTitle} placeholder="Emlék címe" placeholderTextColor={palette.textMuted} style={[styles.modalInput, { backgroundColor: palette.surfaceElevated, color: palette.textPrimary }]} />
+              <TextInput value={description} onChangeText={setDescription} placeholder="Leírás (opcionális)" placeholderTextColor={palette.textMuted} style={[styles.modalInput, styles.descriptionInput, { backgroundColor: palette.surfaceElevated, color: palette.textPrimary }]} multiline />
+              <TextInput value={memoryDate} onChangeText={setMemoryDate} placeholder="2026-10-11" placeholderTextColor={palette.textMuted} style={[styles.modalInput, { backgroundColor: palette.surfaceElevated, color: palette.textPrimary }]} />
+              <TextInput value={location} onChangeText={setLocation} placeholder="Helyszín (opcionális)" placeholderTextColor={palette.textMuted} style={[styles.modalInput, { backgroundColor: palette.surfaceElevated, color: palette.textPrimary }]} />
               <Pressable onPress={() => void choosePhoto()} style={styles.photoButton}>
                 <Ionicons name={photo ? 'checkmark-circle' : 'image-outline'} size={20} color={colors.primary} />
                 <Text style={styles.photoButtonText}>{photos.length ? `${photos.length} fotó kiválasztva` : 'Fotók kiválasztása (opcionális)'}</Text>
               </Pressable>
-              <Text style={styles.participantLabel}>Kik voltak jelen?</Text>
+              <Text style={[styles.participantLabel, { color: palette.textPrimary }]}>Kik voltak jelen?</Text>
               <View style={styles.participantList}>
                 {familyMembers.map((member) => {
                   const selected = selectedParticipants.includes(member.profile_id);
@@ -434,12 +449,10 @@ const styles = StyleSheet.create({
   backgroundGlow: {
     position: 'absolute',
     top: 72,
-    right: -120,
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: '#E7F0FF',
-    opacity: 0.75,
+    right: 0,
+    width: '68%',
+    height: 230,
+    opacity: 0.72,
   },
   pageHeader: {
     flexDirection: 'row',

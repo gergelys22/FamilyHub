@@ -1,6 +1,7 @@
 import DateTimeField from '@/components/date-time-field';
 import LocationAutocomplete from '@/components/location-autocomplete';
-import { colors, radius, spacing } from '@/constants/theme';
+import { colors, darkColors, radius, spacing } from '@/constants/theme';
+import { useTheme } from '@/providers/theme-provider';
 import { createFamilyEvent, type EventCategory } from '@/services/events';
 import { parseLocalDateTime } from '@/utils/event-date-time';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -43,6 +44,8 @@ function defaultDate() {
 
 export default function CreateEventScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
   const params = useLocalSearchParams<{ familyId?: string; familyName?: string }>();
   const familyId = firstParam(params.familyId);
   const familyName = firstParam(params.familyName) ?? 'Családi kör';
@@ -116,17 +119,17 @@ export default function CreateEventScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: palette.background }]}>
           <Pressable onPress={() => router.back()} style={styles.iconButton}>
             <SymbolView
               name={{ ios: 'xmark', android: 'close', web: 'close' }}
               size={22}
-              tintColor={colors.textPrimary}
+              tintColor={palette.textPrimary}
               weight={{ ios: 'semibold', android: medium }}
               style={styles.symbol}
             />
@@ -147,8 +150,8 @@ export default function CreateEventScreen() {
               value={title}
               onChangeText={setTitle}
               placeholder="Például: családi vacsora"
-              placeholderTextColor={colors.textMuted}
-              style={styles.input}
+              placeholderTextColor={palette.textMuted}
+              style={[styles.input, { color: palette.textPrimary, backgroundColor: palette.surface, borderColor: palette.borderStrong }]}
               maxLength={120}
             />
           </View>
@@ -172,7 +175,7 @@ export default function CreateEventScreen() {
                   ]}
                 >
                   <View style={[styles.categoryDot, { backgroundColor: item.color }]} />
-                  <Text style={styles.categoryText}>{item.label}</Text>
+                  <Text style={[styles.categoryText, { color: palette.textSecondary }]}>{item.label}</Text>
                 </Pressable>
               ))}
             </ScrollView>
@@ -232,8 +235,8 @@ export default function CreateEventScreen() {
               value={description}
               onChangeText={setDescription}
               placeholder="Részletek az eseményről…"
-              placeholderTextColor={colors.textMuted}
-              style={[styles.input, styles.textArea]}
+              placeholderTextColor={palette.textMuted}
+              style={[styles.input, styles.textArea, { color: palette.textPrimary, backgroundColor: palette.surface, borderColor: palette.borderStrong }]}
               multiline
               textAlignVertical="top"
               maxLength={1000}

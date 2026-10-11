@@ -1,10 +1,12 @@
 import { FamilyHeader } from '@/components/family-header';
 import { FamilySwitcher } from '@/components/family-switcher';
-import { colors, radius, shadows, spacing } from '@/constants/theme';
+import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
+import { useTheme } from '@/providers/theme-provider';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useAuth } from '@/providers/auth-provider';
 import type { Family } from '@/services/families';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { getFamilyEvents, type FamilyEvent } from '@/services/events';
@@ -70,14 +72,16 @@ function SectionHeader({
   title,
   action,
   onPress,
+  palette,
 }: {
   title: string;
   action?: string;
   onPress?: () => void;
+  palette: typeof colors | typeof darkColors;
 }) {
   return (
     <View style={styles.sectionHeader}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>{title}</Text>
       {action ? (
         <Pressable
           accessibilityRole="button"
@@ -85,7 +89,7 @@ function SectionHeader({
           hitSlop={8}
           onPress={onPress}
         >
-          <Text style={styles.sectionAction}>{action} ›</Text>
+          <Text style={[styles.sectionAction, { color: palette.primary }]}>{action} ›</Text>
         </Pressable>
       ) : null}
     </View>
@@ -97,19 +101,21 @@ function TodayStat({
   color,
   value,
   label,
+  palette,
 }: {
   icon: IconName;
   color: string;
   value: number;
   label: string;
+  palette: typeof colors | typeof darkColors;
 }) {
   return (
     <View style={styles.todayStat}>
       <View style={[styles.todayStatIcon, { backgroundColor: `${color}20` }]}>
         <AppSymbol name={icon} color={color} size={18} />
       </View>
-      <Text style={styles.todayStatValue}>{value}</Text>
-      <Text style={styles.todayStatLabel}>{label}</Text>
+      <Text style={[styles.todayStatValue, { color: palette.primary }]}>{value}</Text>
+      <Text style={[styles.todayStatLabel, { color: palette.primaryLight }]}>{label}</Text>
     </View>
   );
 }
@@ -119,18 +125,24 @@ function NextEventCard({
   meta,
   color,
   onPress,
+  palette,
 }: {
   title: string;
   meta: string;
   color: string;
   onPress: () => void;
+  palette: typeof colors | typeof darkColors;
 }) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel="Következő esemény megnyitása"
       onPress={onPress}
-      style={({ pressed }) => [styles.nextEventCard, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.nextEventCard,
+        { backgroundColor: palette.surface, borderColor: palette.border },
+        pressed && styles.pressed,
+      ]}
     >
       <View style={[styles.nextEventIcon, { backgroundColor: color }]}>
         <AppSymbol
@@ -140,17 +152,17 @@ function NextEventCard({
         />
       </View>
       <View style={styles.flex}>
-        <Text numberOfLines={1} style={styles.listTitle}>
+        <Text numberOfLines={1} style={[styles.listTitle, { color: palette.textPrimary }]}>
           {title}
         </Text>
-        <Text style={styles.listMeta}>{meta}</Text>
+        <Text style={[styles.listMeta, { color: palette.textSecondary }]}>{meta}</Text>
       </View>
-      <View style={styles.todayBadge}>
-        <Text style={styles.todayBadgeText}>MA</Text>
+      <View style={[styles.todayBadge, { backgroundColor: palette.primarySoft }]}>
+        <Text style={[styles.todayBadgeText, { color: palette.primaryLight }]}>MA</Text>
       </View>
       <AppSymbol
         name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
-        color={colors.primary}
+        color={palette.primary}
         size={16}
       />
     </Pressable>
@@ -163,37 +175,49 @@ function QuickAccessCard({
   icon,
   color,
   onPress,
+  palette,
 }: {
   title: string;
   subtitle: string;
   icon: IconName;
   color: string;
   onPress: () => void;
+  palette: typeof colors | typeof darkColors;
 }) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${title} megnyitása`}
       onPress={onPress}
-      style={({ pressed }) => [styles.quickAccessCard, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.quickAccessCard,
+        { backgroundColor: palette.surface, borderColor: palette.border },
+        pressed && styles.pressed,
+      ]}
     >
       <View
         style={[
           styles.quickAccessIcon,
-          { backgroundColor: color === colors.purple ? '#E8D7FF' : '#C9F4E9' },
+          {
+            backgroundColor: palette === darkColors
+              ? color === colors.purple ? '#2A2450' : '#123F43'
+              : color === colors.purple ? '#E8D7FF' : '#C9F4E9',
+          },
         ]}
       >
         <AppSymbol name={icon} color={color} size={29} />
       </View>
       <View style={styles.quickAccessContent}>
-        <Text style={styles.quickAccessTitle}>{title}</Text>
-        <Text style={styles.quickAccessSubtitle}>{subtitle}</Text>
+        <Text style={[styles.quickAccessTitle, { color: palette.textPrimary }]}>{title}</Text>
+        <Text style={[styles.quickAccessSubtitle, { color: palette.textMuted }]}>{subtitle}</Text>
       </View>
     </Pressable>
   );
 }
 
 export default function HomeScreen() {
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
   const router = useRouter();
   const { profile, profileError } = useAuth();
   const { unreadCount } = useNotifications();
@@ -256,8 +280,13 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <View pointerEvents="none" style={styles.backgroundGlow} />
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
+      <LinearGradient
+        pointerEvents="none"
+        colors={isDark ? ['#12335A', '#071A33', '#071A33'] : ['#DDEBFF', '#F6F9FF', '#F6F9FF']}
+        locations={[0, 0.72, 1]}
+        style={styles.backgroundGlow}
+      />
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -270,11 +299,18 @@ export default function HomeScreen() {
         />
 
         <View style={styles.heroCard}>
-          <View pointerEvents="none" style={styles.heroGlow} />
-          <Text style={styles.greeting}>
+          <LinearGradient
+            pointerEvents="none"
+            colors={isDark ? ['#173F86', '#102B4C', '#102B4C'] : ['#FFF4D5', '#FFFFFF00', '#FFFFFF00']}
+            locations={[0, 0.62, 1]}
+            start={{ x: 1, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={styles.heroGlow}
+          />
+          <Text style={[styles.greeting, { color: palette.textPrimary }]}>
             Jó reggelt, {firstName}! <Text style={styles.wave}>👋</Text>
           </Text>
-          <Text style={styles.heroDate}>{todayLabel}</Text>
+          <Text style={[styles.heroDate, { color: palette.textSecondary }]}>{todayLabel}</Text>
         </View>
 
         <View style={styles.familySwitcherSource}>
@@ -319,8 +355,15 @@ export default function HomeScreen() {
           </ScrollView>
         </View>
 
-        <View style={styles.todayCard}>
-          <View pointerEvents="none" style={styles.todayCardGlow} />
+        <View style={[styles.todayCard, { backgroundColor: palette.surfaceElevated }]}>
+          <LinearGradient
+            pointerEvents="none"
+            colors={isDark ? ['#164D70', '#102B4C', '#102B4C'] : ['#D5F5F1', '#E9F5FF', '#E9F5FF']}
+            locations={[0, 0.58, 1]}
+            start={{ x: 1, y: 0 }}
+            end={{ x: 0, y: 0.8 }}
+            style={styles.todayCardGlow}
+          />
           <View style={styles.todayCardHeader}>
             <View style={styles.todayTitleRow}>
               <View style={styles.todayTitleIcon}>
@@ -330,9 +373,9 @@ export default function HomeScreen() {
                   size={29}
                 />
               </View>
-              <Text style={styles.todayTitle}>Ma a családban</Text>
+              <Text style={[styles.todayTitle, { color: palette.textPrimary }]}>Ma a családban</Text>
             </View>
-            <Text style={styles.todaySubtitle}>Minden fontos egy helyen</Text>
+            <Text style={[styles.todaySubtitle, { color: palette.textMuted }]}>Minden fontos egy helyen</Text>
           </View>
           <View style={styles.todayStats}>
             <TodayStat
@@ -343,18 +386,21 @@ export default function HomeScreen() {
               }).length}
               label="esemény"
               color={colors.primary}
+              palette={palette}
               icon={{ ios: 'calendar', android: 'calendar_month', web: 'calendar_month' }}
             />
             <TodayStat
               value={unreadCount}
               label="értesítés"
               color={colors.purple}
+              palette={palette}
               icon={{ ios: 'bell.fill', android: 'notifications', web: 'notifications' }}
             />
             <TodayStat
               value={conversationCount}
               label="üzenet"
               color={colors.teal}
+              palette={palette}
               icon={{ ios: 'bubble.left.and.bubble.right.fill', android: 'forum', web: 'forum' }}
             />
           </View>
@@ -365,18 +411,20 @@ export default function HomeScreen() {
             title="Következő esemény"
             action="Naptár"
             onPress={() => openRoute('/calendar')}
+            palette={palette}
           />
           <NextEventCard
             color={colors.primary}
             title={nextEvent?.title ?? 'Nincs közelgő esemény'}
             meta={eventMeta}
             onPress={() => openRoute('/calendar')}
+            palette={palette}
           />
           {eventsError ? <Text style={styles.errorText}>{eventsError}</Text> : null}
         </View>
 
         <View>
-          <SectionHeader title="Gyors hozzáférés" />
+          <SectionHeader title="Gyors hozzáférés" palette={palette} />
           <View style={styles.quickAccessGrid}>
             <QuickAccessCard
               color={colors.purple}
@@ -384,6 +432,7 @@ export default function HomeScreen() {
               subtitle="Képek és videók"
               title="Emlékek"
               onPress={() => openRoute('/memories')}
+              palette={palette}
             />
             <QuickAccessCard
               color={colors.teal}
@@ -391,6 +440,7 @@ export default function HomeScreen() {
               subtitle="Biztonságos adatok"
               title="Páncélterem"
               onPress={() => openRoute('/vault')}
+              palette={palette}
             />
           </View>
         </View>
@@ -415,13 +465,11 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   backgroundGlow: {
     position: 'absolute',
-    top: -132,
-    right: -112,
-    width: 340,
-    height: 340,
-    borderRadius: 170,
-    backgroundColor: '#DDEBFF',
-    opacity: 0.9,
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 190,
+    opacity: 0.92,
   },
   content: { paddingHorizontal: spacing.lg, paddingBottom: 36, gap: spacing.md },
   contentWide: {
@@ -444,12 +492,10 @@ const styles = StyleSheet.create({
   },
   heroGlow: {
     position: 'absolute',
-    top: -80,
-    right: -60,
-    width: 170,
-    height: 170,
-    borderRadius: 85,
-    backgroundColor: '#FFF4D5',
+    top: 0,
+    right: 0,
+    width: '72%',
+    height: '100%',
     opacity: 0.35,
   },
   familySwitcherSource: {
@@ -548,13 +594,11 @@ const styles = StyleSheet.create({
   },
   todayCardGlow: {
     position: 'absolute',
-    top: -55,
-    right: -45,
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: '#C4F4EA',
-    opacity: 0.52,
+    top: 0,
+    right: 0,
+    width: '48%',
+    height: '100%',
+    opacity: 0.72,
   },
   todayCardHeader: { gap: spacing.xs },
   todayTitleRow: {

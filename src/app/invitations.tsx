@@ -1,4 +1,5 @@
-import { colors, radius, spacing } from '@/constants/theme';
+import { colors, darkColors, radius, spacing } from '@/constants/theme';
+import { useTheme } from '@/providers/theme-provider';
 import {
   acceptFamilyInvite,
   type FamilyInvite,
@@ -29,6 +30,8 @@ const roleNames = {
 
 export default function InvitationsScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
   const [invites, setInvites] = useState<FamilyInvite[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -124,8 +127,8 @@ export default function InvitationsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top', 'bottom']}>
+      <View style={[styles.header, { backgroundColor: palette.background }]}>
         <Pressable
           onPress={() => router.back()}
           style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
@@ -133,12 +136,12 @@ export default function InvitationsScreen() {
           <SymbolView
             name={{ ios: 'chevron.left', android: 'arrow_back', web: 'arrow_back' }}
             size={23}
-            tintColor={colors.textPrimary}
+            tintColor={palette.textPrimary}
             weight={{ ios: 'semibold', android: medium }}
             style={styles.symbol}
           />
         </Pressable>
-        <Text style={styles.headerTitle}>Családi meghívások</Text>
+        <Text style={[styles.headerTitle, { color: palette.textPrimary }]}>Családi meghívások</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -188,7 +191,7 @@ export default function InvitationsScreen() {
             invites.map((invite) => {
               const working = workingId === invite.id;
               return (
-                <View key={invite.id} style={styles.card}>
+                <View key={invite.id} style={[styles.card, { backgroundColor: palette.surface, borderColor: palette.border }]}>
                   <View style={styles.cardHeading}>
                     <View style={styles.inviteIcon}>
                       <SymbolView
@@ -201,13 +204,13 @@ export default function InvitationsScreen() {
                       />
                     </View>
                     <View style={styles.flex}>
-                      <Text style={styles.familyName}>{invite.family_name}</Text>
+                      <Text style={[styles.familyName, { color: palette.textPrimary }]}>{invite.family_name}</Text>
                       <Text style={styles.role}>
                         Szerepkör: {roleNames[invite.intended_role]}
                       </Text>
                     </View>
                   </View>
-                  <Text style={styles.description}>
+                  <Text style={[styles.description, { color: palette.textSecondary }]}>
                     Meghívtak, hogy csatlakozz ehhez a családi térhez.
                   </Text>
                   <View style={styles.actions}>

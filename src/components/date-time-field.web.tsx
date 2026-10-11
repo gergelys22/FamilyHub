@@ -1,4 +1,5 @@
-import { colors } from '@/constants/theme';
+import { colors, darkColors } from '@/constants/theme';
+import { useTheme } from '@/providers/theme-provider';
 import type { DateTimeFieldProps } from '@/utils/event-date-time';
 import { Pressable, Text, View } from 'react-native';
 
@@ -10,11 +11,13 @@ export default function DateTimeField({
   disabled = false,
   clearable = false,
 }: DateTimeFieldProps) {
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
   return (
     <View style={{ gap: 8 }}>
       <Text
         style={{
-          color: colors.textSecondary,
+          color: palette.textSecondary,
           fontSize: 12,
           fontWeight: '800',
         }}
@@ -37,9 +40,9 @@ export default function DateTimeField({
             boxSizing: 'border-box',
             padding: '0 14px',
             borderRadius: 12,
-            border: `1px solid ${colors.borderStrong}`,
-            background: colors.surface,
-            color: colors.textPrimary,
+            border: `1px solid ${palette.borderStrong}`,
+            background: palette.surface,
+            color: palette.textPrimary,
             colorScheme: 'dark',
             fontFamily: 'inherit',
             fontSize: 15,
@@ -60,7 +63,7 @@ export default function DateTimeField({
               justifyContent: 'center',
             }}
           >
-            <Text style={{ color: colors.primaryLight, fontSize: 22 }}>×</Text>
+            <Text style={{ color: palette.primaryLight, fontSize: 22 }}>×</Text>
           </Pressable>
         ) : null}
       </View>

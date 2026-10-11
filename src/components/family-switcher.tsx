@@ -9,7 +9,8 @@ import {
   View,
 } from 'react-native';
 
-import { colors, radius, shadows, spacing } from '@/constants/theme';
+import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
+import { useTheme } from '@/providers/theme-provider';
 import { Family, getMyFamilies } from '@/services/families';
 
 type FamilySwitcherProps = {
@@ -21,6 +22,8 @@ export function FamilySwitcher({
   onActiveFamilyChange,
   compact = false,
 }: FamilySwitcherProps) {
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
   const router = useRouter();
   const [families, setFamilies] = useState<Family[]>([]);
   const [activeFamilyId, setActiveFamilyId] = useState<string | null>(null);
@@ -89,22 +92,22 @@ export function FamilySwitcher({
 
   if (loading) {
     return (
-      <View style={[styles.card, styles.centeredCard]}>
+      <View style={[styles.card, styles.centeredCard, { backgroundColor: palette.surface }]}>
         <ActivityIndicator color={colors.primaryLight} size="small" />
-        <Text style={styles.loadingText}>Családi körök betöltése…</Text>
+        <Text style={[styles.loadingText, { color: palette.textSecondary }]}>Családi körök betöltése…</Text>
       </View>
     );
   }
 
   if (errorMessage) {
     return (
-      <View style={[styles.card, styles.errorCard]}>
+      <View style={[styles.card, styles.errorCard, { backgroundColor: palette.surface }]}>
         <View style={styles.errorIcon}>
           <Text style={styles.errorIconText}>!</Text>
         </View>
         <View style={styles.flex}>
-          <Text style={styles.errorTitle}>Nem sikerült betölteni a családokat</Text>
-          <Text numberOfLines={2} style={styles.errorMessage}>
+          <Text style={[styles.errorTitle, { color: palette.textPrimary }]}>Nem sikerült betölteni a családokat</Text>
+          <Text numberOfLines={2} style={[styles.errorMessage, { color: palette.textSecondary }]}>
             {errorMessage}
           </Text>
         </View>
@@ -200,7 +203,7 @@ export function FamilySwitcher({
   }
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { backgroundColor: palette.surface }]}>
       <View pointerEvents="none" style={styles.cardGlow} />
 
       <View style={styles.cardHeader}>
@@ -218,10 +221,10 @@ export function FamilySwitcher({
           <Text style={styles.familyIconText}>⌂</Text>
         </View>
         <View style={styles.flex}>
-          <Text numberOfLines={1} style={styles.familyName}>
+          <Text numberOfLines={1} style={[styles.familyName, { color: palette.textPrimary }]}>
             {activeFamily.name}
           </Text>
-          <Text style={styles.familyMeta}>Privát családi munkatér</Text>
+          <Text style={[styles.familyMeta, { color: palette.textSecondary }]}>Privát családi munkatér</Text>
         </View>
         <View style={styles.secureBadge}>
           <Text style={styles.secureIcon}>✓</Text>

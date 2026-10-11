@@ -1,6 +1,7 @@
 import { FamilyHeader } from '@/components/family-header';
 import { FamilySwitcher } from '@/components/family-switcher';
-import { colors, radius, shadows, spacing } from '@/constants/theme';
+import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
+import { useTheme } from '@/providers/theme-provider';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useAuth } from '@/providers/auth-provider';
 import { getFamilyEvents, type FamilyEvent } from '@/services/events';
@@ -61,7 +62,7 @@ function getCalendarDays(date: Date) {
   });
 }
 
-function EventCard({ event, onPress }: { event: FamilyEvent; onPress: () => void }) {
+function EventCard({ event, onPress, palette }: { event: FamilyEvent; onPress: () => void; palette: typeof colors | typeof darkColors }) {
   const start = new Date(event.starts_at);
   const color = categoryColors[event.category] ?? colors.primary;
 
@@ -69,7 +70,7 @@ function EventCard({ event, onPress }: { event: FamilyEvent; onPress: () => void
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => [styles.eventCard, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.eventCard, { backgroundColor: palette.surface }, pressed && styles.pressed]}
     >
       <View style={[styles.eventAccent, { backgroundColor: color }]} />
 
@@ -85,9 +86,9 @@ function EventCard({ event, onPress }: { event: FamilyEvent; onPress: () => void
       </View>
 
       <View style={styles.flex}>
-        <Text style={styles.eventTitle}>{event.title}</Text>
+        <Text style={[styles.eventTitle, { color: palette.textPrimary }]}>{event.title}</Text>
 
-        <Text style={styles.eventMeta}>
+        <Text style={[styles.eventMeta, { color: palette.textSecondary }]}>
           {start.toLocaleDateString('hu-HU', {
             month: 'long',
             day: 'numeric',
@@ -121,6 +122,8 @@ function EventCard({ event, onPress }: { event: FamilyEvent; onPress: () => void
 
 export default function CalendarScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
   const { profile } = useAuth();
   const { unreadCount } = useNotifications();
   const [activeFamily, setActiveFamily] = useState<Family | null>(null);
@@ -172,7 +175,7 @@ export default function CalendarScreen() {
     profile?.display_name?.trim().charAt(0).toLocaleUpperCase('hu-HU') || '?';
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -184,7 +187,7 @@ export default function CalendarScreen() {
           onProfilePress={() => router.push('/profile')}
         />
         <View style={styles.pageHeader}>
-          <Text style={styles.title}>Naptár</Text>
+          <Text style={[styles.title, { color: palette.textPrimary }]}>Naptár</Text>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Naptár műveletei"
@@ -199,7 +202,7 @@ export default function CalendarScreen() {
           <FamilySwitcher onActiveFamilyChange={setActiveFamily} />
         </View>
         <View style={styles.monthHeader}>
-          <Text style={styles.monthTitle}>
+          <Text style={[styles.monthTitle, { color: palette.textPrimary }]}>
             {cursor.toLocaleDateString('hu-HU', { year: 'numeric', month: 'long' })}
           </Text>
           <View style={styles.monthControls}>
@@ -227,7 +230,7 @@ export default function CalendarScreen() {
             </Pressable>
           </View>
         </View>
-        <View style={styles.calendarCard}>
+        <View style={[styles.calendarCard, { backgroundColor: palette.surface }]}>
           <View style={styles.weekHeader}>
             {['H', 'K', 'Sze', 'Cs', 'P', 'Szo', 'V'].map((day) => (
               <Text key={day} style={styles.weekDay}>{day}</Text>
@@ -251,7 +254,7 @@ export default function CalendarScreen() {
                 <View key={`${day ?? 'empty'}-${index}`} style={styles.dayCell}>
                   {day !== null ? (
                     <View style={[styles.dayCircle, isToday && styles.dayCircleActive]}>
-                      <Text style={[styles.dayText, isToday && styles.dayTextActive]}>
+                      <Text style={[styles.dayText, { color: palette.textPrimary }, isToday && styles.dayTextActive]}>
                         {day}
                       </Text>
                     </View>
@@ -262,7 +265,7 @@ export default function CalendarScreen() {
             })}
           </View>
         </View>
-        <Text style={styles.sectionTitle}>Mai események</Text>
+        <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>Mai események</Text>
         {error ? (
           <View style={styles.errorCard}>
             <Text style={styles.errorText}>{error}</Text>
@@ -279,6 +282,7 @@ export default function CalendarScreen() {
             <EventCard
               key={event.id}
               event={event}
+                palette={palette}
               onPress={() =>
                 router.push({
                   pathname: './event-details',

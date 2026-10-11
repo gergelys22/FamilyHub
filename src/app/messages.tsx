@@ -1,4 +1,6 @@
 import { colors, radius, shadows, spacing } from '@/constants/theme';
+import { darkColors } from '@/constants/theme';
+import { useTheme } from '@/providers/theme-provider';
 import { useChatConversations } from '@/hooks/use-chat';
 import { useAuth } from '@/providers/auth-provider';
 import { getMyFamilies } from '@/services/families';
@@ -30,16 +32,18 @@ type Conversation = {
 function ConversationRow({
   conversation,
   onPress,
+  palette,
 }: {
   conversation: Conversation;
   onPress: () => void;
+  palette: typeof colors | typeof darkColors;
 }) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${conversation.name} beszélgetés megnyitása`}
       onPress={onPress}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.row, { backgroundColor: palette.surface }, pressed && styles.pressed]}
     >
       <View
         style={[
@@ -58,10 +62,10 @@ function ConversationRow({
       </View>
       <View style={styles.rowContent}>
         <View style={styles.rowTop}>
-          <Text style={styles.name}>{conversation.name}</Text>
-          <Text style={styles.time}>{conversation.time}</Text>
+          <Text style={[styles.name, { color: palette.textPrimary }]}>{conversation.name}</Text>
+          <Text style={[styles.time, { color: palette.textMuted }]}>{conversation.time}</Text>
         </View>
-        <Text numberOfLines={1} style={styles.preview}>
+        <Text numberOfLines={1} style={[styles.preview, { color: palette.textSecondary }]}>
           {conversation.preview}
         </Text>
       </View>
@@ -71,6 +75,8 @@ function ConversationRow({
 
 export default function MessagesScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
   const { profile } = useAuth();
   const [familyId, setFamilyId] = useState<string | null>(null);
   const {
@@ -118,28 +124,28 @@ export default function MessagesScreen() {
     : conversations;
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.title}>Üzenetek</Text>
+        <Text style={[styles.title, { color: palette.textPrimary }]}>Üzenetek</Text>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Üzenetek beállításai"
           onPress={() => router.push('/settings')}
           style={({ pressed }) => [styles.headerButton, pressed && styles.pressed]}
         >
-          <Ionicons name="options-outline" size={22} color={colors.primary} />
+          <Ionicons name="options-outline" size={22} color={palette.primary} />
         </Pressable>
       </View>
 
-      <View style={styles.searchBox}>
-        <Ionicons name="search" size={23} color={colors.primary} />
+      <View style={[styles.searchBox, { backgroundColor: palette.surface }]}>
+        <Ionicons name="search" size={23} color={palette.primary} />
         <TextInput
           accessibilityLabel="Üzenetek keresése"
           autoCapitalize="none"
           onChangeText={setSearch}
           placeholder="Keresés..."
-          placeholderTextColor={colors.textMuted}
-          style={styles.searchInput}
+          placeholderTextColor={palette.textMuted}
+          style={[styles.searchInput, { color: palette.textPrimary }]}
           value={search}
         />
         {search.length > 0 && (
@@ -148,7 +154,7 @@ export default function MessagesScreen() {
             accessibilityLabel="Keresés törlése"
             onPress={() => setSearch('')}
           >
-            <Ionicons name="close-circle" size={20} color={colors.textMuted} />
+            <Ionicons name="close-circle" size={20} color={palette.textMuted} />
           </Pressable>
         )}
       </View>
@@ -171,6 +177,7 @@ export default function MessagesScreen() {
             <ConversationRow
               key={conversation.id}
               conversation={conversation}
+              palette={palette}
               onPress={() =>
                 router.push({
                   pathname: '/chat-details',

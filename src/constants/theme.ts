@@ -28,6 +28,22 @@ export const colors = {
   white: '#FFFFFF',
 } as const;
 
+export const darkColors = {
+  ...colors,
+  background: '#071A33',
+  surface: '#102B4C',
+  surfaceElevated: '#16385F',
+  surfaceMuted: '#1D4772',
+  border: '#2B5682',
+  borderStrong: '#3A6B9D',
+  textPrimary: '#F4F7FC',
+  textSecondary: '#C3D0E3',
+  textMuted: '#8EA3C2',
+  primarySoft: '#173F86',
+  navigationBackground: '#0A2341',
+  navigationBorder: '#2A527D',
+} as const;
+
 export const gradients = {
   primary: ['#4C82FF', '#2458E8'],
   page: ['#F9FBFF', '#EDF4FF'],

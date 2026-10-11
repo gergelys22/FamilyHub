@@ -1,5 +1,6 @@
-import { colors } from '@/constants/theme';
+import { colors, darkColors } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/providers/auth-provider';
+import { ThemeProvider, useTheme } from '@/providers/theme-provider';
 import { Tabs } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
@@ -62,19 +63,23 @@ const tabs: TableDefinition[] = [
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <AppNavigator />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppNavigator />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
 function AppNavigator() {
   const { loading, session } = useAuth();
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
 
   if (loading) {
     return (
       <View style={styles.loading}>
-        <StatusBar style="dark" />
+        <StatusBar style={isDark ? 'light' : 'dark'} />
         <ActivityIndicator color="#3B82F6" size="large" />
       </View>
     );
@@ -82,16 +87,17 @@ function AppNavigator() {
 
   return (
     <>
-      <StatusBar style="dark" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <Tabs
+        key={isDark ? 'dark' : 'light'}
         initialRouteName={session ? 'index' : 'sign-in'}
         screenOptions={{
           headerShown: false,
-          sceneStyle: styles.scene,
-          tabBarActiveTintColor: colors.primary,
-          tabBarInactiveTintColor: colors.textMuted,
+          sceneStyle: { backgroundColor: palette.background },
+          tabBarActiveTintColor: palette.primary,
+          tabBarInactiveTintColor: palette.textMuted,
           tabBarHideOnKeyboard: true,
-          tabBarStyle: styles.tabBar,
+          tabBarStyle: [styles.tabBar, { backgroundColor: palette.navigationBackground, borderTopColor: palette.navigationBorder }],
           tabBarItemStyle: styles.tabItem,
           tabBarLabelStyle: styles.tabLabel,
         }}

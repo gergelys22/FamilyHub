@@ -1,4 +1,5 @@
-import { colors, radius, shadows, spacing } from '@/constants/theme';
+import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
+import { useTheme } from '@/providers/theme-provider';
 import { deleteFamilyEvent, getFamilyEvent, type FamilyEvent } from '@/services/events';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
@@ -133,6 +134,8 @@ function getEventState(value: string) {
 
 export default function EventDetailsScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
   const params = useLocalSearchParams<{ eventId?: string }>();
   const eventId = firstParam(params.eventId);
 
@@ -208,7 +211,7 @@ export default function EventDetailsScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]}>
         <View style={styles.center}>
           <ActivityIndicator color={colors.primaryLight} size="large" />
         </View>
@@ -219,7 +222,7 @@ export default function EventDetailsScreen() {
   const category = categoryData[event?.category ?? 'family'] ?? categoryData.family;
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable
           accessibilityLabel="Vissza"
@@ -234,7 +237,7 @@ export default function EventDetailsScreen() {
               web: 'arrow_back',
             }}
             size={23}
-            tintColor={colors.textPrimary}
+            tintColor={palette.textPrimary}
             weight={{ ios: 'semibold', android: medium }}
             style={styles.symbol}
           />
@@ -272,7 +275,7 @@ export default function EventDetailsScreen() {
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { backgroundColor: palette.background }]}>
         {error ? (
           <View style={styles.errorCard}>
             <View style={styles.errorIcon}>
@@ -287,13 +290,13 @@ export default function EventDetailsScreen() {
                 style={styles.symbol}
               />
             </View>
-            <Text style={styles.errorText}>{error}</Text>
+            <Text style={[styles.errorText, { color: palette.danger }]}>{error}</Text>
           </View>
         ) : null}
 
         {event ? (
           <>
-            <View style={[styles.heroCard, { borderTopColor: category.color }]}>
+            <View style={[styles.heroCard, { borderTopColor: category.color, backgroundColor: palette.surface }]}>
               <View style={styles.heroTopRow}>
                 <View
                   style={[
@@ -305,7 +308,7 @@ export default function EventDetailsScreen() {
                     {category.label}
                   </Text>
                 </View>
-                <Text style={styles.stateText}>{getEventState(event.starts_at)}</Text>
+                <Text style={[styles.stateText, { color: palette.textSecondary }]}>{getEventState(event.starts_at)}</Text>
               </View>
 
               <View
@@ -321,15 +324,15 @@ export default function EventDetailsScreen() {
                 />
               </View>
 
-              <Text style={styles.title}>{event.title}</Text>
+              <Text style={[styles.title, { color: palette.textPrimary }]}>{event.title}</Text>
 
               {event.description ? (
-                <Text style={styles.description}>{event.description}</Text>
+                <Text style={[styles.description, { color: palette.textSecondary }]}>{event.description}</Text>
               ) : null}
             </View>
 
-            <View style={styles.detailsCard}>
-              <Text style={styles.sectionTitle}>Az esemény adatai</Text>
+            <View style={[styles.detailsCard, { backgroundColor: palette.surface }]}>
+              <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>Az esemény adatai</Text>
               <View style={styles.detailRow}>
                 <View
                   style={[styles.detailIcon, { backgroundColor: colors.primarySoft }]}
@@ -348,7 +351,7 @@ export default function EventDetailsScreen() {
                 </View>
 
                 <View style={styles.flex}>
-                  <Text style={styles.detailLabel}>Dátum</Text>
+                  <Text style={[styles.detailLabel, { color: palette.textMuted }]}>Dátum</Text>
                   <View style={styles.dateValueRow}>
                     <View
                       style={[
@@ -363,7 +366,7 @@ export default function EventDetailsScreen() {
                         {formatMonth(event.starts_at)}
                       </Text>
                     </View>
-                    <Text style={styles.detailValue}>{formatDate(event.starts_at)}</Text>
+                    <Text style={[styles.detailValue, { color: palette.textPrimary }]}>{formatDate(event.starts_at)}</Text>
                   </View>
                 </View>
               </View>
@@ -386,8 +389,8 @@ export default function EventDetailsScreen() {
                 </View>
 
                 <View style={styles.flex}>
-                  <Text style={styles.detailLabel}>Időpont</Text>
-                  <Text style={styles.detailValue}>
+                  <Text style={[styles.detailLabel, { color: palette.textMuted }]}>Időpont</Text>
+                  <Text style={[styles.detailValue, { color: palette.textPrimary }]}>
                     {formatTime(event.starts_at)}
                     {event.ends_at ? ` – ${formatTime(event.ends_at)}` : ''}
                   </Text>
@@ -415,8 +418,8 @@ export default function EventDetailsScreen() {
                     </View>
 
                     <View style={styles.flex}>
-                      <Text style={styles.detailLabel}>Helyszín</Text>
-                      <Text style={styles.detailValue}>{event.location_name}</Text>
+                      <Text style={[styles.detailLabel, { color: palette.textMuted }]}>Helyszín</Text>
+                      <Text style={[styles.detailValue, { color: palette.textPrimary }]}>{event.location_name}</Text>
                     </View>
                   </View>
                 </>

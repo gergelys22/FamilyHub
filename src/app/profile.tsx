@@ -1,8 +1,11 @@
 import { colors, radius, shadows, spacing } from '@/constants/theme';
+import { darkColors } from '@/constants/theme';
+import { useTheme } from '@/providers/theme-provider';
 import { useAuth } from '@/providers/auth-provider';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   Alert,
   Image,
@@ -47,6 +50,8 @@ function DetailRow({ icon, color, label, value }: DetailRowProps) {
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
   const { profile, profileError, session, signOut } = useAuth();
   const displayName = profile?.display_name || 'Felhasználó';
   const initial = displayName.trim().charAt(0).toLocaleUpperCase('hu-HU') || '?';
@@ -146,7 +151,7 @@ export default function ProfileScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable
           accessibilityLabel="Vissza"
@@ -155,9 +160,9 @@ export default function ProfileScreen() {
           onPress={() => router.back()}
           style={({ pressed }) => [styles.headerButton, pressed && styles.pressed]}
         >
-          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+          <Ionicons name="chevron-back" size={24} color={palette.textPrimary} />
         </Pressable>
-        <Text style={styles.headerTitle}>Profil</Text>
+        <Text style={[styles.headerTitle, { color: palette.textPrimary }]}>Profil</Text>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Profil szerkesztése"
@@ -172,8 +177,14 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.identityCard}>
-          <View pointerEvents="none" style={styles.identityGlow} />
+        <View style={[styles.identityCard, { backgroundColor: palette.surface }]}>
+          <LinearGradient
+            pointerEvents="none"
+            colors={isDark ? ['#173F86', '#102B4C00'] : ['#C7D9FF', '#EEF4FF00']}
+            start={{ x: 1, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={styles.identityGlow}
+          />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Profilkép kiválasztása"
@@ -199,28 +210,28 @@ export default function ProfileScreen() {
               />
             </View>
           </Pressable>
-          <Text style={styles.name}>{displayName}</Text>
-          <View style={styles.rolePill}>
+          <Text style={[styles.name, { color: palette.textPrimary }]}>{displayName}</Text>
+          <View style={[styles.rolePill, { backgroundColor: palette.primarySoft }]}>
             <Ionicons name="people-outline" size={14} color={colors.primary} />
-            <Text style={styles.roleText}>{profileType}</Text>
+            <Text style={[styles.roleText, { color: palette.textSecondary }]}>{profileType}</Text>
           </View>
-          <Text style={styles.email}>{session?.user.email ?? 'Nincs e-mail-cím'}</Text>
+          <Text style={[styles.email, { color: palette.textMuted }]}>{session?.user.email ?? 'Nincs e-mail-cím'}</Text>
         </View>
 
-        <View style={styles.statusCard}>
+        <View style={[styles.statusCard, { backgroundColor: palette.surface }]}>
           <View style={styles.statusIcon}>
             <Ionicons name="shield-checkmark" size={22} color={colors.success} />
           </View>
           <View style={styles.statusContent}>
-            <Text style={styles.statusTitle}>Fiókod védett</Text>
-            <Text style={styles.statusText}>A családi adataid biztonságban vannak.</Text>
+            <Text style={[styles.statusTitle, { color: palette.textPrimary }]}>Fiókod védett</Text>
+            <Text style={[styles.statusText, { color: palette.textMuted }]}>A családi adataid biztonságban vannak.</Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.success} />
         </View>
 
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: palette.surface }]}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Fiókadatok</Text>
+            <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>Fiókadatok</Text>
             <Ionicons name="person-circle-outline" size={22} color={colors.primary} />
           </View>
           <DetailRow
@@ -301,12 +312,10 @@ const styles = StyleSheet.create({
   },
   identityGlow: {
     position: 'absolute',
-    top: -100,
-    right: -45,
-    width: 230,
-    height: 230,
-    borderRadius: 115,
-    backgroundColor: '#C7D9FF',
+    top: 0,
+    right: 0,
+    width: '76%',
+    height: 190,
     opacity: 0.7,
   },
   avatar: {

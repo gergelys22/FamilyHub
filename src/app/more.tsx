@@ -1,4 +1,5 @@
-import { colors, radius, shadows, spacing } from '@/constants/theme';
+import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
+import { useTheme } from '@/providers/theme-provider';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -9,9 +10,10 @@ type MenuItemProps = {
   label: string;
   color?: string;
   onPress: () => void;
+  palette: typeof colors | typeof darkColors;
 };
 
-function MenuItem({ icon, label, color = colors.primary, onPress }: MenuItemProps) {
+function MenuItem({ icon, label, color = colors.primary, onPress, palette }: MenuItemProps) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -20,37 +22,43 @@ function MenuItem({ icon, label, color = colors.primary, onPress }: MenuItemProp
       style={({ pressed }) => [styles.menuItem, pressed && styles.pressed]}
     >
       <Ionicons name={icon} size={23} color={color} />
-      <Text style={styles.menuLabel}>{label}</Text>
-      <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+      <Text style={[styles.menuLabel, { color: palette.textPrimary }]}>{label}</Text>
+      <Ionicons name="chevron-forward" size={18} color={palette.textPrimary} />
     </Pressable>
   );
 }
 
 export default function MoreScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>Több</Text>
+        <Text style={[styles.title, { color: palette.textPrimary }]}>Több</Text>
 
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Profil megnyitása"
           onPress={() => router.push('/profile')}
-          style={({ pressed }) => [styles.profileCard, pressed && styles.pressed]}
+          style={({ pressed }) => [
+            styles.profileCard,
+            { backgroundColor: palette.surface },
+            pressed && styles.pressed,
+          ]}
         >
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>G</Text>
           </View>
           <View style={styles.profileContent}>
-            <Text style={styles.profileName}>Gergely</Text>
-            <Text style={styles.profileRole}>Családszervező</Text>
+            <Text style={[styles.profileName, { color: palette.textPrimary }]}>Gergely</Text>
+            <Text style={[styles.profileRole, { color: palette.textSecondary }]}>Családszervező</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.primary} />
+          <Ionicons name="chevron-forward" size={20} color={palette.primary} />
         </Pressable>
 
         <View style={styles.menu}>
@@ -58,49 +66,61 @@ export default function MoreScreen() {
             icon="people-outline"
             label="Családtagok"
             onPress={() => router.push('/invite-member')}
+            palette={palette}
           />
           <MenuItem
             icon="git-network-outline"
             label="Családfa"
             onPress={() => router.push('/family-tree')}
+            palette={palette}
           />
           <MenuItem
             icon="shield-checkmark-outline"
             label="Páncélterem"
             onPress={() => router.push('/vault')}
+            palette={palette}
           />
           <MenuItem
             icon="medkit-outline"
             label="Gyógyszerek"
-            color={colors.pink}
+            color={colors.danger}
             onPress={() => router.push('/medications')}
+            palette={palette}
           />
           <MenuItem
             icon="alarm-outline"
             label="Emlékeztetők"
             onPress={() => router.push('/reminders')}
+            palette={palette}
           />
           <MenuItem
             icon="chatbubble-ellipses-outline"
             label="Üzenetek"
             onPress={() => router.push('/messages')}
+            palette={palette}
           />
           <MenuItem
             icon="location-outline"
             label="Helymegosztás"
             onPress={() => router.push('/location-sharing')}
+            palette={palette}
           />
           <MenuItem
             icon="settings-outline"
             label="Beállítások"
             onPress={() => router.push('/settings')}
+            palette={palette}
           />
         </View>
 
         <Pressable
           accessibilityRole="button"
           onPress={() => router.push('/privacy')}
-          style={({ pressed }) => [styles.securityCard, pressed && styles.pressed]}
+          style={({ pressed }) => [
+            styles.securityCard,
+            { backgroundColor: isDark ? '#123D48' : '#E9FBF6' },
+            pressed && styles.pressed,
+          ]}
         >
           <View style={styles.securityIcon}>
             <Ionicons name="shield-checkmark" size={27} color="#20BFA7" />

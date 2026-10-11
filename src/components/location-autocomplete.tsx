@@ -1,4 +1,5 @@
-import { colors } from '@/constants/theme';
+import { colors, darkColors } from '@/constants/theme';
+import { useTheme } from '@/providers/theme-provider';
 import { searchPlaces, type PlaceSuggestion } from '@/services/places';
 import { Link } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -31,6 +32,8 @@ export default function LocationAutocomplete({
   onSelect,
   disabled = false,
 }: Props) {
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
   const [open, setOpen] = useState(false);
   const [revision, setRevision] = useState(0);
   const [result, setResult] = useState<SearchResult | null>(null);
@@ -110,7 +113,7 @@ export default function LocationAutocomplete({
 
   return (
     <View style={styles.field}>
-      <Text style={styles.label}>Helyszín</Text>
+      <Text style={[styles.label, { color: palette.textSecondary }]}>Helyszín</Text>
 
       <TextInput
         accessibilityLabel="Helyszín keresése"
@@ -119,8 +122,8 @@ export default function LocationAutocomplete({
         maxLength={200}
         autoCorrect={false}
         placeholder="Például: Müpa Budapest vagy Kossuth Lajos utca 1, Pécs"
-        placeholderTextColor={colors.textMuted}
-        style={[styles.input, disabled && styles.disabled]}
+        placeholderTextColor={palette.textMuted}
+        style={[styles.input, { color: palette.textPrimary, backgroundColor: palette.surface, borderColor: palette.borderStrong }, disabled && styles.disabled]}
         onFocus={beginSearch}
         onChangeText={(nextValue) => {
           onChange(nextValue);
@@ -136,17 +139,17 @@ export default function LocationAutocomplete({
       />
 
       {open && !disabled ? (
-        <View style={styles.dropdown}>
+        <View style={[styles.dropdown, { backgroundColor: palette.surface, borderColor: palette.borderStrong }]}>
           {!eligible ? (
-            <Text style={styles.message}>Írj be legalább 3 karaktert.</Text>
+            <Text style={[styles.message, { color: palette.textSecondary }]}>Írj be legalább 3 karaktert.</Text>
           ) : !currentResult ? (
             <View style={styles.loading}>
               <ActivityIndicator color={colors.primaryLight} />
-              <Text style={styles.message}>Helyszínek keresése…</Text>
+              <Text style={[styles.message, { color: palette.textSecondary }]}>Helyszínek keresése…</Text>
             </View>
           ) : currentResult.error ? (
             <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{currentResult.error}</Text>
+              <Text style={[styles.errorText, { color: palette.danger }]}>{currentResult.error}</Text>
 
               <Pressable
                 accessibilityRole="button"
@@ -154,11 +157,11 @@ export default function LocationAutocomplete({
                 onPress={beginSearch}
                 style={styles.retry}
               >
-                <Text style={styles.retryText}>Újrapróbálás</Text>
+                <Text style={[styles.retryText, { color: palette.primaryLight }]}>Újrapróbálás</Text>
               </Pressable>
             </View>
           ) : currentResult.items.length === 0 ? (
-            <Text style={styles.message}>
+            <Text style={[styles.message, { color: palette.textSecondary }]}>
               Nincs találat. Pontosítsd a keresést, vagy hagyd meg a beírt helyszínt.
             </Text>
           ) : (
@@ -172,18 +175,18 @@ export default function LocationAutocomplete({
                 style={({ pressed }) => [styles.suggestion, pressed && styles.pressed]}
               >
                 <Text style={styles.placeIcon}>⌖</Text>
-                <Text style={styles.suggestionText}>{item.label}</Text>
+                <Text style={[styles.suggestionText, { color: palette.textPrimary }]}>{item.label}</Text>
               </Pressable>
             ))
           )}
         </View>
       ) : null}
 
-      <Text style={styles.hint}>
+      <Text style={[styles.hint, { color: palette.textMuted }]}>
         Opcionális. Írd be a hely nevét a várossal vagy a pontos címmel együtt.
       </Text>
 
-      <Text style={styles.attribution}>
+      <Text style={[styles.attribution, { color: palette.textMuted }]}>
         <Link href="https://www.geoapify.com/">Powered by Geoapify</Link>
         {' · '}
         <Link href="https://www.openstreetmap.org/copyright">

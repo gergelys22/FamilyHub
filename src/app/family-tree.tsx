@@ -1,4 +1,6 @@
 import { colors, radius, shadows, spacing } from '@/constants/theme';
+import { darkColors } from '@/constants/theme';
+import { useTheme } from '@/providers/theme-provider';
 import { getFamilyMembers, getMyFamilies, type FamilyMember } from '@/services/families';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -13,23 +15,25 @@ function toPerson(member: FamilyMember, index: number): Person {
   return { id: member.profile_id, name, year: member.birth_date ? new Date(member.birth_date).getFullYear().toString() : 'Évszám nincs megadva', initial: name.charAt(0).toLocaleUpperCase('hu-HU'), color: avatarColors[index % avatarColors.length] };
 }
 
-function PersonCard({ person, onPress }: { person: Person; onPress: () => void }) {
+function PersonCard({ person, onPress, palette }: { person: Person; onPress: () => void; palette: typeof colors | typeof darkColors }) {
   return (
     <Pressable
-      style={({ pressed }) => [styles.personCard, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.personCard, { backgroundColor: palette.surface }, pressed && styles.pressed]}
       onPress={onPress}
     >
       <View style={[styles.personAvatar, { backgroundColor: person.color }]}>
         <Text style={styles.personInitial}>{person.initial}</Text>
       </View>
-      <Text style={styles.personName}>{person.name}</Text>
-      <Text style={styles.personYear}>{person.year}</Text>
+      <Text style={[styles.personName, { color: palette.textPrimary }]}>{person.name}</Text>
+      <Text style={[styles.personYear, { color: palette.textMuted }]}>{person.year}</Text>
     </Pressable>
   );
 }
 
 export default function FamilyTreeScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
   const [people, setPeople] = useState<Person[]>([]);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
@@ -42,40 +46,41 @@ export default function FamilyTreeScreen() {
     router.push({ pathname: '/family-member-profile', params: { memberId: person.id } });
   }
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
+      <View style={[styles.header, { backgroundColor: palette.background }]}>
         <Pressable onPress={() => router.back()} style={styles.headerButton}>
-          <Ionicons name="chevron-back" size={25} color={colors.textPrimary} />
+          <Ionicons name="chevron-back" size={25} color={palette.textPrimary} />
         </Pressable>
-        <Text style={styles.title}>Családfa</Text>
+        <Text style={[styles.title, { color: palette.textPrimary }]}>Családfa</Text>
         <Ionicons name="options-outline" size={22} color={colors.primary} />
       </View>
-      <View style={styles.tabs}>
-        <View style={styles.activeTab}>
+      <View style={[styles.tabs, { backgroundColor: palette.surfaceElevated }]}>
+        <View style={[styles.activeTab, { backgroundColor: palette.primary }]}>
           <Text style={styles.activeTabText}>Családfa</Text>
         </View>
-        <View style={styles.tab}>
-          <Text style={styles.tabText}>Történet</Text>
+        <View style={[styles.tab, { backgroundColor: palette.surfaceElevated }]}>
+          <Text style={[styles.tabText, { color: palette.textSecondary }]}>Történet</Text>
         </View>
       </View>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.subtitle}>A család története és kapcsolatai</Text>
-        {error ? <Text style={styles.subtitle}>{error}</Text> : null}
-        <View style={styles.tree}>
-          <Text style={styles.generation}>CSALÁDTAGOK</Text>
+        <Text style={[styles.subtitle, { color: palette.textMuted }]}>A család története és kapcsolatai</Text>
+        {error ? <Text style={[styles.subtitle, { color: palette.textMuted }]}>{error}</Text> : null}
+        <View style={[styles.tree, { backgroundColor: palette.surface }]}>
+          <Text style={[styles.generation, { color: palette.textMuted }]}>CSALÁDTAGOK</Text>
           <View style={styles.childrenRow}>
             {people.map((person) => (
               <PersonCard
                 key={person.name}
                 person={person}
                 onPress={() => openPerson(person)}
+                palette={palette}
               />
             ))}
           </View>
-          {people.length === 0 && !error ? <Text style={styles.subtitle}>Még nincs megjeleníthető családtag.</Text> : null}
+          {people.length === 0 && !error ? <Text style={[styles.subtitle, { color: palette.textMuted }]}>Még nincs megjeleníthető családtag.</Text> : null}
         </View>
         <Pressable
           onPress={() => router.push('/invite-member')}

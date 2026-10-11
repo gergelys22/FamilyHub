@@ -1,4 +1,5 @@
-import { colors } from '@/constants/theme';
+import { colors, darkColors } from '@/constants/theme';
+import { useTheme } from '@/providers/theme-provider';
 import {
   formatPickerValue,
   getPickerDate,
@@ -27,6 +28,8 @@ export default function DateTimeField({
   disabled = false,
   clearable = false,
 }: DateTimeFieldProps) {
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
   const [visible, setVisible] = useState(false);
   const [draft, setDraft] = useState(() => new Date());
   const draftRef = useRef(draft);
@@ -106,7 +109,7 @@ export default function DateTimeField({
 
   return (
     <View style={styles.field}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, { color: palette.textSecondary }]}>{label}</Text>
 
       <View style={styles.row}>
         <Pressable
@@ -115,10 +118,10 @@ export default function DateTimeField({
           accessibilityState={{ disabled }}
           disabled={disabled}
           onPress={openPicker}
-          style={[styles.input, disabled && styles.disabled]}
+          style={[styles.input, { backgroundColor: palette.surface, borderColor: palette.borderStrong }, disabled && styles.disabled]}
         >
-          <Text style={styles.value}>{displayedValue}</Text>
-          <Text style={styles.arrow}>⌄</Text>
+          <Text style={[styles.value, { color: palette.textPrimary }]}>{displayedValue}</Text>
+          <Text style={[styles.arrow, { color: palette.primaryLight }]}>⌄</Text>
         </Pressable>
 
         {clearable && value ? (
@@ -129,7 +132,7 @@ export default function DateTimeField({
             onPress={() => onChange('')}
             style={styles.clearButton}
           >
-            <Text style={styles.arrow}>×</Text>
+            <Text style={[styles.arrow, { color: palette.primaryLight }]}>×</Text>
           </Pressable>
         ) : null}
       </View>
@@ -147,8 +150,8 @@ export default function DateTimeField({
             onPress={() => setVisible(false)}
           />
 
-          <View style={styles.dialog}>
-            <Text style={styles.title}>{label}</Text>
+          <View style={[styles.dialog, { backgroundColor: palette.surface, borderColor: palette.borderStrong }]}>
+            <Text style={[styles.title, { color: palette.textPrimary }]}>{label}</Text>
 
             <DateTimePicker
               value={draft}
@@ -156,7 +159,7 @@ export default function DateTimeField({
               display="spinner"
               locale="hu-HU"
               themeVariant="dark"
-              textColor={colors.textPrimary}
+              textColor={palette.textPrimary}
               onValueChange={(_, selectedDate) => {
                 draftRef.current = selectedDate;
                 setDraft(selectedDate);
@@ -170,7 +173,7 @@ export default function DateTimeField({
                 onPress={() => setVisible(false)}
                 style={styles.action}
               >
-                <Text style={styles.value}>Mégse</Text>
+                <Text style={[styles.value, { color: palette.textPrimary }]}>Mégse</Text>
               </Pressable>
 
               <Pressable
@@ -181,7 +184,7 @@ export default function DateTimeField({
                 }}
                 style={[styles.action, styles.confirm]}
               >
-                <Text style={styles.value}>Kész</Text>
+                <Text style={[styles.value, { color: palette.white }]}>Kész</Text>
               </Pressable>
             </View>
           </View>

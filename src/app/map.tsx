@@ -1,12 +1,14 @@
 import { EventMap } from '@/components/event-map';
 import { FamilyHeader } from '@/components/family-header';
 import { FamilySwitcher } from '@/components/family-switcher';
-import { colors, radius, shadows, spacing } from '@/constants/theme';
+import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
+import { useTheme } from '@/providers/theme-provider';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useAuth } from '@/providers/auth-provider';
 import { getFamilyEvents, type FamilyEvent } from '@/services/events';
 import type { Family } from '@/services/families';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import medium from 'expo-symbols/androidWeights/medium';
 import { useCallback, useMemo, useState } from 'react';
@@ -149,6 +151,8 @@ function EventLocationCard({
 
 export default function MapScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
   const { profile } = useAuth();
   const { unreadCount } = useNotifications();
   const [activeFamily, setActiveFamily] = useState<Family | null>(null);
@@ -251,8 +255,14 @@ export default function MapScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <View pointerEvents="none" style={styles.backgroundGlow} />
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
+      <LinearGradient
+        pointerEvents="none"
+        colors={isDark ? ['#12335A', '#071A3300'] : ['#DCEBFF', '#F8FBFF00']}
+        start={{ x: 1, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={styles.backgroundGlow}
+      />
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -265,7 +275,7 @@ export default function MapScreen() {
         />
 
         <View style={styles.topBar}>
-          <Text style={styles.title}>Térkép</Text>
+          <Text style={[styles.title, { color: palette.textPrimary }]}>Térkép</Text>
           <View style={styles.topAction}>
             <Pressable
               accessibilityRole="button"
@@ -285,7 +295,7 @@ export default function MapScreen() {
           </View>
         </View>
 
-        <View style={styles.mapTabs}>
+        <View style={[styles.mapTabs, { backgroundColor: palette.surfaceElevated }]}>
           {[
             ['family', 'Családtagok'],
             ['places', 'Helyek'],
@@ -296,11 +306,16 @@ export default function MapScreen() {
               accessibilityRole="button"
               accessibilityState={{ selected: activeTab === value }}
               onPress={() => setActiveTab(value as typeof activeTab)}
-              style={[styles.mapTab, activeTab === value && styles.mapTabActive]}
+              style={[
+                styles.mapTab,
+                { backgroundColor: palette.surfaceElevated },
+                activeTab === value && [styles.mapTabActive, { backgroundColor: palette.primary }],
+              ]}
             >
               <Text
                 style={[
                   styles.mapTabText,
+                  { color: palette.textSecondary },
                   activeTab === value && styles.mapTabTextActive,
                 ]}
               >
@@ -319,7 +334,7 @@ export default function MapScreen() {
             {loading ? (
               <View style={styles.loadingCard}>
                 <ActivityIndicator color={colors.primaryLight} />
-                <Text style={styles.loadingText}>Helyszínek betöltése…</Text>
+                <Text style={[styles.loadingText, { color: palette.textMuted }]}>Helyszínek betöltése…</Text>
               </View>
             ) : error ? (
               <View style={styles.errorCard}>
@@ -327,7 +342,7 @@ export default function MapScreen() {
               </View>
             ) : filteredLocationEvents.length ? (
               <>
-                <View style={styles.mapCard}>
+                <View style={[styles.mapCard, { backgroundColor: palette.surfaceElevated, borderColor: palette.border }]}>
                   <EventMap
                     events={filteredLocationEvents}
                     selectedEventId={selectedEvent?.id ?? null}
@@ -398,6 +413,7 @@ export default function MapScreen() {
                     onPress={openSelectedEvent}
                     style={({ pressed }) => [
                       styles.selectedCard,
+                      { backgroundColor: palette.surface },
                       pressed && styles.pressed,
                     ]}
                   >
@@ -413,7 +429,7 @@ export default function MapScreen() {
                     </View>
                     <View style={styles.selectedPlaceContent}>
                       <View style={styles.selectedPlaceHeader}>
-                        <Text numberOfLines={1} style={styles.selectedTitle}>
+                        <Text numberOfLines={1} style={[styles.selectedTitle, { color: palette.textPrimary }]}>
                           {selectedEvent.title}
                         </Text>
                         <SymbolView
@@ -425,8 +441,8 @@ export default function MapScreen() {
                           style={styles.captionSymbol}
                         />
                       </View>
-                      <Text style={styles.selectedPlaceType}>Otthon</Text>
-                      <Text numberOfLines={1} style={styles.selectedLocation}>
+                      <Text style={[styles.selectedPlaceType, { color: palette.textMuted }]}>Otthon</Text>
+                      <Text numberOfLines={1} style={[styles.selectedLocation, { color: palette.textSecondary }]}>
                         {selectedEvent.location_name}
                       </Text>
                     </View>
@@ -568,12 +584,10 @@ const styles = StyleSheet.create({
   backgroundGlow: {
     position: 'absolute',
     top: 88,
-    right: -130,
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: '#DCEBFF',
-    opacity: 0.8,
+    right: 0,
+    width: '70%',
+    height: 240,
+    opacity: 0.72,
   },
   content: { paddingHorizontal: spacing.lg, paddingBottom: 100, gap: spacing.md },
   flex: { flex: 1 },
@@ -682,13 +696,11 @@ const styles = StyleSheet.create({
   },
   mapGlow: {
     position: 'absolute',
-    top: -100,
-    left: '30%',
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: '#FFFFFF',
-    opacity: 0.42,
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: 180,
+    opacity: 0.28,
   },
   mapRoad: {
     position: 'absolute',

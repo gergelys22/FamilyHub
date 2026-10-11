@@ -1,4 +1,5 @@
-import { colors, radius, shadows, spacing } from '@/constants/theme';
+import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
+import { useTheme } from '@/providers/theme-provider';
 import { getProfile } from '@/services/families';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -103,6 +104,8 @@ function MemberAvatar({ member }: { member: Member }) {
 
 export default function FamilyMemberProfileScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
   const { memberId } = useLocalSearchParams<{ memberId?: string }>();
   const isGroup = memberId === 'family';
   const [loadedMember, setLoadedMember] = useState<Member | null>(null);
@@ -130,7 +133,7 @@ export default function FamilyMemberProfileScreen() {
 
   if (isGroup) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
         <View style={styles.header}>
           <Pressable
             accessibilityRole="button"
@@ -138,9 +141,9 @@ export default function FamilyMemberProfileScreen() {
             onPress={() => router.back()}
             style={({ pressed }) => [styles.headerButton, pressed && styles.pressed]}
           >
-            <Ionicons name="chevron-back" size={25} color={colors.textPrimary} />
+            <Ionicons name="chevron-back" size={25} color={palette.textPrimary} />
           </Pressable>
-          <Text style={styles.headerTitle}>Családi csoport</Text>
+          <Text style={[styles.headerTitle, { color: palette.textPrimary }]}>Családi csoport</Text>
           <View style={styles.headerPlaceholder} />
         </View>
         <ScrollView
@@ -155,7 +158,7 @@ export default function FamilyMemberProfileScreen() {
             <Text style={styles.profileMeta}>{groupMembers.length + 1} résztvevő</Text>
           </View>
           <Text style={styles.sectionTitle}>Csoporttagok</Text>
-          <View style={styles.memberCard}>
+          <View style={[styles.memberCard, { backgroundColor: palette.surface }]}>
             {[...groupMembers, members.gergely].map((groupMember) => (
               <Pressable
                 key={groupMember.name}
@@ -174,8 +177,8 @@ export default function FamilyMemberProfileScreen() {
               >
                 <MemberAvatar member={groupMember} />
                 <View style={styles.infoContent}>
-                  <Text style={styles.memberName}>{groupMember.name}</Text>
-                  <Text style={styles.infoValue}>{groupMember.role}</Text>
+                  <Text style={[styles.memberName, { color: palette.textPrimary }]}>{groupMember.name}</Text>
+                  <Text style={[styles.infoValue, { color: palette.textSecondary }]}>{groupMember.role}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
               </Pressable>
@@ -187,7 +190,7 @@ export default function FamilyMemberProfileScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -199,7 +202,7 @@ export default function FamilyMemberProfileScreen() {
             onPress={() => router.back()}
             style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
           >
-            <Ionicons name="chevron-back" size={25} color={colors.textPrimary} />
+            <Ionicons name="chevron-back" size={25} color={palette.textPrimary} />
           </Pressable>
           <Pressable
             accessibilityRole="button"
@@ -207,7 +210,7 @@ export default function FamilyMemberProfileScreen() {
             onPress={() => router.push('/settings')}
             style={({ pressed }) => [styles.moreButton, pressed && styles.pressed]}
           >
-            <Ionicons name="ellipsis-vertical" size={22} color={colors.textPrimary} />
+            <Ionicons name="ellipsis-vertical" size={22} color={palette.textPrimary} />
           </Pressable>
           <MemberAvatar member={member} />
           <Text style={styles.profileName}>{member.name}</Text>
@@ -247,7 +250,7 @@ export default function FamilyMemberProfileScreen() {
           <Text style={styles.sectionTitle}>Fontos információk</Text>
           <Ionicons name="create-outline" size={22} color={colors.primary} />
         </View>
-        <View style={styles.infoCard}>
+        <View style={[styles.infoCard, { backgroundColor: palette.surface }]}>
           <InfoRow
             icon="school-outline"
             color={colors.primary}

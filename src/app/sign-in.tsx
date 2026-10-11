@@ -12,7 +12,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
-import { colors, radius, spacing } from '@/constants/theme';
+import { colors, darkColors, radius, spacing } from '@/constants/theme';
+import { useTheme } from '@/providers/theme-provider';
 import { useAuth } from '@/providers/auth-provider';
 import { SymbolView } from 'expo-symbols';
 import medium from 'expo-symbols/androidWeights/medium';
@@ -47,6 +48,8 @@ function EyeIcon({ visible }: { visible: boolean }) {
 
 export default function SignInScreen() {
   const { signIn, signUp } = useAuth();
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
   const router = useRouter();
   const { mode } = useLocalSearchParams<{ mode?: string }>();
   const isRegistration = mode === 'register';
@@ -130,7 +133,7 @@ export default function SignInScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboard}
@@ -140,23 +143,23 @@ export default function SignInScreen() {
             <View style={styles.logo}>
               <Text style={styles.logoText}>⌂</Text>
             </View>
-            <Text style={styles.title}>CsaládTér</Text>
-            <Text style={styles.subtitle}>
+            <Text style={[styles.title, { color: palette.textPrimary }]}>CsaládTér</Text>
+            <Text style={[styles.subtitle, { color: palette.textMuted }]}>
               {isRegistration
                 ? 'Hozd létre a saját családi teredet.'
                 : 'Jelentkezz be a családi teredhez.'}
             </Text>
           </View>
 
-          <View style={styles.card}>
+          <View style={[styles.card, { backgroundColor: palette.surface, borderColor: palette.border }]}>
             {isRegistration ? (
               <TextInput
                 autoCapitalize="words"
                 autoComplete="name"
                 onChangeText={setDisplayName}
                 placeholder="Megjelenítendő név"
-                placeholderTextColor={colors.textMuted}
-                style={styles.input}
+                placeholderTextColor={palette.textMuted}
+                style={[styles.input, { color: palette.textPrimary, backgroundColor: palette.surfaceElevated, borderColor: palette.border }]}
                 value={displayName}
               />
             ) : null}
@@ -167,8 +170,8 @@ export default function SignInScreen() {
               keyboardType="email-address"
               onChangeText={setEmail}
               placeholder="E-mail-cím"
-              placeholderTextColor={colors.textMuted}
-              style={styles.input}
+              placeholderTextColor={palette.textMuted}
+              style={[styles.input, { color: palette.textPrimary, backgroundColor: palette.surfaceElevated, borderColor: palette.border }]}
               value={email}
             />
             <View style={styles.passwordField}>
@@ -179,9 +182,9 @@ export default function SignInScreen() {
                 onChangeText={setPassword}
                 onSubmitEditing={isRegistration ? undefined : () => void submit()}
                 placeholder="Jelszó"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={palette.textMuted}
                 secureTextEntry={!passwordVisible}
-                style={styles.passwordInput}
+                style={[styles.passwordInput, { color: palette.textPrimary }]}
                 value={password}
               />
               <Pressable
@@ -211,9 +214,9 @@ export default function SignInScreen() {
                   onChangeText={setConfirmPassword}
                   onSubmitEditing={() => void submit()}
                   placeholder="Jelszó megerősítése"
-                  placeholderTextColor={colors.textMuted}
+                  placeholderTextColor={palette.textMuted}
                   secureTextEntry={!confirmPasswordVisible}
-                  style={styles.passwordInput}
+                  style={[styles.passwordInput, { color: palette.textPrimary }]}
                   value={confirmPassword}
                 />
                 <Pressable
