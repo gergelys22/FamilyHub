@@ -3,6 +3,20 @@ import { supabase } from '@/lib/supabase';
 export type FamilyDocument = { id: string; family_id: string; name: string; storage_path: string; mime_type: string | null; size_bytes: number | null; created_at: string };
 export type Medication = { id: string; family_id: string; profile_id: string; name: string; dosage_text: string | null; instructions: string | null; next_at: string | null };
 export type Reminder = { id: string; family_id: string; title: string; detail: string | null; due_at: string; category: string };
+export type FamilyTask = {
+  id: string;
+  family_id: string;
+  created_by_profile_id: string;
+  assigned_to_profile_id: string | null;
+  list_type: 'task' | 'shopping';
+  title: string;
+  detail: string | null;
+  quantity: string | null;
+  due_at: string | null;
+  completed: boolean;
+  created_at: string;
+  updated_at: string;
+};
 
 export async function getFamilyDocuments(familyId: string) {
   const { data, error } = await supabase.from('family_documents').select('id, family_id, name, storage_path, mime_type, size_bytes, created_at').eq('family_id', familyId).order('created_at', { ascending: false });
@@ -50,6 +64,60 @@ export async function saveReminder(input: { id?: string; familyId: string; profi
 }
 export async function deleteReminder(id: string) {
   const { error } = await supabase.from('family_reminders').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+const familyTaskFields = 'id, family_id, created_by_profile_id, assigned_to_profile_id, list_type, title, detail, quantity, due_at, completed, created_at, updated_at';
+
+export async function getFamilyTasks(familyId: string, listType: FamilyTask['list_type']) {
+  const { data, error } = await supabase
+    .from('family_tasks')
+    .select(familyTaskFields)
+    .eq('family_id', familyId)
+    .eq('list_type', listType)
+    .order('completed', { ascending: true })
+    .order('due_at', { ascending: true, nullsFirst: false })
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as FamilyTask[];
+}
+
+export async function createFamilyTask(input: {
+  familyId: string;
+  profileId: string;
+  listType: FamilyTask['list_type'];
+  title: string;
+  detail?: string;
+  quantity?: string;
+  dueAt?: string | null;
+}) {
+  const { data, error } = await supabase
+    .from('family_tasks')
+    .insert({
+      family_id: input.familyId,
+      created_by_profile_id: input.profileId,
+      list_type: input.listType,
+      title: input.title.trim(),
+      detail: input.detail?.trim() || null,
+      quantity: input.quantity?.trim() || null,
+      due_at: input.dueAt ?? null,
+    })
+    .select(familyTaskFields)
+    .single();
+  if (error) throw new Error(error.message);
+  return data as FamilyTask;
+}
+
+export async function setFamilyTaskCompleted(id: string, completed: boolean) {
+  const { error } = await supabase
+    .from('family_tasks')
+    .update({ completed, updated_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteFamilyTask(id: string) {
+  const { error } = await supabase.from('family_tasks').delete().eq('id', id);
   if (error) throw new Error(error.message);
 }
 

@@ -94,6 +94,12 @@ export default function MoreScreen() {
             palette={palette}
           />
           <MenuItem
+            icon="checkbox-outline"
+            label="Teendők és bevásárlás"
+            onPress={() => router.push('/tasks' as never)}
+            palette={palette}
+          />
+          <MenuItem
             icon="chatbubble-ellipses-outline"
             label="Üzenetek"
             onPress={() => router.push('/messages')}
