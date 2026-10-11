@@ -43,6 +43,120 @@ create table if not exists public.family_reminders (
   updated_at timestamptz not null default now()
 );
 
+alter table public.memories
+  add column if not exists description text,
+  add column if not exists created_by_profile_id uuid references public.profiles(id) on delete set null;
+
+create table if not exists public.memory_participants (
+  memory_id uuid not null references public.memories(id) on delete cascade,
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  primary key (memory_id, profile_id)
+);
+
+grant select, insert on public.memories to authenticated;
+grant select, insert on public.memory_media to authenticated;
+grant select, insert on public.memory_participants to authenticated;
+grant delete on public.memory_media to authenticated;
+grant delete on public.memories to authenticated;
+
+alter table public.memories enable row level security;
+alter table public.memory_media enable row level security;
+alter table public.memory_participants enable row level security;
+
+drop policy if exists memories_select_family on public.memories;
+drop policy if exists memories_insert_family on public.memories;
+drop policy if exists memories_delete_family on public.memories;
+drop policy if exists memory_media_select_family on public.memory_media;
+drop policy if exists memory_media_insert_family on public.memory_media;
+drop policy if exists memory_media_delete_family on public.memory_media;
+drop policy if exists memory_participants_select_family on public.memory_participants;
+drop policy if exists memory_participants_insert_family on public.memory_participants;
+
+create policy memories_select_family on public.memories
+for select to authenticated
+using ((select private.is_family_member(family_id)));
+
+create policy memories_insert_family on public.memories
+for insert to authenticated
+with check (
+  (select private.is_family_member(family_id))
+  and (
+    created_by_profile_id is null
+    or created_by_profile_id = (select private.current_profile_id())
+  )
+);
+
+create policy memories_delete_family on public.memories
+for delete to authenticated
+using (
+  (select private.is_family_member(family_id))
+  and (
+    created_by_profile_id is null
+    or created_by_profile_id = (select private.current_profile_id())
+    or (select private.is_family_admin(family_id))
+  )
+);
+
+create policy memory_media_select_family on public.memory_media
+for select to authenticated
+using (
+  exists (
+    select 1
+    from public.memories m
+    where m.id = memory_media.memory_id
+      and (select private.is_family_member(m.family_id))
+  )
+);
+
+create policy memory_media_insert_family on public.memory_media
+for insert to authenticated
+with check (
+  exists (
+    select 1
+    from public.memories m
+    where m.id = memory_media.memory_id
+      and (select private.is_family_member(m.family_id))
+  )
+);
+
+create policy memory_media_delete_family on public.memory_media
+for delete to authenticated
+using (
+  exists (
+    select 1
+    from public.memories m
+    where m.id = memory_media.memory_id
+      and (select private.is_family_member(m.family_id))
+      and (
+        m.created_by_profile_id is null
+        or m.created_by_profile_id = (select private.current_profile_id())
+        or (select private.is_family_admin(m.family_id))
+      )
+  )
+);
+
+create policy memory_participants_select_family on public.memory_participants
+for select to authenticated
+using (
+  exists (
+    select 1 from public.memories m
+    where m.id = memory_participants.memory_id
+      and (select private.is_family_member(m.family_id))
+  )
+);
+
+create policy memory_participants_insert_family on public.memory_participants
+for insert to authenticated
+with check (
+  exists (
+    select 1 from public.memories m
+    join public.family_members fm on fm.family_id = m.family_id
+    where m.id = memory_participants.memory_id
+      and fm.profile_id = memory_participants.profile_id
+      and (select private.is_family_member(m.family_id))
+  )
+);
+
 create index if not exists family_documents_family_idx on public.family_documents(family_id, created_at desc);
 create index if not exists medications_family_idx on public.medications(family_id, next_at);
 create index if not exists family_reminders_family_idx on public.family_reminders(family_id, due_at);
@@ -94,6 +208,44 @@ using (created_by_profile_id = (select private.current_profile_id()) or (select 
 
 insert into storage.buckets (id, name, public) values ('family-documents', 'family-documents', false)
 on conflict (id) do update set public = false;
+
+-- The memories hook uses public URLs, so keep this bucket public until the
+-- client is migrated to signed URLs. Uploads are still restricted to the
+-- authenticated profile's own folder.
+insert into storage.buckets (id, name, public) values ('memories', 'memories', true)
+on conflict (id) do update set public = true;
+
+drop policy if exists memories_storage_insert_own on storage.objects;
+drop policy if exists memories_storage_delete_own on storage.objects;
+drop policy if exists memories_storage_select_family on storage.objects;
+
+create policy memories_storage_select_family on storage.objects
+for select to authenticated
+using (
+  bucket_id = 'memories'
+  and exists (
+    select 1
+    from public.memory_media mm
+    join public.memories m on m.id = mm.memory_id
+    where mm.storage_bucket = bucket_id
+      and mm.storage_path = name
+      and (select private.is_family_member(m.family_id))
+  )
+);
+
+create policy memories_storage_insert_own on storage.objects
+for insert to authenticated
+with check (
+  bucket_id = 'memories'
+  and (storage.foldername(name))[1] = (select private.current_profile_id())::text
+);
+
+create policy memories_storage_delete_own on storage.objects
+for delete to authenticated
+using (
+  bucket_id = 'memories'
+  and (storage.foldername(name))[1] = (select private.current_profile_id())::text
+);
 
 drop policy if exists family_documents_storage_select on storage.objects;
 drop policy if exists family_documents_storage_insert on storage.objects;

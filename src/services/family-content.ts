@@ -52,3 +52,56 @@ export async function deleteReminder(id: string) {
   const { error } = await supabase.from('family_reminders').delete().eq('id', id);
   if (error) throw new Error(error.message);
 }
+
+export async function createMemory(input: {
+  familyId: string;
+  profileId: string;
+  title: string;
+  description?: string;
+  memoryDate: string;
+  locationName?: string;
+  media?: { storagePath: string; mimeType?: string; fileSizeBytes?: number }[];
+  participantProfileIds?: string[];
+}) {
+  const { data, error } = await supabase
+    .from('memories')
+    .insert({
+      family_id: input.familyId,
+      created_by_profile_id: input.profileId,
+      title: input.title.trim(),
+      description: input.description?.trim() || null,
+      memory_date: input.memoryDate,
+      location_name: input.locationName?.trim() || null,
+    })
+    .select('id')
+    .single<{ id: string }>();
+
+  if (error) throw new Error(error.message);
+
+  if (input.media?.length) {
+    const { error: mediaError } = await supabase.from('memory_media').insert(input.media.map((item, index) => ({
+      memory_id: data.id,
+      media_type: 'image',
+      storage_bucket: 'memories',
+      storage_path: item.storagePath,
+      mime_type: item.mimeType ?? null,
+      file_size_bytes: item.fileSizeBytes ?? null,
+      sort_order: index,
+    })));
+    if (mediaError) {
+      await supabase.from('memories').delete().eq('id', data.id);
+      throw new Error(mediaError.message);
+    }
+  }
+  if (input.participantProfileIds?.length) {
+    const { error: participantError } = await supabase.from('memory_participants').insert(
+      input.participantProfileIds.map((profileId) => ({ memory_id: data.id, profile_id: profileId })),
+    );
+    if (participantError) {
+      await supabase.from('memories').delete().eq('id', data.id);
+      throw new Error(participantError.message);
+    }
+  }
+
+  return data.id;
+}

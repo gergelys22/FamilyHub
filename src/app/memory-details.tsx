@@ -5,6 +5,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Image,
+  Dimensions,
+  Modal,
   Pressable,
   Share,
   ScrollView,
@@ -20,7 +22,13 @@ export default function MemoryDetailsScreen() {
   const { memories, loading, hasMore, error, loadMore } = useMemories();
   const memory = useMemo(() => memories.find((item) => item.id === id), [id, memories]);
   const photos = memory?.photos ?? [];
+  console.info('[memory-details] photo state', {
+    id,
+    memoryId: memory?.id,
+    photoCount: photos.length,
+  });
   const [favorite, setFavorite] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<number | null>(null);
 
   useEffect(() => {
     if (id && !loading && !memory && hasMore) {
@@ -37,7 +45,14 @@ export default function MemoryDetailsScreen() {
         >
           <View style={styles.hero}>
             {memory?.photo ? (
-              <Image source={{ uri: memory.photo }} style={styles.heroImage} />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Emlék fő képének megnyitása"
+                onPress={() => setSelectedPhoto(0)}
+                style={styles.heroPressable}
+              >
+                <Image source={{ uri: memory.photo }} style={styles.heroImage} />
+              </Pressable>
             ) : (
               <View style={[styles.heroImage, styles.placeholder]}>
                 <Ionicons name="image-outline" size={44} color={colors.textMuted} />
@@ -67,20 +82,47 @@ export default function MemoryDetailsScreen() {
                     <Text style={styles.location}>{memory.location}</Text>
                   </View>
                 )}
-                <Text style={styles.description}>
-                  Egy különleges pillanat, amit jó újra átélni a családdal.
-                </Text>
+                {memory.participantNames.length > 0 ? (
+                  <View style={styles.participantsRow}>
+                    <Ionicons name="people-outline" size={17} color={colors.primary} />
+                    <Text style={styles.location}>
+                      Jelen voltak: {memory.participantNames.join(', ')}
+                    </Text>
+                  </View>
+                ) : null}
+                {memory.description ? (
+                  <Text style={styles.description}>{memory.description}</Text>
+                ) : null}
 
                 <Text style={styles.sectionTitle}>A pillanat képei</Text>
-                <View style={styles.photoGrid}>
-                  {photos.map((photo, index) => (
-                    <Image
-                      key={`${photo}-${index}`}
-                      source={{ uri: photo }}
-                      style={styles.thumbnail}
-                    />
-                  ))}
-                </View>
+                {photos.length > 0 ? (
+                  <View style={styles.photoGrid}>
+                    {photos.map((photo, index) => (
+                      <Pressable
+                        key={`${photo}-${index}`}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${index + 1}. kép megnyitása`}
+                        onPress={() => setSelectedPhoto(index)}
+                        style={styles.thumbnailPressable}
+                      >
+                        <Image
+                          source={{ uri: photo }}
+                          style={styles.thumbnail}
+                          onError={(event) => {
+                            console.error('[memory-details] image failed', {
+                              uri: photo,
+                              error: event.nativeEvent.error,
+                            });
+                          }}
+                        />
+                      </Pressable>
+                    ))}
+                  </View>
+                ) : (
+                  <Text style={styles.emptyPhotos}>
+                    Ehhez az emlékhez nem tartozik betöltött kép.
+                  </Text>
+                )}
 
                 <View style={styles.actions}>
                   <Pressable
@@ -137,6 +179,43 @@ export default function MemoryDetailsScreen() {
             )}
           </View>
         </ScrollView>
+        <Modal
+          visible={selectedPhoto !== null}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setSelectedPhoto(null)}
+        >
+          <View style={styles.viewer}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Képnézegető bezárása"
+              onPress={() => setSelectedPhoto(null)}
+              style={styles.viewerClose}
+            >
+              <Ionicons name="close" size={28} color={colors.white} />
+            </Pressable>
+            <ScrollView
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              contentOffset={{ x: (selectedPhoto ?? 0) * Dimensions.get('window').width, y: 0 }}
+              style={styles.viewerScroll}
+            >
+              {photos.map((photo, index) => (
+                <View key={`${photo}-viewer-${index}`} style={styles.viewerPage}>
+                  <Image
+                    source={{ uri: photo }}
+                    resizeMode="contain"
+                    style={styles.viewerImage}
+                  />
+                </View>
+              ))}
+            </ScrollView>
+            <Text style={styles.viewerCounter}>
+              {(selectedPhoto ?? 0) + 1} / {photos.length}
+            </Text>
+          </View>
+        </Modal>
       </SafeAreaView>
     </View>
   );
@@ -147,6 +226,7 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   content: { paddingBottom: spacing.xl },
   hero: { height: 360, position: 'relative' },
+  heroPressable: { flex: 1 },
   heroImage: { width: '100%', height: '100%', backgroundColor: colors.surfaceMuted },
   placeholder: { alignItems: 'center', justifyContent: 'center' },
   backButton: {
@@ -184,6 +264,12 @@ const styles = StyleSheet.create({
     gap: 5,
     marginTop: spacing.sm,
   },
+  participantsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
   location: { color: colors.textSecondary, fontSize: 13, fontWeight: '700' },
   description: {
     marginTop: spacing.lg,
@@ -203,11 +289,57 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginTop: spacing.md,
   },
-  thumbnail: {
+  emptyPhotos: {
+    marginTop: spacing.md,
+    color: colors.textMuted,
+    fontSize: 13,
+  },
+  thumbnailPressable: {
     width: '31.8%',
     aspectRatio: 1.15,
+  },
+  thumbnail: {
+    width: '100%',
+    height: '100%',
     borderRadius: radius.md,
     backgroundColor: colors.surfaceMuted,
+  },
+  viewer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(8, 18, 35, 0.96)',
+  },
+  viewerScroll: { flex: 1, width: '100%' },
+  viewerPage: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewerImage: {
+    width: '100%',
+    height: '82%',
+    minHeight: 1,
+  },
+  viewerClose: {
+    position: 'absolute',
+    zIndex: 2,
+    top: spacing.xl,
+    right: spacing.lg,
+    width: 46,
+    height: 46,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.round,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+  },
+  viewerCounter: {
+    position: 'absolute',
+    bottom: spacing.xl,
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: '800',
   },
   actions: {
     flexDirection: 'row',
