@@ -1,4 +1,5 @@
 import { colors, radius, shadows, spacing } from '@/constants/theme';
+import { getFamilyMembers, getMyFamilies, type FamilyMember } from '@/services/families';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import {
@@ -11,31 +12,32 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-const children = [
-  {
-    name: 'Lili',
-    age: '11 éves',
-    initial: 'L',
-    location: 'Iskola környéke',
-    time: '2 perce',
-    color: '#EAC9A8',
-  },
-  {
-    name: 'Máté',
-    age: '8 éves',
-    initial: 'M',
-    location: 'Otthon',
-    time: '5 perce',
-    color: '#C9D8E5',
-  },
-];
+function getAge(birthDate: string | null) {
+  if (!birthDate) return null;
+  const birth = new Date(birthDate);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  if (today < new Date(today.getFullYear(), birth.getMonth(), birth.getDate())) age -= 1;
+  return age;
+}
 
 export default function LocationSharingScreen() {
   const router = useRouter();
   const [sharingEnabled, setSharingEnabled] = useState(false);
   const [selectedChild, setSelectedChild] = useState<string | null>(null);
+  const [members, setMembers] = useState<FamilyMember[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    void getMyFamilies()
+      .then((families) => families[0] ? getFamilyMembers(families[0].id) : [])
+      .then((result) => setMembers(result.filter((member) => {
+        const age = getAge(member.birth_date);
+        return age !== null && age < 14;
+      })))
+      .catch((caught: unknown) => setError(caught instanceof Error ? caught.message : 'A családtagok betöltése sikertelen.'));
+  }, []);
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.header}>
@@ -64,26 +66,30 @@ export default function LocationSharingScreen() {
           </Text>
         </View>
         <Text style={styles.sectionTitle}>14 éven aluli gyermekek</Text>
-        {children.map((child) => (
+        {error ? <Text style={styles.updated}>{error}</Text> : null}
+        {members.map((member) => {
+          const childName = member.nickname?.trim() || member.display_name;
+          const age = getAge(member.birth_date);
+          return (
           <Pressable
-            key={child.name}
+            key={member.profile_id}
             onPress={() => {
-              setSelectedChild(child.name);
-              Alert.alert(child.name, `${child.location} · ${child.time}`);
+              setSelectedChild(member.profile_id);
+              Alert.alert(childName, sharingEnabled ? 'Nincs elérhető friss helyadat.' : 'A helymegosztás ki van kapcsolva.');
             }}
             style={({ pressed }) => [
               styles.card,
-              selectedChild === child.name && styles.selectedCard,
+              selectedChild === member.profile_id && styles.selectedCard,
               pressed && styles.pressed,
             ]}
           >
-            <View style={[styles.avatar, { backgroundColor: child.color }]}>
-              <Text style={styles.avatarText}>{child.initial}</Text>
+            <View style={[styles.avatar, { backgroundColor: '#C9D8E5' }]}>
+              <Text style={styles.avatarText}>{childName.charAt(0).toLocaleUpperCase('hu-HU')}</Text>
               <View style={styles.online} />
             </View>
             <View style={styles.cardContent}>
               <Text style={styles.name}>
-                {child.name} <Text style={styles.age}>{child.age}</Text>
+                {childName} <Text style={styles.age}>{age === null ? 'Életkor nincs megadva' : `${age} éves`}</Text>
               </Text>
               <View style={styles.locationRow}>
                 <Ionicons
@@ -92,16 +98,18 @@ export default function LocationSharingScreen() {
                   color={sharingEnabled ? colors.success : colors.textMuted}
                 />
                 <Text style={styles.location}>
-                  {sharingEnabled ? child.location : 'Helymegosztás kikapcsolva'}
+                  {sharingEnabled ? 'Nincs elérhető helyadat' : 'Helymegosztás kikapcsolva'}
                 </Text>
               </View>
               <Text style={styles.updated}>
-                {sharingEnabled ? `${child.time} frissítve` : 'Nincs aktív helyadat'}
+                {sharingEnabled ? 'Nincs aktív helyadat' : 'Nincs aktív helyadat'}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={19} color={colors.textMuted} />
           </Pressable>
-        ))}
+          );
+        })}
+        {members.length === 0 && !error ? <Text style={styles.updated}>Nincs rögzített, 14 éven aluli családtag.</Text> : null}
         <View style={styles.settingsCard}>
           <View style={styles.settingsText}>
             <Text style={styles.settingsTitle}>

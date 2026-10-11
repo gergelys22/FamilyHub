@@ -1,24 +1,17 @@
 import { colors, radius, shadows, spacing } from '@/constants/theme';
+import { getFamilyMembers, getMyFamilies, type FamilyMember } from '@/services/families';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-type Person = { name: string; year: string; initial: string; color: string };
-const grandparents: Person[] = [
-  { name: 'Nagyapa', year: '1952–2020', initial: 'N', color: '#D6B38D' },
-  { name: 'Nagymama', year: '1955–2023', initial: 'N', color: '#F3C7B3' },
-];
-const parents: Person[] = [
-  { name: 'Apa', year: '1980', initial: 'A', color: '#C9D8E5' },
-  { name: 'Anya', year: '1982', initial: 'A', color: '#EAC9A8' },
-];
-const children: Person[] = [
-  { name: 'Anna', year: '2010', initial: 'A', color: '#F3C7B3' },
-  { name: 'Bence', year: '2012', initial: 'B', color: '#C9D8E5' },
-  { name: 'Lili', year: '2015', initial: 'L', color: '#EAC9A8' },
-  { name: 'Máté', year: '2018', initial: 'M', color: '#D6B38D' },
-];
+type Person = { id: string; name: string; year: string; initial: string; color: string };
+const avatarColors = ['#D6B38D', '#F3C7B3', '#C9D8E5', '#EAC9A8'];
+function toPerson(member: FamilyMember, index: number): Person {
+  const name = member.nickname?.trim() || member.display_name;
+  return { id: member.profile_id, name, year: member.birth_date ? new Date(member.birth_date).getFullYear().toString() : 'Évszám nincs megadva', initial: name.charAt(0).toLocaleUpperCase('hu-HU'), color: avatarColors[index % avatarColors.length] };
+}
 
 function PersonCard({ person, onPress }: { person: Person; onPress: () => void }) {
   return (
@@ -37,14 +30,16 @@ function PersonCard({ person, onPress }: { person: Person; onPress: () => void }
 
 export default function FamilyTreeScreen() {
   const router = useRouter();
+  const [people, setPeople] = useState<Person[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    void getMyFamilies()
+      .then((families) => families[0] ? getFamilyMembers(families[0].id) : [])
+      .then((members) => setPeople(members.map(toPerson)))
+      .catch((caught: unknown) => setError(caught instanceof Error ? caught.message : 'A családtagok betöltése sikertelen.'));
+  }, []);
   function openPerson(person: Person) {
-    const memberId =
-      person.name === 'Máté' ? 'mate' : person.name.toLocaleLowerCase('hu-HU');
-    if (['anna', 'lili', 'mate'].includes(memberId)) {
-      router.push({ pathname: '/family-member-profile', params: { memberId } });
-      return;
-    }
-    Alert.alert(person.name, 'Ehhez a családtaghoz még nincs kapcsolt profil.');
+    router.push({ pathname: '/family-member-profile', params: { memberId: person.id } });
   }
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -68,32 +63,11 @@ export default function FamilyTreeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.subtitle}>A család története és kapcsolatai</Text>
+        {error ? <Text style={styles.subtitle}>{error}</Text> : null}
         <View style={styles.tree}>
-          <Text style={styles.generation}>NAGYSZÜLŐK</Text>
-          <View style={styles.row}>
-            {grandparents.map((person) => (
-              <PersonCard
-                key={person.name}
-                person={person}
-                onPress={() => openPerson(person)}
-              />
-            ))}
-          </View>
-          <View style={styles.connectorVertical} />
-          <Text style={styles.generation}>SZÜLŐK</Text>
-          <View style={styles.row}>
-            {parents.map((person) => (
-              <PersonCard
-                key={person.name}
-                person={person}
-                onPress={() => openPerson(person)}
-              />
-            ))}
-          </View>
-          <View style={styles.connectorVertical} />
-          <Text style={styles.generation}>GYERMEKEK</Text>
+          <Text style={styles.generation}>CSALÁDTAGOK</Text>
           <View style={styles.childrenRow}>
-            {children.map((person) => (
+            {people.map((person) => (
               <PersonCard
                 key={person.name}
                 person={person}
@@ -101,6 +75,7 @@ export default function FamilyTreeScreen() {
               />
             ))}
           </View>
+          {people.length === 0 && !error ? <Text style={styles.subtitle}>Még nincs megjeleníthető családtag.</Text> : null}
         </View>
         <Pressable
           onPress={() => router.push('/invite-member')}

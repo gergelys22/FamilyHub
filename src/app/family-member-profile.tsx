@@ -1,6 +1,8 @@
 import { colors, radius, shadows, spacing } from '@/constants/theme';
+import { getProfile } from '@/services/families';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -103,7 +105,27 @@ export default function FamilyMemberProfileScreen() {
   const router = useRouter();
   const { memberId } = useLocalSearchParams<{ memberId?: string }>();
   const isGroup = memberId === 'family';
-  const member = members[memberId ?? 'lili'] ?? members.lili;
+  const [loadedMember, setLoadedMember] = useState<Member | null>(null);
+  useEffect(() => {
+    if (!memberId || isGroup || members[memberId]) return;
+    void getProfile(memberId)
+      .then((profile) => {
+        const name = profile.display_name;
+        setLoadedMember({
+          name,
+          role: 'Családtag',
+          birthDate: profile.birth_date ? new Date(profile.birth_date).toLocaleDateString('hu-HU') : 'Születési dátum nincs megadva',
+          initial: name.charAt(0).toLocaleUpperCase('hu-HU'),
+          color: '#C9D8E5',
+          textColor: '#325773',
+          school: 'Nincs megadva',
+          allergy: 'Nincs megadva',
+          medicine: 'Nincs megadva',
+        });
+      })
+      .catch(() => setLoadedMember(null));
+  }, [isGroup, memberId]);
+  const member = loadedMember ?? members[memberId ?? 'lili'] ?? members.lili;
   const groupMembers = groupMemberIds.map((id) => members[id]);
 
   if (isGroup) {

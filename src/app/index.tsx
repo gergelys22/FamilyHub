@@ -6,7 +6,9 @@ import { useAuth } from '@/providers/auth-provider';
 import type { Family } from '@/services/families';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { getFamilyEvents, type FamilyEvent } from '@/services/events';
+import { getChatConversations } from '@/services/chat';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -196,6 +198,9 @@ export default function HomeScreen() {
   const { profile, profileError } = useAuth();
   const { unreadCount } = useNotifications();
   const [activeFamily, setActiveFamily] = useState<Family | null>(null);
+  const [upcomingEvents, setUpcomingEvents] = useState<FamilyEvent[]>([]);
+  const [eventsError, setEventsError] = useState<string | null>(null);
+  const [conversationCount, setConversationCount] = useState(0);
   const displayName = profile?.display_name?.trim() || 'Felhasználó';
   const userInitial = displayName.charAt(0).toLocaleUpperCase('hu-HU') || '?';
   const firstName = displayName.split(/\s+/)[0];
@@ -205,6 +210,30 @@ export default function HomeScreen() {
     day: 'numeric',
     weekday: 'long',
   }).format(new Date());
+
+  useEffect(() => {
+    if (!activeFamily) return;
+    const from = new Date();
+    const to = new Date(from);
+    to.setDate(to.getDate() + 90);
+    void getFamilyEvents(activeFamily.id, from, to)
+      .then((events) => {
+        setUpcomingEvents(events);
+        setEventsError(null);
+      })
+      .catch((error: unknown) => {
+        setEventsError(error instanceof Error ? error.message : 'Az események betöltése sikertelen.');
+      });
+    void getChatConversations(activeFamily.id)
+      .then((conversations) => setConversationCount(conversations.length))
+      .catch(() => setConversationCount(0));
+  }, [activeFamily]);
+
+  const nextEvent = upcomingEvents[0] ?? null;
+  const nextEventDate = nextEvent ? new Date(nextEvent.starts_at) : null;
+  const eventMeta = nextEventDate
+    ? `${nextEventDate.toLocaleDateString('hu-HU', { month: 'short', day: 'numeric' })} · ${nextEventDate.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' })}${nextEvent.location_name ? ` · ${nextEvent.location_name}` : ''}`
+    : 'Nincs közelgő esemény';
 
   function openRoute(route: HomeRoute) {
     if (route === '/invite-member' && activeFamily) {
@@ -307,7 +336,11 @@ export default function HomeScreen() {
           </View>
           <View style={styles.todayStats}>
             <TodayStat
-              value={3}
+              value={upcomingEvents.filter((event) => {
+                const date = new Date(event.starts_at);
+                const today = new Date();
+                return date.toDateString() === today.toDateString();
+              }).length}
               label="esemény"
               color={colors.primary}
               icon={{ ios: 'calendar', android: 'calendar_month', web: 'calendar_month' }}
@@ -319,7 +352,7 @@ export default function HomeScreen() {
               icon={{ ios: 'bell.fill', android: 'notifications', web: 'notifications' }}
             />
             <TodayStat
-              value={2}
+              value={conversationCount}
               label="üzenet"
               color={colors.teal}
               icon={{ ios: 'bubble.left.and.bubble.right.fill', android: 'forum', web: 'forum' }}
@@ -335,10 +368,11 @@ export default function HomeScreen() {
           />
           <NextEventCard
             color={colors.primary}
-            title="Orvosi időpont"
-            meta="Ma · 09:30 · Anna"
+            title={nextEvent?.title ?? 'Nincs közelgő esemény'}
+            meta={eventMeta}
             onPress={() => openRoute('/calendar')}
           />
+          {eventsError ? <Text style={styles.errorText}>{eventsError}</Text> : null}
         </View>
 
         <View>
