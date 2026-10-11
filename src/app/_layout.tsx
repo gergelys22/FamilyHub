@@ -97,7 +97,7 @@ function AppNavigator() {
           tabBarActiveTintColor: palette.primary,
           tabBarInactiveTintColor: palette.textMuted,
           tabBarHideOnKeyboard: true,
-          tabBarStyle: [styles.tabBar, { backgroundColor: palette.navigationBackground, borderTopColor: palette.navigationBorder }],
+          tabBarStyle: [styles.tabBar, { backgroundColor: palette.glassBackground, borderTopColor: palette.glassBorder }],
           tabBarItemStyle: styles.tabItem,
           tabBarLabelStyle: styles.tabLabel,
         }}

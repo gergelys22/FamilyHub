@@ -25,6 +25,8 @@ export const colors = {
 
   navigationBackground: '#FFFFFF',
   navigationBorder: '#E7EEF9',
+  glassBackground: 'rgba(255, 255, 255, 0.78)',
+  glassBorder: 'rgba(201, 217, 243, 0.72)',
   white: '#FFFFFF',
 } as const;
 
@@ -42,6 +44,8 @@ export const darkColors = {
   primarySoft: '#173F86',
   navigationBackground: '#0A2341',
   navigationBorder: '#2A527D',
+  glassBackground: 'rgba(16, 43, 76, 0.78)',
+  glassBorder: 'rgba(142, 163, 194, 0.22)',
 } as const;
 
 export const gradients = {

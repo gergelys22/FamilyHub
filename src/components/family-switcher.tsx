@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 
 import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
+import { GlassSurface } from '@/components/glass-surface';
 import { useTheme } from '@/providers/theme-provider';
 import { Family, getMyFamilies } from '@/services/families';
 
@@ -147,7 +148,10 @@ export function FamilySwitcher({
 
   if (compact) {
     return (
-      <View style={styles.compactCard}>
+      <GlassSurface
+        dark={isDark}
+        style={[styles.compactCard, { backgroundColor: palette.glassBackground, borderColor: palette.glassBorder }]}
+      >
         <View style={styles.compactActiveFamilyRow}>
           <View style={styles.compactFamilyIcon}>
             <Text style={styles.compactFamilyIconText}>⌂</Text>
@@ -198,12 +202,15 @@ export function FamilySwitcher({
             })}
           </ScrollView>
         ) : null}
-      </View>
+      </GlassSurface>
     );
   }
 
   return (
-    <View style={[styles.card, { backgroundColor: palette.surface }]}>
+    <GlassSurface
+      dark={isDark}
+      style={[styles.card, { backgroundColor: palette.glassBackground, borderColor: palette.glassBorder }]}
+    >
       <View pointerEvents="none" style={styles.cardGlow} />
 
       <View style={styles.cardHeader}>
@@ -272,7 +279,7 @@ export function FamilySwitcher({
         <Text style={styles.addFamilyPlus}>+</Text>
         <Text style={styles.addFamilyText}>Másik családi kör létrehozása</Text>
       </Pressable>
-    </View>
+    </GlassSurface>
   );
 }
 

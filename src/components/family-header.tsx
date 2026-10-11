@@ -1,4 +1,5 @@
 import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
+import { GlassSurface } from '@/components/glass-surface';
 import { useTheme } from '@/providers/theme-provider';
 import { SymbolView } from 'expo-symbols';
 import medium from 'expo-symbols/androidWeights/medium';
@@ -23,7 +24,13 @@ export function FamilyHeader({
     unreadNotificationCount > 99 ? '99+' : String(unreadNotificationCount);
 
   return (
-    <View style={styles.container}>
+    <GlassSurface
+      dark={isDark}
+      style={[
+        styles.container,
+        { borderBottomColor: palette.glassBorder, backgroundColor: palette.glassBackground },
+      ]}
+    >
       <View style={styles.brand}>
         <View style={styles.logo}>
           <SymbolView
@@ -92,7 +99,7 @@ export function FamilyHeader({
           <Text style={styles.profileText}>{userInitial}</Text>
         </Pressable>
       </View>
-    </View>
+    </GlassSurface>
   );
 }
 
@@ -102,6 +109,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: spacing.lg,
   },
   brand: {
     flexDirection: 'row',
