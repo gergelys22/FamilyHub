@@ -30,6 +30,15 @@ function formatDueDate(iso: string): string {
   return `${d.getMonth() + 1}. ${d.getDate()}.`;
 }
 
+function formatActivityDate(iso: string): string {
+  return new Date(iso).toLocaleString('hu-HU', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 function birthdayLabel(daysAway: number): string {
   if (daysAway === 0) return 'Ma';
   if (daysAway === 1) return 'Holnap';
@@ -52,13 +61,14 @@ export function FamilyDashboard({ familyId, profileId, onNavigate }: Props) {
     );
   }
 
-  const { todayEvents, overdueTasks, overdueTaskTotal, medications, unreadMessages, birthdays } = data;
+  const { todayEvents, overdueTasks, overdueTaskTotal, medications, unreadMessages, birthdays, activityLogs } = data;
   const allEmpty =
     todayEvents.length === 0 &&
     overdueTaskTotal === 0 &&
     medications.length === 0 &&
     unreadMessages === 0 &&
-    birthdays.length === 0;
+    birthdays.length === 0 &&
+    activityLogs.length === 0;
 
   const tiles: {
     key: DashboardTarget;
@@ -149,8 +159,34 @@ export function FamilyDashboard({ familyId, profileId, onNavigate }: Props) {
           {overdueTaskTotal > 5 ? <Text style={styles.more}>+ {overdueTaskTotal - 5} további</Text> : null}
         </Section>
       ) : null}
+      {activityLogs.length > 0 ? (
+        <Section title="CsalĂˇdi aktivitĂˇs" palette={palette}>
+          {activityLogs.slice(0, 5).map((entry) => (
+            <Row
+              key={entry.id}
+              icon={activityIcon(entry.type)}
+              title={entry.summary}
+              meta={[entry.actorName, formatActivityDate(entry.created_at)].filter(Boolean).join(' Â· ')}
+              palette={palette}
+            />
+          ))}
+        </Section>
+      ) : null}
     </View>
   );
+}
+
+function activityIcon(type: string): keyof typeof Ionicons.glyphMap {
+  switch (type) {
+    case 'task_completed':
+      return 'checkmark-circle-outline';
+    case 'task_reopened':
+      return 'refresh-circle-outline';
+    case 'task_deleted':
+      return 'trash-outline';
+    default:
+      return 'sparkles-outline';
+  }
 }
 
 export default function FamilyDashboardScreen() {

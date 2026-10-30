@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { createActivityLog } from '@/services/activity';
 
 export type FamilyDocument = { id: string; family_id: string; name: string; storage_path: string; mime_type: string | null; size_bytes: number | null; created_at: string };
 export type Medication = { id: string; family_id: string; profile_id: string; name: string; dosage_text: string | null; instructions: string | null; next_at: string | null };
@@ -107,20 +108,72 @@ export async function createFamilyTask(input: {
     .select(familyTaskFields)
     .single();
   if (error) throw new Error(error.message);
-  return data as FamilyTask;
+  const task = data as FamilyTask;
+  await createActivityLog({
+    familyId: task.family_id,
+    type: 'task_created',
+    entityType: 'task',
+    entityId: task.id,
+    summary: task.list_type === 'shopping'
+      ? `Új bevásárlási tétel: ${task.title}`
+      : `Új teendő: ${task.title}`,
+    metadata: {
+      title: task.title,
+      listType: task.list_type,
+      assignedToProfileId: task.assigned_to_profile_id,
+      dueAt: task.due_at,
+    },
+  });
+  return task;
 }
 
 export async function setFamilyTaskCompleted(id: string, completed: boolean) {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('family_tasks')
     .update({ completed, updated_at: new Date().toISOString() })
-    .eq('id', id);
+    .eq('id', id)
+    .select(familyTaskFields)
+    .single();
   if (error) throw new Error(error.message);
+  const task = data as FamilyTask;
+  await createActivityLog({
+    familyId: task.family_id,
+    type: completed ? 'task_completed' : 'task_reopened',
+    entityType: 'task',
+    entityId: task.id,
+    summary: completed ? `Elvégezve: ${task.title}` : `Újranyitva: ${task.title}`,
+    metadata: {
+      title: task.title,
+      listType: task.list_type,
+      completed,
+    },
+  });
+  return task;
 }
 
 export async function deleteFamilyTask(id: string) {
+  const { data: task, error: taskError } = await supabase
+    .from('family_tasks')
+    .select(familyTaskFields)
+    .eq('id', id)
+    .single();
+  if (taskError) throw new Error(taskError.message);
+
   const { error } = await supabase.from('family_tasks').delete().eq('id', id);
   if (error) throw new Error(error.message);
+
+  const deletedTask = task as FamilyTask;
+  await createActivityLog({
+    familyId: deletedTask.family_id,
+    type: 'task_deleted',
+    entityType: 'task',
+    entityId: deletedTask.id,
+    summary: `Törölt elem: ${deletedTask.title}`,
+    metadata: {
+      title: deletedTask.title,
+      listType: deletedTask.list_type,
+    },
+  });
 }
 
 export async function createMemory(input: {

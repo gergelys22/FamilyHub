@@ -10,6 +10,7 @@ import {
   type DashboardMedication,
   type DashboardTask,
 } from '@/services/dashboard';
+import { getFamilyActivityLogs, type ActivityLog } from '@/services/activity';
 import { getFamilyEvents, type FamilyEvent } from '@/services/events';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
@@ -21,6 +22,7 @@ export type DashboardData = {
   medications: DashboardMedication[];
   unreadMessages: number;
   birthdays: DashboardBirthday[];
+  activityLogs: ActivityLog[];
 };
 
 const EMPTY: DashboardData = {
@@ -30,6 +32,7 @@ const EMPTY: DashboardData = {
   medications: [],
   unreadMessages: 0,
   birthdays: [],
+  activityLogs: [],
 };
 
 type Params = { familyId: string | null | undefined; profileId: string | null | undefined };
@@ -66,12 +69,13 @@ export function useFamilyDashboard({ familyId, profileId }: Params) {
     if (!hasLoaded.current) setLoading(true);
 
     const now = new Date();
-    const [events, overdue, meds, unread, birthdays] = await Promise.allSettled([
+    const [events, overdue, meds, unread, birthdays, activity] = await Promise.allSettled([
       getFamilyEvents(familyId, startOfDay(now), endOfDay(now)),
       getOverdueTasks(familyId),
       getTodayMedications(familyId),
       profileId ? getUnreadMessageCount(familyId, profileId) : Promise.resolve(0),
       getUpcomingBirthdays(familyId),
+      getFamilyActivityLogs(familyId),
     ]);
 
     if (current !== requestId.current) return;
@@ -84,8 +88,9 @@ export function useFamilyDashboard({ familyId, profileId }: Params) {
       medications: meds.status === 'fulfilled' ? meds.value : prev.medications,
       unreadMessages: unread.status === 'fulfilled' ? unread.value : prev.unreadMessages,
       birthdays: birthdays.status === 'fulfilled' ? birthdays.value : prev.birthdays,
+      activityLogs: activity.status === 'fulfilled' ? activity.value : prev.activityLogs,
     }));
-    setFailedCount([events, overdue, meds, unread, birthdays].filter((r) => r.status === 'rejected').length);
+    setFailedCount([events, overdue, meds, unread, birthdays, activity].filter((r) => r.status === 'rejected').length);
     hasLoaded.current = true;
     setLoading(false);
   }, [familyId, profileId]);
