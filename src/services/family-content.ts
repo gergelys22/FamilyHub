@@ -85,6 +85,7 @@ export async function getFamilyTasks(familyId: string, listType: FamilyTask['lis
 export async function createFamilyTask(input: {
   familyId: string;
   profileId: string;
+  assignedToProfileId?: string | null;
   listType: FamilyTask['list_type'];
   title: string;
   detail?: string;
@@ -96,6 +97,7 @@ export async function createFamilyTask(input: {
     .insert({
       family_id: input.familyId,
       created_by_profile_id: input.profileId,
+      assigned_to_profile_id: input.assignedToProfileId ?? null,
       list_type: input.listType,
       title: input.title.trim(),
       detail: input.detail?.trim() || null,
