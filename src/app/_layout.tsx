@@ -237,6 +237,8 @@ function AppNavigator() {
           <Tabs.Screen name="settings" options={{ href: null, title: 'Beállítások', tabBarStyle: { display: 'none' } }} />
           <Tabs.Screen name="privacy" options={{ href: null, title: 'Adatvédelem', tabBarStyle: { display: 'none' } }} />
 
+          <Tabs.Screen name="family-dashboard" options={{ href: null }} />
+
           <Tabs.Screen
             name="invitations"
             options={{
