@@ -13,14 +13,14 @@ export const ui = {
   card: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
     backgroundColor: colors.surface,
     ...shadows.card,
   },
   cardSoft: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
     backgroundColor: colors.surfaceElevated,
   },
   input: {
@@ -36,7 +36,7 @@ export const ui = {
     minHeight: 52,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     backgroundColor: colors.primary,
     ...shadows.floating,
   },
@@ -46,7 +46,7 @@ export const ui = {
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     backgroundColor: colors.surface,
   },
   pill: {

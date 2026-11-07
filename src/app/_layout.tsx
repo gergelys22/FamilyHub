@@ -297,17 +297,17 @@ const styles = StyleSheet.create({
     backgroundColor: colors.navigationBackground,
     borderTopColor: colors.navigationBorder,
     borderTopWidth: 1,
-    height: 74,
-    paddingTop: 7,
-    paddingBottom: 9,
+    height: 70,
+    paddingTop: 5,
+    paddingBottom: 7,
   },
   tabItem: {
     paddingHorizontal: 2,
   },
   tabLabel: {
     marginTop: 2,
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 9,
+    fontWeight: '800',
   },
   tabIcon: {
     width: 27,
@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     width: 40,
-    height: 32,
+    height: 30,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 16,

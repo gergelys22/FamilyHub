@@ -70,7 +70,7 @@ function EventCard({ event, onPress, palette }: { event: FamilyEvent; onPress: (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => [styles.eventCard, { backgroundColor: palette.surface }, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.eventCard, { backgroundColor: palette.surface, borderColor: palette.border }, pressed && styles.pressed]}
     >
       <View style={[styles.eventAccent, { backgroundColor: color }]} />
 
@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.round,
-    backgroundColor: '#EEF4FC',
+    backgroundColor: colors.surfaceElevated,
   },
   moreText: { color: colors.primary, fontSize: 20, fontWeight: '900', letterSpacing: 2 },
   menuOverlay: {
@@ -527,9 +527,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.round,
-    backgroundColor: '#EEF4FC',
+    backgroundColor: colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: '#E1EAF8',
+    borderColor: colors.border,
   },
   monthControlPressed: {
     opacity: 0.72,
@@ -550,7 +550,9 @@ const styles = StyleSheet.create({
   },
   calendarCard: {
     padding: spacing.md,
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
     backgroundColor: colors.white,
     ...shadows.card,
   },
@@ -612,7 +614,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     overflow: 'hidden',
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: '#E7EEF8',
     backgroundColor: colors.white,

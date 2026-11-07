@@ -105,12 +105,12 @@ export function FamilyHeader({
 
 const styles = StyleSheet.create({
   container: {
-    height: 68,
+    height: 64,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderBottomWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
   },
   brand: {
     flexDirection: 'row',
@@ -118,8 +118,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   logo: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.md,
@@ -141,8 +141,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   notificationsButton: {
-    width: 44,
-    height: 44,
+    width: 42,
+    height: 42,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,

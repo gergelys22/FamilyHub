@@ -286,7 +286,9 @@ const styles = StyleSheet.create({
     padding: 4,
     flexDirection: 'row',
     borderRadius: radius.round,
-    backgroundColor: '#EEF4FC',
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
 
   filter: {
@@ -324,12 +326,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.md,
     alignItems: 'center',
+    borderRadius: radius.lg,
     backgroundColor: 'transparent',
   },
 
   unreadNotification: {
-    backgroundColor: 'rgba(232, 240, 255, 0.45)',
-    borderRadius: radius.lg,
+    backgroundColor: colors.primarySoft,
+    borderWidth: 1,
+    borderColor: colors.border,
     paddingHorizontal: spacing.sm,
   },
 

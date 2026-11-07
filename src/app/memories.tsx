@@ -466,7 +466,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.round,
-    backgroundColor: '#F0F5FF',
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   menuOverlay: {
     flex: 1,
@@ -538,7 +540,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 4,
     borderRadius: radius.round,
-    backgroundColor: '#EEF4FC',
+    backgroundColor: colors.surfaceElevated,
   },
   tabWrap: {
     flex: 1,
@@ -569,7 +571,7 @@ const styles = StyleSheet.create({
   },
   memoryImageWrap: {
     overflow: 'hidden',
-    borderRadius: radius.lg,
+    borderRadius: radius.md,
     backgroundColor: colors.surfaceMuted,
     ...shadows.card,
   },
@@ -680,7 +682,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     marginTop: spacing.xs,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     backgroundColor: colors.surfaceElevated,
   },
   floatingAdd: {
@@ -701,6 +703,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(23, 43, 77, 0.42)',
   },
   modal: {
+    maxHeight: '90%',
     padding: spacing.xl,
     gap: spacing.md,
     borderTopLeftRadius: radius.xl,
@@ -711,7 +714,7 @@ const styles = StyleSheet.create({
   modalInput: {
     minHeight: 48,
     paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     backgroundColor: colors.background,
     color: colors.textPrimary,
   },
@@ -726,7 +729,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     backgroundColor: colors.primarySoft,
   },
   photoButtonText: { flex: 1, color: colors.primary, fontWeight: '700' },
@@ -749,7 +752,7 @@ const styles = StyleSheet.create({
   saveButton: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     backgroundColor: colors.primary,
   },
   saveButtonText: { color: colors.white, fontWeight: '900' },

@@ -1,20 +1,20 @@
 export const colors = {
-  background: '#F6F9FF',
+  background: '#F7F9FC',
   surface: '#FFFFFF',
-  surfaceElevated: '#F0F5FF',
-  surfaceMuted: '#E7F0FF',
+  surfaceElevated: '#F4F7FB',
+  surfaceMuted: '#EAF0F8',
 
-  border: '#E1EAF8',
-  borderStrong: '#C9D9F3',
+  border: '#E4EAF2',
+  borderStrong: '#D1DCEB',
 
-  textPrimary: '#172B4D',
-  textSecondary: '#49658C',
-  textMuted: '#8497B5',
+  textPrimary: '#1B2940',
+  textSecondary: '#5D6D84',
+  textMuted: '#8D9AAF',
 
   primary: '#2F6BFF',
   primaryLight: '#5B8CFF',
   primaryDark: '#2154D7',
-  primarySoft: '#E8F0FF',
+  primarySoft: '#EAF1FF',
 
   success: '#20BFA7',
   warning: '#F5B942',
@@ -32,20 +32,20 @@ export const colors = {
 
 export const darkColors = {
   ...colors,
-  background: '#071A33',
-  surface: '#102B4C',
-  surfaceElevated: '#16385F',
-  surfaceMuted: '#1D4772',
-  border: '#2B5682',
-  borderStrong: '#3A6B9D',
-  textPrimary: '#F4F7FC',
-  textSecondary: '#C3D0E3',
-  textMuted: '#8EA3C2',
-  primarySoft: '#173F86',
-  navigationBackground: '#0A2341',
-  navigationBorder: '#2A527D',
-  glassBackground: 'rgba(16, 43, 76, 0.78)',
-  glassBorder: 'rgba(142, 163, 194, 0.22)',
+  background: '#0D1929',
+  surface: '#142338',
+  surfaceElevated: '#1A2C44',
+  surfaceMuted: '#203752',
+  border: '#29405B',
+  borderStrong: '#39536F',
+  textPrimary: '#F2F5FA',
+  textSecondary: '#BCC8D8',
+  textMuted: '#8D9CB2',
+  primarySoft: '#193A77',
+  navigationBackground: '#101F33',
+  navigationBorder: '#29405B',
+  glassBackground: 'rgba(20, 35, 56, 0.88)',
+  glassBorder: 'rgba(141, 156, 178, 0.2)',
 } as const;
 
 export const gradients = {
@@ -56,25 +56,25 @@ export const gradients = {
 
 export const shadows = {
   card: {
-    shadowColor: '#2E5FA8',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 3,
+    shadowColor: '#243B5A',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 2,
   },
   floating: {
     shadowColor: '#2458E8',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.24,
-    shadowRadius: 14,
-    elevation: 7,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 5,
   },
   navigation: {
     shadowColor: '#7693C2',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 10,
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 8,
   },
 } as const;
 
@@ -83,15 +83,15 @@ export const spacing = {
   sm: 8,
   md: 12,
   lg: 16,
-  xl: 24,
-  xxl: 32,
+  xl: 22,
+  xxl: 30,
 } as const;
 
 export const radius = {
-  sm: 10,
-  md: 14,
-  lg: 18,
-  xl: 24,
+  sm: 9,
+  md: 13,
+  lg: 17,
+  xl: 21,
   round: 999,
 } as const;
 
