@@ -81,6 +81,12 @@ export default function MoreScreen() {
             palette={palette}
           />
           <MenuItem
+            icon="happy-outline"
+            label="Gyermekmodul"
+            onPress={() => router.push('/school-children')}
+            palette={palette}
+          />
+          <MenuItem
             icon="shield-checkmark-outline"
             label="Páncélterem"
             onPress={() => router.push('/vault')}

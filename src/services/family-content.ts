@@ -18,6 +18,23 @@ export type FamilyTask = {
   created_at: string;
   updated_at: string;
 };
+export type SchoolItemType = 'timetable' | 'homework' | 'exam' | 'workout' | 'meeting';
+export type FamilySchoolItem = {
+  id: string;
+  family_id: string;
+  child_profile_id: string;
+  created_by_profile_id: string;
+  item_type: SchoolItemType;
+  title: string;
+  detail: string | null;
+  location: string | null;
+  metadata: Record<string, string | boolean | number | null>;
+  starts_at: string | null;
+  due_at: string | null;
+  completed: boolean;
+  created_at: string;
+  updated_at: string;
+};
 
 export async function getFamilyDocuments(familyId: string) {
   const { data, error } = await supabase.from('family_documents').select('id, family_id, name, storage_path, mime_type, size_bytes, created_at').eq('family_id', familyId).order('created_at', { ascending: false });
@@ -174,6 +191,67 @@ export async function deleteFamilyTask(id: string) {
       listType: deletedTask.list_type,
     },
   });
+}
+
+const schoolItemFields = 'id, family_id, child_profile_id, created_by_profile_id, item_type, title, detail, location, metadata, starts_at, due_at, completed, created_at, updated_at';
+
+export async function getFamilySchoolItems(familyId: string, childProfileId?: string) {
+  let query = supabase
+    .from('family_school_items')
+    .select(schoolItemFields)
+    .eq('family_id', familyId)
+    .order('completed', { ascending: true })
+    .order('due_at', { ascending: true, nullsFirst: false })
+    .order('starts_at', { ascending: true, nullsFirst: false });
+  if (childProfileId) query = query.eq('child_profile_id', childProfileId);
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return (data ?? []) as FamilySchoolItem[];
+}
+
+export async function createFamilySchoolItem(input: {
+  familyId: string;
+  childProfileId: string;
+  profileId: string;
+  itemType: SchoolItemType;
+  title: string;
+  detail?: string;
+  location?: string;
+  metadata?: Record<string, string | boolean | number | null>;
+  startsAt?: string | null;
+  dueAt?: string | null;
+}) {
+  const { data, error } = await supabase
+    .from('family_school_items')
+    .insert({
+      family_id: input.familyId,
+      child_profile_id: input.childProfileId,
+      created_by_profile_id: input.profileId,
+      item_type: input.itemType,
+      title: input.title.trim(),
+      detail: input.detail?.trim() || null,
+      location: input.location?.trim() || null,
+      metadata: input.metadata ?? {},
+      starts_at: input.startsAt ?? null,
+      due_at: input.dueAt ?? null,
+    })
+    .select(schoolItemFields)
+    .single();
+  if (error) throw new Error(error.message);
+  return data as FamilySchoolItem;
+}
+
+export async function setFamilySchoolItemCompleted(id: string, completed: boolean) {
+  const { error } = await supabase
+    .from('family_school_items')
+    .update({ completed, updated_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteFamilySchoolItem(id: string) {
+  const { error } = await supabase.from('family_school_items').delete().eq('id', id);
+  if (error) throw new Error(error.message);
 }
 
 export async function createMemory(input: {
