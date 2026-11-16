@@ -158,7 +158,7 @@ export default function ChatDetailsScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   keyboard: { flex: 1 },
-  header: { minHeight: 70, paddingHorizontal: spacing.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
+  header: { minHeight: 66, paddingHorizontal: spacing.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
   headerButton: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
   identity: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
   headerAvatar: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center', borderRadius: 21, backgroundColor: colors.primarySoft },
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
   mineBlock: { alignItems: 'flex-end' },
   author: { marginBottom: 3, color: colors.primary, fontSize: 10, fontWeight: '800' },
   bubble: { maxWidth: '82%', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.lg },
-  theirBubble: { backgroundColor: colors.surface, borderBottomLeftRadius: 5, ...shadows.card },
+  theirBubble: { backgroundColor: colors.surfaceElevated, borderBottomLeftRadius: 5, ...shadows.card },
   myBubble: { backgroundColor: colors.primary, borderBottomRightRadius: 5 },
   messageText: { color: colors.textPrimary, fontSize: 14, lineHeight: 20 },
   myText: { color: colors.white },
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
   smallAvatarText: { color: colors.primary, fontWeight: '900' },
   participantName: { flex: 1, color: colors.textPrimary, fontSize: 13, fontWeight: '800' },
   composer: { minHeight: 66, padding: spacing.sm, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border },
-  input: { flex: 1, minHeight: 42, paddingHorizontal: spacing.md, color: colors.textPrimary, borderRadius: radius.round, backgroundColor: colors.background },
+  input: { flex: 1, minHeight: 42, paddingHorizontal: spacing.md, color: colors.textPrimary, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background },
   send: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 20, backgroundColor: colors.primary },
   disabled: { opacity: 0.4 },
 });

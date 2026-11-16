@@ -117,7 +117,9 @@ const styles = StyleSheet.create({
     padding: 4,
     flexDirection: 'row',
     borderRadius: radius.round,
-    backgroundColor: '#EEF4FC',
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   tab: {
     flex: 1,
@@ -146,8 +148,10 @@ const styles = StyleSheet.create({
   },
   tree: {
     padding: spacing.md,
-    borderRadius: radius.xl,
-    backgroundColor: '#F7FBFF',
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
     ...shadows.card,
   },
   generation: {

@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.7,
     textTransform: 'uppercase',
   },
-  card: { borderRadius: radius.xl, backgroundColor: colors.surface, ...shadows.card },
+  card: { borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, ...shadows.card },
   row: {
     minHeight: 70,
     padding: spacing.md,
