@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
-import { colors, darkColors, radius, spacing } from '@/constants/theme';
+import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
 import { useTheme } from '@/providers/theme-provider';
 import { useAuth } from '@/providers/auth-provider';
 import { SymbolView } from 'expo-symbols';
@@ -305,7 +305,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
+    ...shadows.card,
   },
   input: {
     minHeight: 52,
@@ -314,14 +315,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceElevated,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
   },
   primaryButton: {
     minHeight: 52,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     backgroundColor: colors.primary,
+    ...shadows.floating,
   },
   primaryButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
   secondaryButton: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
@@ -338,7 +340,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceElevated,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
   },
 
   passwordInput: {

@@ -473,7 +473,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     alignItems: 'center',
     gap: spacing.md,
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     borderTopWidth: 5,
@@ -521,7 +521,7 @@ const styles = StyleSheet.create({
   },
   detailsCard: {
     padding: spacing.lg,
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,

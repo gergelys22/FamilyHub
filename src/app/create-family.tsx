@@ -14,7 +14,7 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { colors, radius, spacing } from '@/constants/theme';
+import { colors, radius, shadows, spacing } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
 import { createFamily } from '@/services/families';
 
@@ -337,10 +337,11 @@ const styles = StyleSheet.create({
   formCard: {
     padding: spacing.lg,
     gap: spacing.sm,
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
+    ...shadows.card,
   },
   labelRow: {
     flexDirection: 'row',
@@ -353,7 +354,7 @@ const styles = StyleSheet.create({
     minHeight: 58,
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     backgroundColor: colors.surfaceElevated,
     borderWidth: 1,
     borderColor: colors.borderStrong,
@@ -399,9 +400,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     borderRadius: radius.lg,
-    backgroundColor: '#0D1B31',
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
+    ...shadows.card,
   },
   ownerAvatar: {
     width: 46,

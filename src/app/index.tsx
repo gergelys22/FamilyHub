@@ -304,6 +304,7 @@ export default function HomeScreen() {
           userInitial={userInitial}
           unreadNotificationCount={unreadCount}
           onNotificationsPress={() => router.push('/notifications')}
+          onMessagesPress={() => router.push('/messages')}
           onProfilePress={() => router.push('/profile')}
         />
 

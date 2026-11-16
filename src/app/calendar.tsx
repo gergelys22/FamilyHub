@@ -184,6 +184,7 @@ export default function CalendarScreen() {
           userInitial={initial}
           unreadNotificationCount={unreadCount}
           onNotificationsPress={() => router.push('/notifications')}
+          onMessagesPress={() => router.push('/messages')}
           onProfilePress={() => router.push('/profile')}
         />
         <View style={styles.pageHeader}>

@@ -271,6 +271,7 @@ export default function MapScreen() {
           userInitial={userInitial}
           unreadNotificationCount={unreadCount}
           onNotificationsPress={() => router.push('/notifications')}
+          onMessagesPress={() => router.push('/messages')}
           onProfilePress={() => router.push('/profile')}
         />
 
@@ -626,7 +627,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: 4,
     borderRadius: radius.round,
-    backgroundColor: '#EEF4FC',
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   mapTab: {
     flex: 1,
@@ -671,7 +674,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.md,
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: '#294469',
     backgroundColor: '#10233E',
@@ -688,9 +691,9 @@ const styles = StyleSheet.create({
   mapCard: {
     height: 490,
     overflow: 'hidden',
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: '#DDE8F5',
+    borderColor: colors.border,
     backgroundColor: '#DDEFE7',
     ...shadows.card,
   },

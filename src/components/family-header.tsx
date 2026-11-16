@@ -9,6 +9,7 @@ type FamilyHeaderProps = {
   userInitial?: string;
   unreadNotificationCount?: number;
   onNotificationsPress?: () => void;
+  onMessagesPress?: () => void;
   onProfilePress?: () => void;
 };
 
@@ -16,6 +17,7 @@ export function FamilyHeader({
   userInitial = 'A',
   unreadNotificationCount = 0,
   onNotificationsPress,
+  onMessagesPress,
   onProfilePress,
 }: FamilyHeaderProps) {
   const { isDark } = useTheme();
@@ -51,6 +53,27 @@ export function FamilyHeader({
       </View>
 
       <View style={styles.actions}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Üzenetek megnyitása"
+          hitSlop={8}
+          onPress={onMessagesPress}
+          style={({ pressed }) => [
+            styles.notificationsButton,
+            { borderColor: palette.border, backgroundColor: palette.surface },
+            pressed && styles.pressed,
+          ]}
+        >
+          <SymbolView
+            name={{ ios: 'bubble.left.and.bubble.right.fill', android: 'forum', web: 'forum' }}
+            size={22}
+            tintColor={palette.teal}
+            type="hierarchical"
+            weight={{ ios: 'semibold', android: medium }}
+            style={styles.symbol}
+          />
+        </Pressable>
+
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`Értesítések megnyitása. ${unreadNotificationCount} olvasatlan.`}

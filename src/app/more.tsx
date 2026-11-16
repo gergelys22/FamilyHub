@@ -112,12 +112,6 @@ export default function MoreScreen() {
             palette={palette}
           />
           <MenuItem
-            icon="chatbubble-ellipses-outline"
-            label="Üzenetek"
-            onPress={() => router.push('/messages')}
-            palette={palette}
-          />
-          <MenuItem
             icon="location-outline"
             label="Helymegosztás"
             onPress={() => router.push('/location-sharing')}

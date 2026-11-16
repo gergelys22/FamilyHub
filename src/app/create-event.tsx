@@ -1,6 +1,6 @@
 import DateTimeField from '@/components/date-time-field';
 import LocationAutocomplete from '@/components/location-autocomplete';
-import { colors, darkColors, radius, spacing } from '@/constants/theme';
+import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
 import { useTheme } from '@/providers/theme-provider';
 import { createFamilyEvent, type EventCategory } from '@/services/events';
 import { parseLocalDateTime } from '@/utils/event-date-time';
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     minHeight: 50,
     paddingHorizontal: spacing.lg,
     color: colors.textPrimary,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.borderStrong,
     backgroundColor: colors.surface,
@@ -326,8 +326,9 @@ const styles = StyleSheet.create({
     minHeight: 54,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     backgroundColor: colors.primary,
+    ...shadows.floating,
   },
   saveText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
   disabled: { opacity: 0.45 },
