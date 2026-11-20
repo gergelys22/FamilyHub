@@ -93,6 +93,12 @@ export default function MoreScreen() {
             palette={palette}
           />
           <MenuItem
+            icon="pulse-outline"
+            label="Aktivitásnapló"
+            onPress={() => router.push('/activity-log')}
+            palette={palette}
+          />
+          <MenuItem
             icon="happy-outline"
             label="Gyermekmodul"
             onPress={() => router.push('/school-children')}

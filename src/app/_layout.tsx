@@ -269,6 +269,7 @@ function AppNavigator() {
           <Tabs.Screen name="settings" options={{ href: null, title: 'Beállítások', tabBarStyle: { display: 'none' } }} />
           <Tabs.Screen name="privacy" options={{ href: null, title: 'Adatvédelem', tabBarStyle: { display: 'none' } }} />
           <Tabs.Screen name="family-dashboard" options={{ href: null }} />
+          <Tabs.Screen name="activity-log" options={{ href: null, title: 'Aktivitásnapló', tabBarStyle: { display: 'none' } }} />
           <Tabs.Screen name="school-children" options={{ href: null }} />
           <Tabs.Screen name="school-calendar" options={{ href: null, title: 'Gyermek naptára', tabBarStyle: { display: 'none' } }} />
 

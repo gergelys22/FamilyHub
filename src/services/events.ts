@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { createActivityLog } from '@/services/activity';
 
 export type EventCategory =
   'family' | 'birthday' | 'medical' | 'school' | 'sport' | 'administration' | 'trip';
@@ -74,6 +75,14 @@ export async function createFamilyEvent(input: {
 
   if (error) throw new Error(error.message);
   if (typeof data !== 'string') throw new Error('Az esemény létrehozása sikertelen.');
+  await createActivityLog({
+    familyId: input.familyId,
+    type: 'event_created',
+    entityType: 'event',
+    entityId: data,
+    summary: `Új esemény: ${input.title.trim()}`,
+    metadata: { title: input.title.trim(), category: input.category },
+  });
   return data;
 }
 
@@ -90,6 +99,12 @@ export async function updateFamilyEvent(
     endsAt?: Date;
   },
 ): Promise<void> {
+  const { data: existing, error: existingError } = await supabase
+    .from('family_events')
+    .select('id, family_id, title')
+    .eq('id', eventId)
+    .single();
+  if (existingError) throw new Error(existingError.message);
   const { error } = await supabase
     .from('family_events')
     .update({
@@ -106,10 +121,32 @@ export async function updateFamilyEvent(
     .eq('id', eventId);
 
   if (error) throw new Error(error.message);
+  await createActivityLog({
+    familyId: existing.family_id,
+    type: 'event_updated',
+    entityType: 'event',
+    entityId: eventId,
+    summary: `Esemény módosítva: ${input.title.trim()}`,
+    metadata: { title: input.title.trim(), previousTitle: existing.title, category: input.category },
+  });
 }
 
 export async function deleteFamilyEvent(eventId: string): Promise<void> {
+  const { data: existing, error: existingError } = await supabase
+    .from('family_events')
+    .select('id, family_id, title')
+    .eq('id', eventId)
+    .single();
+  if (existingError) throw new Error(existingError.message);
   const { error } = await supabase.from('family_events').delete().eq('id', eventId);
 
   if (error) throw new Error(error.message);
+  await createActivityLog({
+    familyId: existing.family_id,
+    type: 'event_deleted',
+    entityType: 'event',
+    entityId: eventId,
+    summary: `Esemény törölve: ${existing.title}`,
+    metadata: { title: existing.title },
+  });
 }
