@@ -2,6 +2,13 @@ import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme'
 import { useTheme } from '@/providers/theme-provider';
 import { useNotifications } from '@/hooks/use-notifications';
 import type { AppNotification } from '@/services/notifications';
+import {
+  getNotificationPreferences,
+  saveNotificationPreferences,
+  type NotificationPreferences,
+} from '@/services/notifications';
+import { useAuth } from '@/providers/auth-provider';
+import { getMyFamilies, getFamilyMembers, type FamilyMember } from '@/services/families';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import {
@@ -13,8 +20,11 @@ import {
   StyleSheet,
   Text,
   View,
+  Switch,
+  Modal,
+  TextInput,
 } from 'react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type NotificationFilter = 'all' | 'events' | 'system';
@@ -43,6 +53,12 @@ function getNotificationIcon(type: string, palette: typeof colors | typeof darkC
 
     case 'medicine':
       return { name: 'medkit', color: palette.teal, backgroundColor: palette.surfaceMuted };
+
+    case 'reminder':
+      return { name: 'alarm', color: palette.warning, backgroundColor: palette.surfaceMuted };
+
+    case 'document':
+      return { name: 'document-text', color: palette.primary, backgroundColor: palette.primarySoft };
 
     default:
       return { name: 'shield-checkmark', color: palette.danger, backgroundColor: palette.surfaceMuted };
@@ -100,6 +116,11 @@ function NotificationItem({
 
           {unread ? <View style={styles.unreadDot} /> : null}
         </View>
+        {notification.body ? (
+          <Text numberOfLines={2} style={[styles.notificationBody, { color: palette.textSecondary }]}>
+            {notification.body}
+          </Text>
+        ) : null}
 
       </View>
       <Text style={[styles.notificationDate, { color: palette.textMuted }]}>{formatNotificationDate(notification.created_at)}</Text>
@@ -111,7 +132,15 @@ export default function NotificationsScreen() {
   const router = useRouter();
   const { isDark } = useTheme();
   const palette = isDark ? darkColors : colors;
+  const { profile } = useAuth();
   const [markingAll, setMarkingAll] = useState(false);
+  const [settingsVisible, setSettingsVisible] = useState(false);
+  const [familyId, setFamilyId] = useState<string | null>(null);
+  const [members, setMembers] = useState<FamilyMember[]>([]);
+  const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
+  const [savingPreferences, setSavingPreferences] = useState(false);
+  const [quietStart, setQuietStart] = useState('');
+  const [quietEnd, setQuietEnd] = useState('');
   const {
     notifications,
     unreadCount,
@@ -122,23 +151,162 @@ export default function NotificationsScreen() {
     markAllAsRead,
   } = useNotifications();
   const [filter, setFilter] = useState<NotificationFilter>('all');
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    void getMyFamilies()
+      .then(async (families) => {
+        const active = families[0] ?? null;
+        setFamilyId(active?.id ?? null);
+        if (!active) {
+          setMembers([]);
+          setPreferences(null);
+          return;
+        }
+        const [familyMembers, saved] = await Promise.all([
+          getFamilyMembers(active.id),
+          getNotificationPreferences(profile.id, active.id),
+        ]);
+        setMembers(familyMembers);
+        const next =
+          saved ?? {
+            profile_id: profile.id,
+            family_id: active.id,
+            enabled_types: [
+              'family_invite',
+              'calendar',
+              'task',
+              'medicine',
+              'reminder',
+              'document',
+              'location',
+              'memory',
+            ],
+            muted_member_ids: [],
+            quiet_start: null,
+            quiet_end: null,
+          };
+        setPreferences(next);
+        setQuietStart(next.quiet_start !== null ? String(next.quiet_start).padStart(2, '0') + ':00' : '');
+        setQuietEnd(next.quiet_end !== null ? String(next.quiet_end).padStart(2, '0') + ':00' : '');
+      })
+      .catch((caught: unknown) => {
+        Alert.alert(
+          'Beállítások betöltése sikertelen',
+          caught instanceof Error ? caught.message : 'Próbáld újra később.',
+        );
+      });
+  }, [profile?.id]);
+
+  function isQuietHours() {
+    if (!preferences?.quiet_start && preferences?.quiet_start !== 0) return false;
+    if (!preferences?.quiet_end && preferences?.quiet_end !== 0) return false;
+    const now = new Date().getHours();
+    const start = preferences.quiet_start;
+    const end = preferences.quiet_end;
+    if (start === null || end === null) return false;
+    return start <= end
+      ? now >= start && now < end
+      : now >= start || now < end;
+  }
+
   const filteredNotifications = notifications.filter((notification) => {
+    if (isQuietHours()) return false;
+    if (
+      preferences &&
+      !preferences.enabled_types.includes(notification.notification_type)
+    ) return false;
+    if (preferences?.muted_member_ids.length) {
+      const actorId =
+        (notification.data.profileId as string | undefined) ??
+        (notification.data.memberId as string | undefined) ??
+        (notification.data.actorProfileId as string | undefined);
+      if (actorId && preferences.muted_member_ids.includes(actorId)) return false;
+    }
     if (filter === 'all') return true;
     if (filter === 'events') {
-      return ['calendar', 'memory', 'medicine', 'task'].includes(
+      return ['calendar', 'memory', 'medicine', 'task', 'reminder', 'document'].includes(
         notification.notification_type,
       );
     }
-    return !['calendar', 'memory', 'medicine', 'task'].includes(
+    return !['calendar', 'memory', 'medicine', 'task', 'reminder', 'document'].includes(
       notification.notification_type,
     );
   });
+
+  const notificationTypes: Array<{ key: string; label: string; icon: IconName }> = [
+    { key: 'family_invite', label: 'Meghívások', icon: 'person-add-outline' },
+    { key: 'calendar', label: 'Események', icon: 'calendar-outline' },
+    { key: 'task', label: 'Teendők', icon: 'checkbox-outline' },
+    { key: 'medicine', label: 'Gyógyszerek', icon: 'medkit-outline' },
+    { key: 'reminder', label: 'Emlékeztetők', icon: 'alarm-outline' },
+    { key: 'document', label: 'Dokumentumok', icon: 'document-text-outline' },
+    { key: 'memory', label: 'Emlékek', icon: 'image-outline' },
+  ];
+
+  function toggleType(type: string) {
+    setPreferences((current) => {
+      if (!current) return current;
+      const enabled = current.enabled_types.includes(type);
+      return {
+        ...current,
+        enabled_types: enabled
+          ? current.enabled_types.filter((item) => item !== type)
+          : [...current.enabled_types, type],
+      };
+    });
+  }
+
+  function toggleMember(memberId: string) {
+    setPreferences((current) => {
+      if (!current) return current;
+      const muted = current.muted_member_ids.includes(memberId);
+      return {
+        ...current,
+        muted_member_ids: muted
+          ? current.muted_member_ids.filter((item) => item !== memberId)
+          : [...current.muted_member_ids, memberId],
+      };
+    });
+  }
+
+  async function savePreferences() {
+    if (!preferences) return;
+    const parseHour = (value: string) => {
+      const match = /^([01]\d|2[0-3]):00$/.exec(value.trim());
+      return match ? Number(match[1]) : null;
+    };
+    const start = quietStart ? parseHour(quietStart) : null;
+    const end = quietEnd ? parseHour(quietEnd) : null;
+    if ((quietStart && start === null) || (quietEnd && end === null)) {
+      Alert.alert('Hibás idő', 'Használd ezt a formátumot: 22:00');
+      return;
+    }
+    setSavingPreferences(true);
+    try {
+      await saveNotificationPreferences({
+        ...preferences,
+        quiet_start: start,
+        quiet_end: end,
+      });
+      setPreferences((current) => current ? { ...current, quiet_start: start, quiet_end: end } : current);
+      setSettingsVisible(false);
+    } catch (caught) {
+      Alert.alert(
+        'Mentés sikertelen',
+        caught instanceof Error ? caught.message : 'Próbáld újra később.',
+      );
+    } finally {
+      setSavingPreferences(false);
+    }
+  }
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Text style={[styles.headerTitle, { color: palette.textPrimary }]}>Értesítések</Text>
 
+        <View style={styles.headerActions}>
         <Pressable
           accessibilityLabel="Összes megjelölése olvasottként"
           accessibilityRole="button"
@@ -162,6 +330,18 @@ export default function NotificationsScreen() {
         >
           <Ionicons name={markingAll ? 'hourglass-outline' : 'checkmark-done'} size={23} color={palette.primary} />
         </Pressable>
+        <Pressable
+          accessibilityLabel="Értesítési beállítások"
+          accessibilityRole="button"
+          onPress={() => setSettingsVisible(true)}
+          style={({ pressed }) => [
+            [styles.headerButton, { backgroundColor: palette.surface, borderColor: palette.border }],
+            pressed && styles.pressed,
+          ]}
+        >
+          <Ionicons name="options-outline" size={22} color={palette.primary} />
+        </Pressable>
+        </View>
       </View>
 
       <View style={[styles.filters, { backgroundColor: palette.surfaceElevated }]}>
@@ -237,6 +417,101 @@ export default function NotificationsScreen() {
           )}
         </ScrollView>
       )}
+      <Modal
+        visible={settingsVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSettingsVisible(false)}
+      >
+        <View style={[styles.settingsOverlay, { backgroundColor: isDark ? 'rgba(3, 10, 24, 0.78)' : 'rgba(23, 43, 77, 0.38)' }]}>
+          <View style={[styles.settingsModal, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+            <View style={styles.settingsHeader}>
+              <Text style={[styles.settingsTitle, { color: palette.textPrimary }]}>Értesítési központ</Text>
+              <Pressable onPress={() => setSettingsVisible(false)} accessibilityLabel="Beállítások bezárása" hitSlop={8}>
+                <Ionicons name="close" size={24} color={palette.textSecondary} />
+              </Pressable>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={[styles.settingsSection, { color: palette.textMuted }]}>Értesítések fajtája</Text>
+              {notificationTypes.map((type) => {
+                const enabled = preferences?.enabled_types.includes(type.key) ?? true;
+                return (
+                  <View key={type.key} style={[styles.settingRow, { borderColor: palette.border }]}>
+                    <View style={[styles.settingIcon, { backgroundColor: palette.primarySoft }]}>
+                      <Ionicons name={type.icon} size={20} color={palette.primary} />
+                    </View>
+                    <Text style={[styles.settingLabel, { color: palette.textPrimary }]}>{type.label}</Text>
+                    <Switch
+                      value={enabled}
+                      onValueChange={() => toggleType(type.key)}
+                      trackColor={{ false: palette.border, true: palette.primaryLight }}
+                      thumbColor={enabled ? colors.white : undefined}
+                    />
+                  </View>
+                );
+              })}
+
+              <Text style={[styles.settingsSection, { color: palette.textMuted }]}>Csendes időszak</Text>
+              <View style={styles.quietRow}>
+                <View style={styles.quietField}>
+                  <Text style={[styles.quietLabel, { color: palette.textSecondary }]}>Kezdés</Text>
+                  <TextInput
+                    value={quietStart}
+                    onChangeText={setQuietStart}
+                    placeholder="22:00"
+                    placeholderTextColor={palette.textMuted}
+                    style={[styles.quietInput, { backgroundColor: palette.background, color: palette.textPrimary, borderColor: palette.border }]}
+                  />
+                </View>
+                <View style={styles.quietField}>
+                  <Text style={[styles.quietLabel, { color: palette.textSecondary }]}>Befejezés</Text>
+                  <TextInput
+                    value={quietEnd}
+                    onChangeText={setQuietEnd}
+                    placeholder="07:00"
+                    placeholderTextColor={palette.textMuted}
+                    style={[styles.quietInput, { backgroundColor: palette.background, color: palette.textPrimary, borderColor: palette.border }]}
+                  />
+                </View>
+              </View>
+
+              {members.length > 0 ? (
+                <>
+                  <Text style={[styles.settingsSection, { color: palette.textMuted }]}>Családtagok elnémítása</Text>
+                  {members.filter((member) => member.profile_id !== profile?.id).map((member) => {
+                    const muted = preferences?.muted_member_ids.includes(member.profile_id) ?? false;
+                    return (
+                      <View key={member.profile_id} style={[styles.settingRow, { borderColor: palette.border }]}>
+                        <View style={[styles.memberInitial, { backgroundColor: palette.primarySoft }]}>
+                          <Text style={[styles.memberInitialText, { color: palette.primary }]}>
+                            {(member.nickname || member.display_name).charAt(0).toUpperCase()}
+                          </Text>
+                        </View>
+                        <Text style={[styles.settingLabel, { color: palette.textPrimary }]}>
+                          {member.nickname || member.display_name}
+                        </Text>
+                        <Switch
+                          value={muted}
+                          onValueChange={() => toggleMember(member.profile_id)}
+                          trackColor={{ false: palette.border, true: palette.danger }}
+                          thumbColor={muted ? colors.white : undefined}
+                        />
+                      </View>
+                    );
+                  })}
+                </>
+              ) : null}
+            </ScrollView>
+            <Pressable
+              disabled={savingPreferences}
+              onPress={() => void savePreferences()}
+              style={[styles.saveSettings, { backgroundColor: palette.primary, opacity: savingPreferences ? 0.65 : 1 }]}
+            >
+              <Text style={styles.saveSettingsText}>{savingPreferences ? 'Mentés…' : 'Beállítások mentése'}</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -253,6 +528,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
 
   headerButton: {
@@ -443,6 +724,110 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#FDA4AF',
     fontSize: 12,
+  },
+
+  settingsOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+
+  settingsModal: {
+    maxHeight: '88%',
+    padding: spacing.lg,
+    gap: spacing.md,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    borderTopWidth: 1,
+  },
+
+  settingsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  settingsTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+  },
+
+  settingsSection: {
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+
+  settingRow: {
+    minHeight: 58,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+
+  settingIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  settingLabel: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+
+  quietRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+
+  quietField: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+
+  quietLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+
+  quietInput: {
+    minHeight: 46,
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderRadius: radius.md,
+  },
+
+  memberInitial: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  memberInitialText: {
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  saveSettings: {
+    minHeight: 52,
+    marginTop: spacing.sm,
+    borderRadius: radius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  saveSettingsText: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: '900',
   },
 
   pressed: {

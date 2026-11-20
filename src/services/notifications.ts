@@ -52,3 +52,46 @@ export async function deleteNotification(notificationId: string) {
 
   if (error) throw error;
 }
+
+export type NotificationPreferences = {
+  profile_id: string;
+  family_id: string;
+  enabled_types: string[];
+  muted_member_ids: string[];
+  quiet_start: number | null;
+  quiet_end: number | null;
+};
+
+export async function getNotificationPreferences(
+  profileId: string,
+  familyId: string,
+): Promise<NotificationPreferences | null> {
+  const { data, error } = await supabase
+    .from('family_notification_preferences')
+    .select('profile_id, family_id, enabled_types, muted_member_ids, quiet_start, quiet_end')
+    .eq('profile_id', profileId)
+    .eq('family_id', familyId)
+    .maybeSingle();
+  if (error) throw error;
+  return data as NotificationPreferences | null;
+}
+
+export async function saveNotificationPreferences(
+  preferences: NotificationPreferences,
+) {
+  const { error } = await supabase
+    .from('family_notification_preferences')
+    .upsert(
+      {
+        profile_id: preferences.profile_id,
+        family_id: preferences.family_id,
+        enabled_types: preferences.enabled_types,
+        muted_member_ids: preferences.muted_member_ids,
+        quiet_start: preferences.quiet_start,
+        quiet_end: preferences.quiet_end,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'profile_id' },
+    );
+  if (error) throw error;
+}

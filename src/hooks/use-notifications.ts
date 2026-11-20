@@ -5,7 +5,10 @@ import {
   getNotifications,
   markAllNotificationsAsRead,
   markNotificationAsRead,
+  getNotificationPreferences,
+  type NotificationPreferences,
 } from '@/services/notifications';
+import { getMyFamilies } from '@/services/families';
 import { useEffect, useState } from 'react';
 
 export function useNotifications() {
@@ -14,6 +17,7 @@ export function useNotifications() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
 
   useEffect(() => {
     if (!profileId) return;
@@ -22,9 +26,18 @@ export function useNotifications() {
 
     function loadNotifications(errorMessage: string) {
       getNotifications(profileId!)
-        .then((data) => {
+        .then(async (data) => {
           if (!active) return;
           setNotifications(data);
+          try {
+            const families = await getMyFamilies();
+            const family = families[0] ?? null;
+            if (family) {
+              setPreferences(await getNotificationPreferences(profileId!, family.id));
+            }
+          } catch {
+            setPreferences(null);
+          }
           setError(null);
         })
         .catch((loadError: unknown) => {
@@ -59,9 +72,38 @@ export function useNotifications() {
     };
   }, [profileId]);
 
-  const unreadCount = notifications.filter(
-    (notification) => !notification.read_at,
-  ).length;
+  const inQuietHours = (() => {
+    if (
+      preferences?.quiet_start === null ||
+      preferences?.quiet_start === undefined ||
+      preferences?.quiet_end === null ||
+      preferences?.quiet_end === undefined
+    ) return false;
+    const now = new Date().getHours();
+    const start = preferences.quiet_start;
+    const end = preferences.quiet_end;
+    return start <= end
+      ? now >= start && now < end
+      : now >= start || now < end;
+  })();
+
+  const unreadCount = inQuietHours
+    ? 0
+    : notifications.filter((notification) => {
+        if (notification.read_at) return false;
+        if (
+          preferences &&
+          !preferences.enabled_types.includes(notification.notification_type)
+        ) return false;
+        const actorId =
+          (notification.data.profileId as string | undefined) ??
+          (notification.data.memberId as string | undefined) ??
+          (notification.data.actorProfileId as string | undefined);
+        return !(
+          actorId &&
+          preferences?.muted_member_ids.includes(actorId)
+        );
+      }).length;
 
   async function refresh() {
     if (!profileId) return;
