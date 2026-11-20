@@ -14,7 +14,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { colors, radius, spacing } from '@/constants/theme';
+import { colors, darkColors, radius, spacing } from '@/constants/theme';
+import { useTheme } from '@/providers/theme-provider';
 import { createFamilyInvite, InviteCreatedError, InviteRole } from '@/services/family-invites';
 
 const roleOptions: {
@@ -45,6 +46,8 @@ const roleOptions: {
 
 export default function InviteMemberScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
   const params = useLocalSearchParams<{ familyId?: string; familyName?: string }>();
   const familyId = typeof params.familyId === 'string' ? params.familyId : '';
   const familyName =
@@ -93,22 +96,41 @@ export default function InviteMemberScreen() {
 
   if (success) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <SafeAreaView
+        style={[styles.safeArea, { backgroundColor: palette.background }]}
+        edges={['top', 'bottom']}
+      >
         <View style={styles.successScreen}>
-          <View style={styles.successHalo}>
+          <View
+            style={[
+              styles.successHalo,
+              {
+                backgroundColor: isDark ? '#0B3B3533' : '#E3F7F2',
+                borderColor: isDark ? '#176B5F' : '#B7E7DC',
+              },
+            ]}
+          >
             <View style={styles.successIcon}>
               <Text style={styles.successCheck}>✓</Text>
             </View>
           </View>
-          <Text style={styles.successTitle}>Meghívás rögzítve</Text>
-          <Text style={styles.successDescription}>
+          <Text style={[styles.successTitle, { color: palette.textPrimary }]}>Meghívás rögzítve</Text>
+          <Text style={[styles.successDescription, { color: palette.textMuted }]}>
             {emailSent
               ? `A meghívás elkészült ${normalizedEmail} számára e-mailben és 7 napig érvényes.`
               : `A meghívás rögzítve lett ${normalizedEmail} számára, de az e-mail küldése most sikertelen.`}
           </Text>
-          <View style={styles.infoBox}>
+          <View
+            style={[
+              styles.infoBox,
+              {
+                backgroundColor: isDark ? '#10233F' : palette.primarySoft,
+                borderColor: isDark ? '#2A456C' : palette.borderStrong,
+              },
+            ]}
+          >
             <Text style={styles.infoIcon}>i</Text>
-            <Text style={styles.infoText}>
+            <Text style={[styles.infoText, { color: palette.textSecondary }]}>
               {emailSent
                 ? 'A meghívás értesítésként és e-mailben is elküldésre kerül.'
                 : 'A meghívás alkalmazáson belül továbbra is megjelenik, ha a meghívott már regisztrált.'}
@@ -126,7 +148,7 @@ export default function InviteMemberScreen() {
             onPress={() => router.replace('/')}
             style={styles.textButton}
           >
-            <Text style={styles.textButtonText}>Vissza a főoldalra</Text>
+            <Text style={[styles.textButtonText, { color: palette.primary }]}>Vissza a főoldalra</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -134,14 +156,21 @@ export default function InviteMemberScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: palette.background }]}
+      edges={['top', 'bottom']}
+    >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardView}
       >
         <LinearGradient
           pointerEvents="none"
-          colors={['#5530B8', '#5530B800']}
+            colors={
+              isDark
+                ? ['#5530B8', '#5530B800']
+                : [palette.primarySoft, '#FFFFFF00']
+            }
           start={{ x: 1, y: 0 }}
           end={{ x: 0, y: 1 }}
           style={styles.glow}
@@ -153,11 +182,15 @@ export default function InviteMemberScreen() {
             accessibilityRole="button"
             disabled={submitting}
             onPress={() => router.replace('/')}
-            style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.closeButton,
+              { backgroundColor: palette.surface, borderColor: palette.border },
+              pressed && styles.pressed,
+            ]}
           >
-            <Text style={styles.closeText}>×</Text>
+            <Text style={[styles.closeText, { color: palette.textSecondary }]}>×</Text>
           </Pressable>
-          <Text style={styles.headerTitle}>Új családtag</Text>
+          <Text style={[styles.headerTitle, { color: palette.textSecondary }]}>Új családtag</Text>
           <View style={styles.headerSpacer} />
         </View>
 
@@ -168,23 +201,36 @@ export default function InviteMemberScreen() {
         >
           <View style={styles.hero}>
             <View style={styles.avatarStack}>
-              <View style={[styles.avatar, styles.avatarBack]}>
+              <View style={[styles.avatar, styles.avatarBack, { borderColor: palette.background }]}>
                 <Text style={styles.avatarText}>⌂</Text>
               </View>
-              <View style={[styles.avatar, styles.avatarFront]}>
+              <View style={[styles.avatar, styles.avatarFront, { borderColor: palette.background }]}>
                 <Text style={styles.avatarText}>+</Text>
               </View>
             </View>
-            <Text style={styles.title}>Kit szeretnél meghívni?</Text>
-            <Text style={styles.subtitle}>
-              Meghívás a(z) <Text style={styles.familyName}>{familyName}</Text> családi
+            <Text style={[styles.title, { color: palette.textPrimary }]}>Kit szeretnél meghívni?</Text>
+            <Text style={[styles.subtitle, { color: palette.textMuted }]}>
+              Meghívás a(z) <Text style={[styles.familyName, { color: palette.primary }]}>{familyName}</Text> családi
               körbe.
             </Text>
           </View>
 
-          <View style={styles.formCard}>
-            <Text style={styles.label}>E-mail-cím</Text>
-            <View style={[styles.inputShell, errorMessage && styles.inputShellError]}>
+          <View
+            style={[
+              styles.formCard,
+              { backgroundColor: palette.surface, borderColor: palette.border },
+            ]}
+          >
+            <Text style={[styles.label, { color: palette.textSecondary }]}>E-mail-cím</Text>
+            <View
+              style={[
+                styles.inputShell,
+                {
+                  backgroundColor: palette.surfaceElevated,
+                  borderColor: errorMessage ? palette.danger : palette.borderStrong,
+                },
+              ]}
+            >
               <Text style={styles.mailIcon}>@</Text>
               <TextInput
                 accessibilityLabel="Meghívott e-mail-címe"
@@ -202,12 +248,12 @@ export default function InviteMemberScreen() {
                 placeholderTextColor={colors.textMuted}
                 returnKeyType="done"
                 selectionColor={colors.primaryLight}
-                style={styles.input}
+                style={[styles.input, { color: palette.textPrimary }]}
                 value={email}
               />
             </View>
 
-            <Text style={[styles.label, styles.roleLabel]}>Szerepkör</Text>
+            <Text style={[styles.label, styles.roleLabel, { color: palette.textSecondary }]}>Szerepkör</Text>
             <View style={styles.roleList}>
               {roleOptions.map((option) => {
                 const selected = option.value === role;
@@ -218,13 +264,30 @@ export default function InviteMemberScreen() {
                     disabled={submitting}
                     key={option.value}
                     onPress={() => setRole(option.value)}
-                    style={[styles.roleCard, selected && styles.roleCardSelected]}
+                    style={[
+                      styles.roleCard,
+                      {
+                        backgroundColor: selected
+                          ? (isDark ? '#11284A' : palette.primarySoft)
+                          : palette.surfaceElevated,
+                        borderColor: selected ? palette.primary : palette.border,
+                      },
+                    ]}
                   >
-                    <View style={[styles.roleIcon, selected && styles.roleIconSelected]}>
+                    <View
+                      style={[
+                        styles.roleIcon,
+                        {
+                          backgroundColor: selected
+                            ? (isDark ? '#1C4A83' : palette.primary)
+                            : palette.surface,
+                        },
+                      ]}
+                    >
                       <Text
                         style={[
                           styles.roleIconText,
-                          selected && styles.roleIconTextSelected,
+                          { color: selected ? (isDark ? palette.primaryLight : palette.white) : palette.textMuted },
                         ]}
                       >
                         {option.icon}
@@ -232,13 +295,26 @@ export default function InviteMemberScreen() {
                     </View>
                     <View style={styles.flex}>
                       <Text
-                        style={[styles.roleTitle, selected && styles.roleTitleSelected]}
+                        style={[
+                          styles.roleTitle,
+                          { color: selected ? palette.primaryDark : palette.textSecondary },
+                        ]}
                       >
                         {option.title}
                       </Text>
-                      <Text style={styles.roleDescription}>{option.description}</Text>
+                      <Text style={[styles.roleDescription, { color: palette.textMuted }]}>
+                        {option.description}
+                      </Text>
                     </View>
-                    <View style={[styles.radio, selected && styles.radioSelected]}>
+                    <View
+                      style={[
+                        styles.radio,
+                        {
+                          borderColor: selected ? palette.primary : palette.borderStrong,
+                          backgroundColor: selected ? palette.primary : 'transparent',
+                        },
+                      ]}
+                    >
                       {selected ? <View style={styles.radioDot} /> : null}
                     </View>
                   </Pressable>
@@ -247,28 +323,50 @@ export default function InviteMemberScreen() {
             </View>
 
             {errorMessage ? (
-              <View accessibilityLiveRegion="polite" style={styles.errorBox}>
+              <View
+                accessibilityLiveRegion="polite"
+                style={[
+                  styles.errorBox,
+                  {
+                    backgroundColor: isDark ? '#3B1622' : '#FFF1F3',
+                    borderColor: isDark ? '#7F2439' : '#F8C8D0',
+                  },
+                ]}
+              >
                 <Text style={styles.errorMark}>!</Text>
-                <Text style={styles.errorText}>{errorMessage}</Text>
+                <Text style={[styles.errorText, { color: isDark ? '#FDA4AF' : '#A52A3A' }]}>
+                  {errorMessage}
+                </Text>
               </View>
             ) : null}
           </View>
 
           <View style={styles.privacyRow}>
             <Text style={styles.privacyIcon}>◆</Text>
-            <Text style={styles.privacyText}>
+            <Text style={[styles.privacyText, { color: palette.textMuted }]}>
               A meghívott csak az engedélyezett családi adatokat érheti majd el.
             </Text>
           </View>
         </ScrollView>
 
-        <View style={styles.footer}>
+        <View
+          style={[
+            styles.footer,
+            {
+              backgroundColor: isDark ? '#071123F2' : palette.glassBackground,
+              borderTopColor: palette.border,
+            },
+          ]}
+        >
           <Pressable
             accessibilityRole="button"
             disabled={!canSubmit}
             onPress={() => void submit()}
             style={({ pressed }) => [
               styles.primaryButton,
+              !canSubmit && {
+                backgroundColor: isDark ? '#263753' : palette.surfaceMuted,
+              },
               pressed && canSubmit && styles.primaryButtonPressed,
               !canSubmit && styles.primaryButtonDisabled,
             ]}
