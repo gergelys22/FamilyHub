@@ -80,6 +80,31 @@ export async function saveReminder(input: { id?: string; familyId: string; profi
   if (error) throw new Error(error.message);
   return data as Reminder;
 }
+
+export async function saveReminders(inputs: Array<{
+  familyId: string;
+  profileId: string;
+  title: string;
+  detail?: string;
+  dueAt: string;
+  category?: string;
+}>) {
+  if (inputs.length === 0) return [];
+  const { data, error } = await supabase
+    .from('family_reminders')
+    .insert(inputs.map((input) => ({
+      family_id: input.familyId,
+      created_by_profile_id: input.profileId,
+      title: input.title.trim(),
+      detail: input.detail?.trim() || null,
+      due_at: input.dueAt,
+      category: input.category?.trim() || 'general',
+    })))
+    .select('id, family_id, title, detail, due_at, category')
+    .returns<Reminder[]>();
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
 export async function deleteReminder(id: string) {
   const { error } = await supabase.from('family_reminders').delete().eq('id', id);
   if (error) throw new Error(error.message);
@@ -142,6 +167,53 @@ export async function createFamilyTask(input: {
     },
   });
   return task;
+}
+
+export async function createFamilyTasks(inputs: Array<{
+  familyId: string;
+  profileId: string;
+  assignedToProfileId?: string | null;
+  listType: FamilyTask['list_type'];
+  title: string;
+  detail?: string;
+  quantity?: string;
+  dueAt?: string | null;
+}>) {
+  if (inputs.length === 0) return [];
+  const { data, error } = await supabase
+    .from('family_tasks')
+    .insert(inputs.map((input) => ({
+      family_id: input.familyId,
+      created_by_profile_id: input.profileId,
+      assigned_to_profile_id: input.assignedToProfileId ?? null,
+      list_type: input.listType,
+      title: input.title.trim(),
+      detail: input.detail?.trim() || null,
+      quantity: input.quantity?.trim() || null,
+      due_at: input.dueAt ?? null,
+    })))
+    .select(familyTaskFields)
+    .returns<FamilyTask[]>();
+  if (error) throw new Error(error.message);
+  const tasks = data ?? [];
+  await Promise.all(tasks.map((task) =>
+    createActivityLog({
+      familyId: task.family_id,
+      type: 'task_created',
+      entityType: 'task',
+      entityId: task.id,
+      summary: task.list_type === 'shopping'
+        ? `Új bevásárlási tétel: ${task.title}`
+        : `Új teendő: ${task.title}`,
+      metadata: {
+        title: task.title,
+        listType: task.list_type,
+        assignedToProfileId: task.assigned_to_profile_id,
+        dueAt: task.due_at,
+      },
+    }),
+  ));
+  return tasks;
 }
 
 export async function setFamilyTaskCompleted(id: string, completed: boolean) {
@@ -239,6 +311,39 @@ export async function createFamilySchoolItem(input: {
     .single();
   if (error) throw new Error(error.message);
   return data as FamilySchoolItem;
+}
+
+export async function createFamilySchoolItems(inputs: Array<{
+  familyId: string;
+  childProfileId: string;
+  profileId: string;
+  itemType: SchoolItemType;
+  title: string;
+  detail?: string;
+  location?: string;
+  metadata?: Record<string, string | boolean | number | null>;
+  startsAt?: string | null;
+  dueAt?: string | null;
+}>) {
+  if (inputs.length === 0) return [];
+  const { data, error } = await supabase
+    .from('family_school_items')
+    .insert(inputs.map((input) => ({
+      family_id: input.familyId,
+      child_profile_id: input.childProfileId,
+      created_by_profile_id: input.profileId,
+      item_type: input.itemType,
+      title: input.title.trim(),
+      detail: input.detail?.trim() || null,
+      location: input.location?.trim() || null,
+      metadata: input.metadata ?? {},
+      starts_at: input.startsAt ?? null,
+      due_at: input.dueAt ?? null,
+    })))
+    .select(schoolItemFields)
+    .returns<FamilySchoolItem[]>();
+  if (error) throw new Error(error.message);
+  return data ?? [];
 }
 
 export async function setFamilySchoolItemCompleted(id: string, completed: boolean) {

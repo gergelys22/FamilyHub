@@ -1,7 +1,7 @@
 import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
 import { getMyFamilies, getFamilyMembers, type FamilyMember } from '@/services/families';
 import {
-  createFamilySchoolItem,
+  createFamilySchoolItems,
   deleteFamilySchoolItem,
   getFamilySchoolItems,
   setFamilySchoolItemCompleted,
@@ -124,6 +124,15 @@ export default function SchoolChildren() {
   const [equipment, setEquipment] = useState('');
   const [agenda, setAgenda] = useState('');
   const [busy, setBusy] = useState(false);
+  const [pendingItems, setPendingItems] = useState<Array<{
+    itemType: ModuleType;
+    title: string;
+    detail: string;
+    location: string;
+    metadata: Record<string, string | boolean | number | null>;
+    startsAt: string | null;
+    dueAt: string | null;
+  }>>([]);
   const children = useMemo(() => members.filter(isChild), [members]);
   const selectedChild = children.find((child) => child.profile_id === selectedChildId) ?? children[0];
 
@@ -164,6 +173,14 @@ export default function SchoolChildren() {
     setLocation('');
     setDate('');
     setSubject('');
+    setPeriod('');
+    setExamType('');
+    setTopics('');
+    setCoachName('');
+    setCoachContact('');
+    setEquipment('');
+    setAgenda('');
+    setSubject('');
     setDayOfWeek('Hétfő');
     setWeekType('Mindkét hét');
     setPeriod('');
@@ -175,46 +192,97 @@ export default function SchoolChildren() {
     setCoachContact('');
     setEquipment('');
     setAgenda('');
+    setPendingItems([]);
     setVisible(true);
+  }
+
+  function buildMetadata() {
+    return {
+      subject: subject || null,
+      dayOfWeek: itemType === 'timetable' ? dayOfWeek : null,
+      weekType: itemType === 'timetable' ? weekType : null,
+      period: itemType === 'timetable' ? period : null,
+      isBreak: itemType === 'timetable' ? isBreak : null,
+      isExempt: itemType === 'timetable' ? isExempt : null,
+      examType: itemType === 'exam' ? examType : null,
+      topics: itemType === 'exam' ? topics : null,
+      coachName: itemType === 'workout' ? coachName : null,
+      coachContact: itemType === 'workout' ? coachContact : null,
+      equipment: itemType === 'workout' ? equipment : null,
+      agenda: itemType === 'meeting' ? agenda : null,
+    };
+  }
+
+  function buildCurrentItem() {
+    const parsedDate = date.trim() ? new Date(date.trim().replace(' ', 'T')) : null;
+    if (date.trim() && (!parsedDate || Number.isNaN(parsedDate.getTime()))) {
+      return null;
+    }
+    return {
+      itemType,
+      title: title.trim(),
+      detail: detail.trim(),
+      location: location.trim(),
+      metadata: buildMetadata(),
+      startsAt: itemType !== 'homework' && itemType !== 'exam' ? parsedDate?.toISOString() ?? null : null,
+      dueAt: itemType === 'homework' || itemType === 'exam' ? parsedDate?.toISOString() ?? null : null,
+    };
+  }
+
+  function addToBatch() {
+    if (!title.trim()) {
+      Alert.alert('Hiányzó adat', 'Adj meg egy címet a hozzáadni kívánt elemhez.');
+      return;
+    }
+    const item = buildCurrentItem();
+    if (!item) {
+      Alert.alert('Hibás dátum', 'Használd ezt a formátumot: 2026-11-07 16:00');
+      return;
+    }
+    setPendingItems((current) => [...current, item]);
+    setTitle('');
+    setDetail('');
+    setLocation('');
+    setDate('');
   }
 
   async function save() {
     if (!familyId || !profile?.id || !selectedChild?.profile_id || !title.trim()) {
-      Alert.alert('Hiányzó adat', 'Válassz gyermeket, és adj meg egy címet.');
-      return;
+      if (pendingItems.length === 0) {
+        Alert.alert('Hiányzó adat', 'Válassz gyermeket, és adj meg legalább egy elemet.');
+        return;
+      }
     }
-    const parsedDate = date.trim() ? new Date(date.trim().replace(' ', 'T')) : null;
-    if (date.trim() && (!parsedDate || Number.isNaN(parsedDate.getTime()))) {
-      Alert.alert('Hibás dátum', 'Használd ezt a formátumot: 2026-11-07 16:00');
+    if (!familyId || !profile?.id || !selectedChild?.profile_id) {
       return;
     }
     setBusy(true);
     try {
-      await createFamilySchoolItem({
+      const itemsToSave = [...pendingItems];
+      const currentItem = buildCurrentItem();
+      if (title.trim()) {
+        if (!currentItem) {
+          Alert.alert('Hibás dátum', 'Használd ezt a formátumot: 2026-11-07 16:00');
+          return;
+        }
+        itemsToSave.push(currentItem);
+      }
+      if (itemsToSave.length === 0) {
+        Alert.alert('Hiányzó adat', 'Adj meg legalább egy elemet a mentéshez.');
+        return;
+      }
+      await createFamilySchoolItems(itemsToSave.map((item) => ({
         familyId,
         childProfileId: selectedChild.profile_id,
         profileId: profile.id,
-        itemType,
-        title,
-        detail,
-        location,
-        metadata: {
-          subject: subject || null,
-          dayOfWeek: itemType === 'timetable' ? dayOfWeek : null,
-          weekType: itemType === 'timetable' ? weekType : null,
-          period: itemType === 'timetable' ? period : null,
-          isBreak: itemType === 'timetable' ? isBreak : null,
-          isExempt: itemType === 'timetable' ? isExempt : null,
-          examType: itemType === 'exam' ? examType : null,
-          topics: itemType === 'exam' ? topics : null,
-          coachName: itemType === 'workout' ? coachName : null,
-          coachContact: itemType === 'workout' ? coachContact : null,
-          equipment: itemType === 'workout' ? equipment : null,
-          agenda: itemType === 'meeting' ? agenda : null,
-        },
-        dueAt: itemType === 'homework' || itemType === 'exam' ? parsedDate?.toISOString() ?? null : null,
-        startsAt: itemType !== 'homework' && itemType !== 'exam' ? parsedDate?.toISOString() ?? null : null,
-      });
+        itemType: item.itemType,
+        title: item.title,
+        detail: item.detail,
+        location: item.location,
+        metadata: item.metadata,
+        startsAt: item.startsAt,
+        dueAt: item.dueAt,
+      })));
       setVisible(false);
       await reload(familyId, selectedChild.profile_id);
     } catch (error) {
@@ -415,9 +483,41 @@ export default function SchoolChildren() {
                   <TextInput value={location} onChangeText={setLocation} placeholder="Helyszín (opcionális)" placeholderTextColor={palette.textMuted} style={[styles.input, styles.nestedInput, { backgroundColor: palette.surface, color: palette.textPrimary }]} />
                 </View>
               </View>
+              {pendingItems.length > 0 ? (
+                <View style={styles.batchList}>
+                  <Text style={[styles.batchTitle, { color: palette.textPrimary }]}>
+                    Hozzáadásra vár ({pendingItems.length})
+                  </Text>
+                  {pendingItems.map((item, index) => (
+                    <View
+                      key={`${item.title}-${index}`}
+                      style={[
+                        styles.batchItem,
+                        { backgroundColor: palette.background, borderColor: palette.border },
+                      ]}
+                    >
+                      <View style={[styles.batchDot, { backgroundColor: moduleMeta[item.itemType].color }]} />
+                      <Text numberOfLines={1} style={[styles.batchItemText, { color: palette.textPrimary }]}>
+                        {item.title}
+                      </Text>
+                      <Pressable
+                        accessibilityLabel={`${item.title} eltávolítása a listából`}
+                        onPress={() => setPendingItems((current) => current.filter((_, itemIndex) => itemIndex !== index))}
+                        hitSlop={8}
+                      >
+                        <Ionicons name="close-circle-outline" size={20} color={palette.textMuted} />
+                      </Pressable>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
               <View style={styles.actions}>
                 <Pressable onPress={() => setVisible(false)} style={styles.cancel}><Text style={{ color: palette.textSecondary, fontWeight: '800' }}>Mégse</Text></Pressable>
-                <Pressable disabled={busy} onPress={() => void save()} style={[styles.save, { backgroundColor: moduleMeta[itemType].color }]}><Ionicons name="checkmark" size={17} color={palette.white} /><Text style={{ color: palette.white, fontWeight: '900' }}>{busy ? 'Mentés…' : 'Mentés'}</Text></Pressable>
+                <Pressable disabled={busy} onPress={addToBatch} style={[styles.addToBatch, { borderColor: moduleMeta[itemType].color }]}>
+                  <Ionicons name="add" size={17} color={moduleMeta[itemType].color} />
+                  <Text style={{ color: moduleMeta[itemType].color, fontWeight: '900' }}>Újabb elem</Text>
+                </Pressable>
+                <Pressable disabled={busy} onPress={() => void save()} style={[styles.save, { backgroundColor: moduleMeta[itemType].color }]}><Ionicons name="checkmark" size={17} color={palette.white} /><Text style={{ color: palette.white, fontWeight: '900' }}>{busy ? 'Mentés…' : pendingItems.length > 0 ? 'Összes mentése' : 'Mentés'}</Text></Pressable>
               </View>
             </ScrollView>
           </View>
@@ -488,8 +588,14 @@ const styles = StyleSheet.create({
   input: { minHeight: 48, paddingHorizontal: spacing.md, borderRadius: radius.md, fontSize: 14 },
   nestedInput: { minHeight: 44 },
   textArea: { minHeight: 82, paddingTop: spacing.md, textAlignVertical: 'top' },
-  actions: { marginTop: spacing.lg, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: spacing.sm },
+  batchList: { marginTop: spacing.md, gap: spacing.xs },
+  batchTitle: { marginBottom: spacing.xs, fontSize: 12, fontWeight: '900' },
+  batchItem: { minHeight: 44, paddingHorizontal: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderRadius: radius.md },
+  batchDot: { width: 8, height: 8, borderRadius: 4 },
+  batchItemText: { flex: 1, fontSize: 12, fontWeight: '800' },
+  actions: { marginTop: spacing.lg, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center', gap: spacing.sm },
   cancel: { padding: spacing.md },
+  addToBatch: { paddingHorizontal: spacing.md, paddingVertical: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.xs, borderWidth: 1, borderRadius: radius.md },
   save: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.xs, borderRadius: radius.md },
   pressed: { opacity: 0.75, transform: [{ scale: 0.98 }] },
 });

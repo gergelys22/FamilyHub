@@ -3,7 +3,7 @@ import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme'
 import { useAuth } from '@/providers/auth-provider';
 import { useTheme } from '@/providers/theme-provider';
 import {
-  createFamilyTask,
+  createFamilyTasks,
   deleteFamilyTask,
   getFamilyTasks,
   setFamilyTaskCompleted,
@@ -57,6 +57,13 @@ export default function TasksScreen() {
   const [dueTime, setDueTime] = useState('18:00');
   const [busy, setBusy] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const [pendingItems, setPendingItems] = useState<Array<{
+    title: string;
+    detail: string;
+    quantity: string;
+    assignedToProfileId: string | null;
+    dueAt: string | null;
+  }>>([]);
 
   const memberNameById = useMemo(
     () => new Map(members.map((member) => [member.profile_id, member.display_name])),
@@ -128,35 +135,71 @@ export default function TasksScreen() {
     setAssignedToProfileId(profile?.id ?? null);
     setDueDate(listType === 'task' ? defaultDueDate() : '');
     setDueTime('18:00');
+    setPendingItems([]);
     setVisible(true);
   }
 
-  async function save() {
-    if (!familyId || !profile?.id || !title.trim()) {
-      Alert.alert('Hiányzó adat', 'Adj meg egy címet.');
-      return;
-    }
-
+  function buildCurrentItem() {
     const parsedDueAt =
       listType === 'task' && dueDate ? parseLocalDateTime(dueDate, dueTime || '18:00') : null;
 
     if (listType === 'task' && dueDate && !parsedDueAt) {
+      return null;
+    }
+
+    return {
+      title: title.trim(),
+      detail: detail.trim(),
+      quantity: quantity.trim(),
+      assignedToProfileId: listType === 'task' ? assignedToProfileId : null,
+      dueAt: parsedDueAt?.toISOString() ?? null,
+    };
+  }
+
+  function addToBatch() {
+    if (!title.trim()) {
+      Alert.alert('Hiányzó adat', 'Adj meg egy címet a hozzáadni kívánt elemhez.');
+      return;
+    }
+    const item = buildCurrentItem();
+    if (!item) {
       Alert.alert('Hibás határidő', 'Ellenőrizd a dátumot és az időpontot.');
+      return;
+    }
+    setPendingItems((current) => [...current, item]);
+    setTitle('');
+    setDetail('');
+    setQuantity('');
+  }
+
+  async function save() {
+    if (!familyId || !profile?.id) return;
+    const itemsToSave = [...pendingItems];
+    if (title.trim()) {
+      const currentItem = buildCurrentItem();
+      if (!currentItem) {
+        Alert.alert('Hibás határidő', 'Ellenőrizd a dátumot és az időpontot.');
+        return;
+      }
+      itemsToSave.push(currentItem);
+    }
+    if (itemsToSave.length === 0) {
+      Alert.alert('Hiányzó adat', 'Adj meg legalább egy elemet a mentéshez.');
       return;
     }
 
     setBusy(true);
     try {
-      await createFamilyTask({
+      await createFamilyTasks(itemsToSave.map((item) => ({
         familyId,
         profileId: profile.id,
-        assignedToProfileId: listType === 'task' ? assignedToProfileId : null,
+        assignedToProfileId: item.assignedToProfileId,
         listType,
-        title,
-        detail,
-        quantity,
-        dueAt: parsedDueAt?.toISOString() ?? null,
-      });
+        title: item.title,
+        detail: item.detail,
+        quantity: item.quantity,
+        dueAt: item.dueAt,
+      })));
       setVisible(false);
       await loadItems(familyId, listType);
     } catch (error) {
@@ -289,9 +332,33 @@ export default function TasksScreen() {
             ) : null}
 
             <TextInput value={detail} onChangeText={setDetail} placeholder="Megjegyzés (opcionális)" placeholderTextColor={palette.textMuted} style={styles.input} />
+            {pendingItems.length > 0 ? (
+              <View style={styles.batchList}>
+                <Text style={styles.batchTitle}>Hozzáadásra vár ({pendingItems.length})</Text>
+                {pendingItems.map((item, index) => (
+                  <View key={`${item.title}-${index}`} style={styles.batchItem}>
+                    <View style={styles.batchDot} />
+                    <Text numberOfLines={1} style={styles.batchItemText}>{item.title}</Text>
+                    <Pressable
+                      accessibilityLabel={`${item.title} eltávolítása a listából`}
+                      onPress={() => setPendingItems((current) => current.filter((_, itemIndex) => itemIndex !== index))}
+                      hitSlop={8}
+                    >
+                      <Ionicons name="close-circle-outline" size={20} color={palette.textMuted} />
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            ) : null}
             <View style={styles.actions}>
               <Pressable onPress={() => setVisible(false)} style={styles.cancel}><Text style={styles.cancelText}>Mégse</Text></Pressable>
-              <Pressable disabled={busy} onPress={() => void save()} style={[styles.save, busy && styles.disabled]}><Text style={styles.saveText}>{busy ? 'Mentés...' : 'Hozzáadás'}</Text></Pressable>
+              <Pressable disabled={busy} onPress={addToBatch} style={styles.addToBatch}>
+                <Ionicons name="add" size={17} color={palette.primary} />
+                <Text style={styles.addToBatchText}>Újabb elem</Text>
+              </Pressable>
+              <Pressable disabled={busy} onPress={() => void save()} style={[styles.save, busy && styles.disabled]}>
+                <Text style={styles.saveText}>{busy ? 'Mentés...' : pendingItems.length > 0 ? 'Összes mentése' : 'Hozzáadás'}</Text>
+              </Pressable>
             </View>
           </View>
         </View>
@@ -338,9 +405,16 @@ function createStyles(palette: typeof colors | typeof darkColors) {
     assigneeTextSelected: { color: palette.white },
     dueRow: { flexDirection: 'row', gap: spacing.md },
     timeField: { width: 116 },
-    actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm },
+    batchList: { gap: spacing.xs },
+    batchTitle: { marginBottom: spacing.xs, color: palette.textPrimary, fontSize: 12, fontWeight: '900' },
+    batchItem: { minHeight: 44, paddingHorizontal: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: palette.border, borderRadius: radius.md, backgroundColor: palette.background },
+    batchDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: palette.primary },
+    batchItemText: { flex: 1, color: palette.textPrimary, fontSize: 12, fontWeight: '800' },
+    actions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center', gap: spacing.sm },
     cancel: { padding: spacing.md },
     cancelText: { color: palette.textSecondary, fontWeight: '800' },
+    addToBatch: { paddingHorizontal: spacing.md, paddingVertical: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.xs, borderWidth: 1, borderColor: palette.primary, borderRadius: radius.lg },
+    addToBatchText: { color: palette.primary, fontWeight: '900' },
     save: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderRadius: radius.lg, backgroundColor: palette.primary },
     saveText: { color: palette.white, fontWeight: '900' },
     disabled: { opacity: 0.55 },
