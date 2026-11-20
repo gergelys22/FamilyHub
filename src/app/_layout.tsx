@@ -133,7 +133,16 @@ function AppNavigator() {
                 title: tab.title,
                 tabBarIcon: ({ color, focused }) => (
                   <View
-                    style={[styles.iconContainer, focused && styles.iconContainerActive]}
+                    style={[
+                      styles.iconContainer,
+                      focused && [
+                        styles.iconContainerActive,
+                        {
+                          backgroundColor: isDark ? 'rgba(91, 140, 255, 0.18)' : colors.primarySoft,
+                          borderColor: isDark ? 'rgba(91, 140, 255, 0.24)' : 'rgba(47, 107, 255, 0.08)',
+                        },
+                      ],
+                    ]}
                   >
                     <SymbolView
                       name={tab.icon}
@@ -362,6 +371,6 @@ const styles = StyleSheet.create({
     borderRadius: 17,
   },
   iconContainerActive: {
-    backgroundColor: colors.primarySoft,
+    borderWidth: 1,
   },
 });
