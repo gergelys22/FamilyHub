@@ -1,7 +1,22 @@
 import { supabase } from '@/lib/supabase';
 import { createActivityLog } from '@/services/activity';
 
-export type FamilyDocument = { id: string; family_id: string; name: string; storage_path: string; mime_type: string | null; size_bytes: number | null; created_at: string };
+export type FamilyDocument = {
+  id: string;
+  family_id: string;
+  name: string;
+  storage_path: string;
+  mime_type: string | null;
+  size_bytes: number | null;
+  document_type: string;
+  tags: string[];
+  expires_at: string | null;
+  related_profile_id: string | null;
+  restricted: boolean;
+  version: number;
+  created_at: string;
+  updated_at: string;
+};
 export type Medication = { id: string; family_id: string; profile_id: string; name: string; dosage_text: string | null; instructions: string | null; next_at: string | null };
 export type Reminder = { id: string; family_id: string; title: string; detail: string | null; due_at: string; category: string };
 export type FamilyTask = {
@@ -37,12 +52,44 @@ export type FamilySchoolItem = {
 };
 
 export async function getFamilyDocuments(familyId: string) {
-  const { data, error } = await supabase.from('family_documents').select('id, family_id, name, storage_path, mime_type, size_bytes, created_at').eq('family_id', familyId).order('created_at', { ascending: false });
+  const { data, error } = await supabase
+    .from('family_documents')
+    .select('id, family_id, name, storage_path, mime_type, size_bytes, document_type, tags, expires_at, related_profile_id, restricted, version, created_at, updated_at')
+    .eq('family_id', familyId)
+    .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
   return (data ?? []) as FamilyDocument[];
 }
-export async function createFamilyDocument(input: { familyId: string; profileId: string; name: string; storagePath: string; mimeType?: string; sizeBytes?: number }) {
-  const { data, error } = await supabase.from('family_documents').insert({ family_id: input.familyId, uploaded_by_profile_id: input.profileId, name: input.name.trim(), storage_path: input.storagePath, mime_type: input.mimeType ?? null, size_bytes: input.sizeBytes ?? null }).select('id, family_id, name, storage_path, mime_type, size_bytes, created_at').single();
+export async function createFamilyDocument(input: {
+  familyId: string;
+  profileId: string;
+  name: string;
+  storagePath: string;
+  mimeType?: string;
+  sizeBytes?: number;
+  documentType?: string;
+  tags?: string[];
+  expiresAt?: string | null;
+  relatedProfileId?: string | null;
+  restricted?: boolean;
+}) {
+  const { data, error } = await supabase
+    .from('family_documents')
+    .insert({
+      family_id: input.familyId,
+      uploaded_by_profile_id: input.profileId,
+      name: input.name.trim(),
+      storage_path: input.storagePath,
+      mime_type: input.mimeType ?? null,
+      size_bytes: input.sizeBytes ?? null,
+      document_type: input.documentType?.trim() || 'egyeb',
+      tags: input.tags ?? [],
+      expires_at: input.expiresAt ?? null,
+      related_profile_id: input.relatedProfileId ?? null,
+      restricted: input.restricted ?? false,
+    })
+    .select('id, family_id, name, storage_path, mime_type, size_bytes, document_type, tags, expires_at, related_profile_id, restricted, version, created_at, updated_at')
+    .single();
   if (error) throw new Error(error.message);
   return data as FamilyDocument;
 }
@@ -51,6 +98,82 @@ export async function deleteFamilyDocument(document: FamilyDocument) {
   if (storageError) throw new Error(storageError.message);
   const { error } = await supabase.from('family_documents').delete().eq('id', document.id);
   if (error) throw new Error(error.message);
+}
+
+export async function updateFamilyDocument(
+  documentId: string,
+  input: {
+    name?: string;
+    documentType?: string;
+    tags?: string[];
+    expiresAt?: string | null;
+    relatedProfileId?: string | null;
+    restricted?: boolean;
+  },
+) {
+  const payload: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (input.name !== undefined) payload.name = input.name.trim();
+  if (input.documentType !== undefined) payload.document_type = input.documentType.trim() || 'egyeb';
+  if (input.tags !== undefined) payload.tags = input.tags;
+  if (input.expiresAt !== undefined) payload.expires_at = input.expiresAt;
+  if (input.relatedProfileId !== undefined) payload.related_profile_id = input.relatedProfileId;
+  if (input.restricted !== undefined) payload.restricted = input.restricted;
+  const { data, error } = await supabase
+    .from('family_documents')
+    .update(payload)
+    .eq('id', documentId)
+    .select('id, family_id, name, storage_path, mime_type, size_bytes, document_type, tags, expires_at, related_profile_id, restricted, version, created_at, updated_at')
+    .single();
+  if (error) throw new Error(error.message);
+  return data as FamilyDocument;
+}
+
+export type FamilyDocumentVersion = {
+  id: string;
+  document_id: string;
+  storage_path: string;
+  name: string;
+  mime_type: string | null;
+  size_bytes: number | null;
+  uploaded_by_profile_id: string;
+  version: number;
+  created_at: string;
+};
+
+export async function getFamilyDocumentVersions(documentId: string) {
+  const { data, error } = await supabase
+    .from('family_document_versions')
+    .select('id, document_id, storage_path, name, mime_type, size_bytes, uploaded_by_profile_id, version, created_at')
+    .eq('document_id', documentId)
+    .order('version', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as FamilyDocumentVersion[];
+}
+
+export async function createFamilyDocumentVersion(input: {
+  documentId: string;
+  profileId: string;
+  storagePath: string;
+  name: string;
+  mimeType?: string;
+  sizeBytes?: number;
+  version: number;
+}) {
+  const { data, error } = await supabase
+    .from('family_document_versions')
+    .insert({
+      document_id: input.documentId,
+      uploaded_by_profile_id: input.profileId,
+      storage_path: input.storagePath,
+      name: input.name,
+      mime_type: input.mimeType ?? null,
+      size_bytes: input.sizeBytes ?? null,
+      version: input.version,
+    })
+    .select('id, document_id, storage_path, name, mime_type, size_bytes, uploaded_by_profile_id, version, created_at')
+    .single();
+  if (error) throw new Error(error.message);
+  return data as FamilyDocumentVersion;
 }
 export async function getMedications(familyId: string) {
   const { data, error } = await supabase.from('medications').select('id, family_id, profile_id, name, dosage_text, instructions, next_at').eq('family_id', familyId).order('next_at', { ascending: true, nullsFirst: false });
