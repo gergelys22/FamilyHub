@@ -99,6 +99,12 @@ export default function MoreScreen() {
             palette={palette}
           />
           <MenuItem
+            icon="wallet-outline"
+            label="Családi költségvetés"
+            onPress={() => router.push('/budget')}
+            palette={palette}
+          />
+          <MenuItem
             icon="happy-outline"
             label="Gyermekmodul"
             onPress={() => router.push('/school-children')}
