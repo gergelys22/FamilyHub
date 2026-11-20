@@ -17,7 +17,35 @@ export type FamilyDocument = {
   created_at: string;
   updated_at: string;
 };
-export type Medication = { id: string; family_id: string; profile_id: string; name: string; dosage_text: string | null; instructions: string | null; next_at: string | null };
+export type Medication = {
+  id: string;
+  family_id: string;
+  profile_id: string;
+  person_profile_id: string | null;
+  name: string;
+  dosage_text: string | null;
+  instructions: string | null;
+  next_at: string | null;
+  frequency: string | null;
+  schedule_time: string | null;
+  is_active: boolean;
+  ends_on: string | null;
+};
+
+export type EmergencyContact = {
+  id: string;
+  family_id: string;
+  created_by_profile_id: string;
+  name: string;
+  relation: string | null;
+  phone: string;
+  email: string | null;
+  priority: number;
+  is_primary: boolean;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
 export type Reminder = { id: string; family_id: string; title: string; detail: string | null; due_at: string; category: string };
 export type FamilyTask = {
   id: string;
@@ -176,19 +204,172 @@ export async function createFamilyDocumentVersion(input: {
   return data as FamilyDocumentVersion;
 }
 export async function getMedications(familyId: string) {
-  const { data, error } = await supabase.from('medications').select('id, family_id, profile_id, name, dosage_text, instructions, next_at').eq('family_id', familyId).order('next_at', { ascending: true, nullsFirst: false });
+  const { data, error } = await supabase
+    .from('medications')
+    .select('id, family_id, profile_id, person_profile_id, name, dosage_text, instructions, next_at, frequency, schedule_time, is_active, ends_on')
+    .eq('family_id', familyId)
+    .order('is_active', { ascending: false })
+    .order('next_at', { ascending: true, nullsFirst: false });
   if (error) throw new Error(error.message);
   return (data ?? []) as Medication[];
 }
-export async function saveMedication(input: { id?: string; familyId: string; profileId: string; name: string; dosageText: string; instructions?: string; nextAt?: string | null }) {
-  const payload = { family_id: input.familyId, profile_id: input.profileId, name: input.name.trim(), dosage_text: input.dosageText.trim(), instructions: input.instructions?.trim() || null, next_at: input.nextAt ?? null, updated_at: new Date().toISOString() };
+export async function saveMedication(input: {
+  id?: string;
+  familyId: string;
+  profileId: string;
+  personProfileId?: string | null;
+  name: string;
+  dosageText: string;
+  instructions?: string;
+  nextAt?: string | null;
+  frequency?: string | null;
+  scheduleTime?: string | null;
+  isActive?: boolean;
+  endsOn?: string | null;
+}) {
+  const payload = {
+    family_id: input.familyId,
+    profile_id: input.profileId,
+    person_profile_id: input.personProfileId ?? null,
+    name: input.name.trim(),
+    dosage_text: input.dosageText.trim(),
+    instructions: input.instructions?.trim() || null,
+    next_at: input.nextAt ?? null,
+    frequency: input.frequency?.trim() || null,
+    schedule_time: input.scheduleTime?.trim() || null,
+    is_active: input.isActive ?? true,
+    ends_on: input.endsOn ?? null,
+    updated_at: new Date().toISOString(),
+  };
   const query = input.id ? supabase.from('medications').update(payload).eq('id', input.id) : supabase.from('medications').insert(payload);
-  const { data, error } = await query.select('id, family_id, profile_id, name, dosage_text, instructions, next_at').single();
+  const { data, error } = await query
+    .select('id, family_id, profile_id, person_profile_id, name, dosage_text, instructions, next_at, frequency, schedule_time, is_active, ends_on')
+    .single();
   if (error) throw new Error(error.message);
   return data as Medication;
 }
 export async function deleteMedication(id: string) {
   const { error } = await supabase.from('medications').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function saveMedications(inputs: Array<{
+  familyId: string;
+  profileId: string;
+  personProfileId?: string | null;
+  name: string;
+  dosageText: string;
+  instructions?: string;
+  nextAt?: string | null;
+  frequency?: string | null;
+  scheduleTime?: string | null;
+  isActive?: boolean;
+  endsOn?: string | null;
+}>) {
+  if (inputs.length === 0) return [];
+  const { data, error } = await supabase
+    .from('medications')
+    .insert(inputs.map((input) => ({
+      family_id: input.familyId,
+      profile_id: input.profileId,
+      person_profile_id: input.personProfileId ?? null,
+      name: input.name.trim(),
+      dosage_text: input.dosageText.trim(),
+      instructions: input.instructions?.trim() || null,
+      next_at: input.nextAt ?? null,
+      frequency: input.frequency?.trim() || null,
+      schedule_time: input.scheduleTime?.trim() || null,
+      is_active: input.isActive ?? true,
+      ends_on: input.endsOn ?? null,
+    })))
+    .select('id, family_id, profile_id, person_profile_id, name, dosage_text, instructions, next_at, frequency, schedule_time, is_active, ends_on')
+    .returns<Medication[]>();
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function getEmergencyContacts(familyId: string) {
+  const { data, error } = await supabase
+    .from('family_emergency_contacts')
+    .select('id, family_id, created_by_profile_id, name, relation, phone, email, priority, is_primary, notes, created_at, updated_at')
+    .eq('family_id', familyId)
+    .order('is_primary', { ascending: false })
+    .order('priority', { ascending: true })
+    .order('name', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as EmergencyContact[];
+}
+
+export async function saveEmergencyContact(input: {
+  id?: string;
+  familyId: string;
+  profileId: string;
+  name: string;
+  relation?: string;
+  phone: string;
+  email?: string;
+  priority?: number;
+  isPrimary?: boolean;
+  notes?: string;
+}) {
+  const payload = {
+    family_id: input.familyId,
+    created_by_profile_id: input.profileId,
+    name: input.name.trim(),
+    relation: input.relation?.trim() || null,
+    phone: input.phone.trim(),
+    email: input.email?.trim() || null,
+    priority: input.priority ?? 50,
+    is_primary: input.isPrimary ?? false,
+    notes: input.notes?.trim() || null,
+    updated_at: new Date().toISOString(),
+  };
+  const query = input.id
+    ? supabase.from('family_emergency_contacts').update(payload).eq('id', input.id)
+    : supabase.from('family_emergency_contacts').insert(payload);
+  const { data, error } = await query
+    .select('id, family_id, created_by_profile_id, name, relation, phone, email, priority, is_primary, notes, created_at, updated_at')
+    .single();
+  if (error) throw new Error(error.message);
+  return data as EmergencyContact;
+}
+
+export async function saveEmergencyContacts(inputs: Array<{
+  familyId: string;
+  profileId: string;
+  name: string;
+  relation?: string;
+  phone: string;
+  email?: string;
+  priority?: number;
+  isPrimary?: boolean;
+  notes?: string;
+}>) {
+  if (inputs.length === 0) return [];
+  const { data, error } = await supabase
+    .from('family_emergency_contacts')
+    .insert(inputs.map((input) => ({
+      family_id: input.familyId,
+      created_by_profile_id: input.profileId,
+      name: input.name.trim(),
+      relation: input.relation?.trim() || null,
+      phone: input.phone.trim(),
+      email: input.email?.trim() || null,
+      priority: input.priority ?? 50,
+      is_primary: input.isPrimary ?? false,
+      notes: input.notes?.trim() || null,
+    })))
+    .select('id, family_id, created_by_profile_id, name, relation, phone, email, priority, is_primary, notes, created_at, updated_at')
+    .returns<EmergencyContact[]>();
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function deleteEmergencyContact(id: string) {
+  const { error } = await supabase
+    .from('family_emergency_contacts')
+    .delete()
+    .eq('id', id);
   if (error) throw new Error(error.message);
 }
 export async function getReminders(familyId: string) {

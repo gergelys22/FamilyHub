@@ -262,6 +262,7 @@ function AppNavigator() {
 
           <Tabs.Screen name="family-tree" options={{ href: null, title: 'Családfa', tabBarStyle: { display: 'none' } }} />
           <Tabs.Screen name="medications" options={{ href: null, title: 'Gyógyszerek', tabBarStyle: { display: 'none' } }} />
+          <Tabs.Screen name="emergency-contacts" options={{ href: null, title: 'Sürgősségi kapcsolatok', tabBarStyle: { display: 'none' } }} />
           <Tabs.Screen name="reminders" options={{ href: null, title: 'Emlékeztetők', tabBarStyle: { display: 'none' } }} />
           <Tabs.Screen name="tasks" options={{ href: null, title: 'Teendők és bevásárlás', tabBarStyle: { display: 'none' } }} />
           <Tabs.Screen name="location-sharing" options={{ href: null, title: 'Helymegosztás', tabBarStyle: { display: 'none' } }} />

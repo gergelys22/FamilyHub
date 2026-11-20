@@ -125,6 +125,7 @@ export default function VaultScreen() {
           title="Egészségügyi adatok"
           description="Gyógyszerek, allergiák és orvosi adatok"
           count="0"
+          onPress={() => router.push('/medications')}
           palette={palette}
         />
         <VaultItem
@@ -134,6 +135,7 @@ export default function VaultScreen() {
           title="Sürgősségi kapcsolatok"
           description="Fontos telefonszámok egy helyen"
           count="0"
+          onPress={() => router.push('/emergency-contacts')}
           palette={palette}
         />
 
