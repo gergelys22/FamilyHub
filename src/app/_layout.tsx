@@ -1,6 +1,7 @@
 import { colors, darkColors } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/providers/auth-provider';
 import { PresenceProvider } from '@/providers/presence-provider';
+import { SecurityProvider } from '@/providers/security-provider';
 import { GlassSurface } from '@/components/glass-surface';
 import { ThemeProvider, useTheme } from '@/providers/theme-provider';
 import { Tabs } from 'expo-router';
@@ -68,7 +69,9 @@ export default function RootLayout() {
     <ThemeProvider>
       <AuthProvider>
         <PresenceProvider>
-          <AppNavigator />
+          <SecurityProvider>
+            <AppNavigator />
+          </SecurityProvider>
         </PresenceProvider>
       </AuthProvider>
     </ThemeProvider>

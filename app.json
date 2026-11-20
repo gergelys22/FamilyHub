@@ -49,6 +49,14 @@
           "cameraPermission": "A FamilyHub hozzáférést kér profilkép készítéséhez.",
           "microphonePermission": false
         }
+      ],
+      "expo-secure-store",
+      "expo-sqlite",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "A FamilyHub a Face ID-t használhatja az érzékeny képernyők feloldásához."
+        }
       ]
     ],
     "experiments": {

@@ -127,6 +127,47 @@ export default function BudgetScreen() {
     .filter((item) => item.active)
     .reduce((sum, item) => sum + item.amount_cents, 0);
 
+  const categoryTotals = useMemo(() => {
+    const totals = new Map(categories.map((item) => [item.key, 0]));
+    monthTransactions.forEach((item) => {
+      totals.set(item.category, (totals.get(item.category) ?? 0) + item.amount_cents);
+    });
+    return categories
+      .map((item) => ({
+        ...item,
+        value: totals.get(item.key) ?? 0,
+      }))
+      .filter((item) => item.value > 0)
+      .sort((a, b) => b.value - a.value);
+  }, [monthTransactions]);
+
+  const monthlyTotals = useMemo(() => {
+    const now = new Date();
+    const result = [];
+    for (let offset = 5; offset >= 0; offset -= 1) {
+      const monthDate = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+      const value = transactions
+        .filter((item) => {
+          const date = new Date(item.spent_at);
+          return date.getFullYear() === monthDate.getFullYear()
+            && date.getMonth() === monthDate.getMonth();
+        })
+        .reduce((sum, item) => sum + item.amount_cents, 0);
+      result.push({
+        key: `${monthDate.getFullYear()}-${monthDate.getMonth()}`,
+        label: monthDate.toLocaleDateString('hu-HU', { month: 'short' }).replace('.', ''),
+        value,
+        isCurrent: offset === 0,
+      });
+    }
+    return result;
+  }, [transactions]);
+
+  const maxMonthlyValue = Math.max(
+    ...monthlyTotals.map((item) => item.value),
+    1,
+  );
+
   function openCreate() {
     setTitle('');
     setAmount('');
