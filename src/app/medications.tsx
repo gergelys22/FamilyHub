@@ -57,6 +57,11 @@ export default function MedicationsScreen() {
   const [isActive, setIsActive] = useState(true);
   const [pendingItems, setPendingItems] = useState<PendingMedication[]>([]);
   const [busy, setBusy] = useState(false);
+  const [search, setSearch] = useState('');
+  const [filterVisible, setFilterVisible] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [frequencyFilter, setFrequencyFilter] = useState<'all' | 'Napi' | 'Rendszeres' | 'Szükség esetén'>('all');
+  const [sortBy, setSortBy] = useState<'name' | 'next' | 'person'>('name');
 
   async function reload(id = familyId) {
     if (id) setItems(await getMedications(id));
@@ -243,6 +248,25 @@ export default function MedicationsScreen() {
         <Text style={[styles.title, { color: palette.textPrimary }]}>Gyógyszerek</Text>
         <Ionicons name="medkit-outline" size={22} color={palette.primary} />
       </View>
+      <View style={styles.searchRow}>
+        <View style={[styles.search, { backgroundColor: palette.surfaceElevated, borderColor: palette.border }]}>
+          <Ionicons name="search" size={20} color={palette.primary} />
+          <TextInput
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Gyógyszer keresése..."
+            placeholderTextColor={palette.textMuted}
+            style={[styles.searchInput, { color: palette.textPrimary }]}
+          />
+        </View>
+        <Pressable
+          accessibilityLabel="Gyógyszer szűrők"
+          onPress={() => setFilterVisible(true)}
+          style={[styles.filterButton, { backgroundColor: palette.surface, borderColor: palette.border }]}
+        >
+          <Ionicons name="options-outline" size={21} color={palette.primary} />
+        </Pressable>
+      </View>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={[styles.hero, { backgroundColor: isDark ? '#3A1E31' : '#FFF0F5', borderColor: isDark ? '#63344F' : '#F4CDD9' }]}>
           <View style={[styles.heroIcon, { backgroundColor: isDark ? '#60304B' : '#FFDCE8' }]}>
@@ -254,7 +278,31 @@ export default function MedicationsScreen() {
           </View>
         </View>
 
-        {items.map((item) => {
+        {[...items]
+          .filter((item) => {
+            const person = members.find((member) => member.profile_id === item.person_profile_id);
+            const searchable = `${item.name} ${item.dosage_text ?? ''} ${item.instructions ?? ''} ${person?.display_name ?? ''}`.toLocaleLowerCase('hu-HU');
+            if (!searchable.includes(search.trim().toLocaleLowerCase('hu-HU'))) return false;
+            if (statusFilter === 'active' && !item.is_active) return false;
+            if (statusFilter === 'inactive' && item.is_active) return false;
+            if (frequencyFilter !== 'all' && item.frequency !== frequencyFilter) return false;
+            return true;
+          })
+          .sort((a, b) => {
+            if (sortBy === 'next') {
+              if (!a.next_at && !b.next_at) return 0;
+              if (!a.next_at) return 1;
+              if (!b.next_at) return -1;
+              return new Date(a.next_at).getTime() - new Date(b.next_at).getTime();
+            }
+            if (sortBy === 'person') {
+              const personA = members.find((member) => member.profile_id === a.person_profile_id)?.display_name ?? '';
+              const personB = members.find((member) => member.profile_id === b.person_profile_id)?.display_name ?? '';
+              return personA.localeCompare(personB, 'hu');
+            }
+            return a.name.localeCompare(b.name, 'hu');
+          })
+          .map((item) => {
           const person = members.find((member) => member.profile_id === item.person_profile_id);
           return (
             <Pressable
@@ -293,6 +341,61 @@ export default function MedicationsScreen() {
       <Pressable onPress={() => openForm()} style={styles.fab} accessibilityLabel="Új gyógyszer hozzáadása">
         <Ionicons name="add" size={31} color={colors.white} />
       </Pressable>
+
+      <Modal visible={filterVisible} transparent animationType="slide" onRequestClose={() => setFilterVisible(false)}>
+        <View style={[styles.overlay, { backgroundColor: isDark ? 'rgba(3, 10, 24, 0.78)' : 'rgba(23, 43, 77, 0.38)' }]}>
+          <View style={[styles.modal, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+            <View style={styles.modalContent}>
+              <View style={styles.filterHeader}>
+                <Text style={[styles.modalTitle, { color: palette.textPrimary }]}>Gyógyszerszűrők</Text>
+                <Pressable onPress={() => setFilterVisible(false)} hitSlop={8}>
+                  <Ionicons name="close" size={24} color={palette.textSecondary} />
+                </Pressable>
+              </View>
+              <Text style={[styles.fieldLabel, { color: palette.textSecondary }]}>Rendezés</Text>
+              <View style={styles.optionRow}>
+                {([
+                  ['name', 'ABC'],
+                  ['next', 'Következő bevétel'],
+                  ['person', 'Személy'],
+                ] as const).map(([value, label]) => (
+                  <Pressable key={value} onPress={() => setSortBy(value)} style={[styles.option, { backgroundColor: sortBy === value ? palette.primary : palette.surfaceElevated }]}>
+                    <Text style={{ color: sortBy === value ? palette.white : palette.textSecondary, fontWeight: '800' }}>{label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <Text style={[styles.fieldLabel, { color: palette.textSecondary }]}>Állapot</Text>
+              <View style={styles.optionRow}>
+                {([
+                  ['all', 'Mind'],
+                  ['active', 'Aktív'],
+                  ['inactive', 'Inaktív'],
+                ] as const).map(([value, label]) => (
+                  <Pressable key={value} onPress={() => setStatusFilter(value)} style={[styles.option, { backgroundColor: statusFilter === value ? palette.primary : palette.surfaceElevated }]}>
+                    <Text style={{ color: statusFilter === value ? palette.white : palette.textSecondary, fontWeight: '800' }}>{label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <Text style={[styles.fieldLabel, { color: palette.textSecondary }]}>Gyakoriság</Text>
+              <View style={styles.optionRow}>
+                {(['all', 'Napi', 'Rendszeres', 'Szükség esetén'] as const).map((value) => (
+                  <Pressable key={value} onPress={() => setFrequencyFilter(value)} style={[styles.option, { backgroundColor: frequencyFilter === value ? palette.primary : palette.surfaceElevated }]}>
+                    <Text style={{ color: frequencyFilter === value ? palette.white : palette.textSecondary, fontWeight: '800' }}>{value === 'all' ? 'Mind' : value}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <View style={styles.actions}>
+                <Pressable onPress={() => { setStatusFilter('all'); setFrequencyFilter('all'); setSortBy('name'); setSearch(''); }} style={styles.cancel}>
+                  <Text style={{ color: palette.textSecondary, fontWeight: '800' }}>Szűrők törlése</Text>
+                </Pressable>
+                <Pressable onPress={() => setFilterVisible(false)} style={[styles.save, { backgroundColor: palette.primary }]}>
+                  <Text style={styles.saveText}>Megjelenítés</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={visible} transparent animationType="slide" onRequestClose={() => setVisible(false)}>
         <View style={[styles.overlay, { backgroundColor: isDark ? 'rgba(3, 10, 24, 0.78)' : 'rgba(23, 43, 77, 0.38)' }]}>
@@ -373,6 +476,10 @@ const styles = StyleSheet.create({
   header: { minHeight: 64, paddingHorizontal: spacing.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: { fontSize: 25, fontWeight: '900' },
   flex: { flex: 1 },
+  searchRow: { marginHorizontal: spacing.lg, marginTop: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  search: { flex: 1, minHeight: 50, paddingHorizontal: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderRadius: radius.lg },
+  searchInput: { flex: 1, fontSize: 13 },
+  filterButton: { width: 50, height: 50, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderRadius: radius.lg },
   content: { padding: spacing.lg, paddingBottom: 110, gap: spacing.md },
   hero: { padding: spacing.lg, flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderWidth: 1, borderRadius: radius.lg },
   heroIcon: { width: 56, height: 56, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
@@ -390,6 +497,7 @@ const styles = StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end' },
   modal: { maxHeight: '92%', borderTopWidth: 1, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl },
   modalContent: { padding: spacing.xl, gap: spacing.md },
+  filterHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   modalTitle: { fontSize: 20, fontWeight: '900' },
   input: { minHeight: 48, paddingHorizontal: spacing.md, borderWidth: 1, borderRadius: radius.lg },
   textArea: { minHeight: 82, paddingTop: spacing.md, textAlignVertical: 'top' },

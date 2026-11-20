@@ -53,6 +53,11 @@ export default function EmergencyContactsScreen() {
   const [notes, setNotes] = useState('');
   const [pendingItems, setPendingItems] = useState<PendingContact[]>([]);
   const [busy, setBusy] = useState(false);
+  const [search, setSearch] = useState('');
+  const [filterVisible, setFilterVisible] = useState(false);
+  const [primaryFilter, setPrimaryFilter] = useState<'all' | 'primary' | 'regular'>('all');
+  const [relationFilter, setRelationFilter] = useState('all');
+  const [sortBy, setSortBy] = useState<'name' | 'priority' | 'newest'>('priority');
 
   async function reload(id = familyId) {
     if (id) setItems(await getEmergencyContacts(id));
@@ -207,6 +212,25 @@ export default function EmergencyContactsScreen() {
         <Text style={[styles.title, { color: palette.textPrimary }]}>Sürgősségi kapcsolatok</Text>
         <Ionicons name="call-outline" size={22} color={colors.teal} />
       </View>
+      <View style={styles.searchRow}>
+        <View style={[styles.search, { backgroundColor: palette.surfaceElevated, borderColor: palette.border }]}>
+          <Ionicons name="search" size={20} color={colors.teal} />
+          <TextInput
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Kapcsolat keresése..."
+            placeholderTextColor={palette.textMuted}
+            style={[styles.searchInput, { color: palette.textPrimary }]}
+          />
+        </View>
+        <Pressable
+          accessibilityLabel="Kapcsolat szűrők"
+          onPress={() => setFilterVisible(true)}
+          style={[styles.filterButton, { backgroundColor: palette.surface, borderColor: palette.border }]}
+        >
+          <Ionicons name="options-outline" size={21} color={colors.teal} />
+        </Pressable>
+      </View>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={[styles.hero, { backgroundColor: isDark ? '#123E3A' : '#E4F8F3', borderColor: isDark ? '#1E6258' : '#C2EADD' }]}>
           <View style={[styles.heroIcon, { backgroundColor: palette.surface }]}>
@@ -218,7 +242,23 @@ export default function EmergencyContactsScreen() {
           </View>
         </View>
 
-        {items.map((item) => (
+        {[...items]
+          .filter((item) => {
+            if (!`${item.name} ${item.relation ?? ''} ${item.phone} ${item.email ?? ''} ${item.notes ?? ''}`
+              .toLocaleLowerCase('hu-HU')
+              .includes(search.trim().toLocaleLowerCase('hu-HU'))) return false;
+            if (primaryFilter === 'primary' && !item.is_primary) return false;
+            if (primaryFilter === 'regular' && item.is_primary) return false;
+            if (relationFilter !== 'all' && (item.relation ?? '').toLocaleLowerCase('hu-HU') !== relationFilter) return false;
+            return true;
+          })
+          .sort((a, b) => {
+            if (sortBy === 'name') return a.name.localeCompare(b.name, 'hu');
+            if (sortBy === 'newest') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+            if (a.is_primary !== b.is_primary) return a.is_primary ? -1 : 1;
+            return a.priority - b.priority;
+          })
+          .map((item) => (
           <View key={item.id} style={[styles.card, { backgroundColor: palette.surface, borderColor: item.is_primary ? colors.teal : palette.border }]}>
             <View style={[styles.avatar, { backgroundColor: item.is_primary ? colors.teal : palette.primarySoft }]}>
               <Text style={[styles.avatarText, { color: item.is_primary ? colors.white : palette.primary }]}>
@@ -257,6 +297,68 @@ export default function EmergencyContactsScreen() {
       <Pressable onPress={() => openForm()} style={styles.fab} accessibilityLabel="Új sürgősségi kapcsolat">
         <Ionicons name="add" size={31} color={colors.white} />
       </Pressable>
+
+      <Modal visible={filterVisible} transparent animationType="slide" onRequestClose={() => setFilterVisible(false)}>
+        <View style={[styles.overlay, { backgroundColor: isDark ? 'rgba(3, 10, 24, 0.78)' : 'rgba(23, 43, 77, 0.38)' }]}>
+          <View style={[styles.modal, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+            <View style={styles.modalContent}>
+              <View style={styles.filterHeader}>
+                <Text style={[styles.modalTitle, { color: palette.textPrimary }]}>Kapcsolatszűrők</Text>
+                <Pressable onPress={() => setFilterVisible(false)} hitSlop={8}>
+                  <Ionicons name="close" size={24} color={palette.textSecondary} />
+                </Pressable>
+              </View>
+              <Text style={[styles.fieldLabel, { color: palette.textSecondary }]}>Rendezés</Text>
+              <View style={styles.optionRow}>
+                {([
+                  ['priority', 'Fontosság'],
+                  ['name', 'ABC'],
+                  ['newest', 'Legújabb'],
+                ] as const).map(([value, label]) => (
+                  <Pressable key={value} onPress={() => setSortBy(value)} style={[styles.option, { backgroundColor: sortBy === value ? colors.teal : palette.surfaceElevated }]}>
+                    <Text style={{ color: sortBy === value ? colors.white : palette.textSecondary, fontWeight: '800' }}>{label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <Text style={[styles.fieldLabel, { color: palette.textSecondary }]}>Fontosság</Text>
+              <View style={styles.optionRow}>
+                {([
+                  ['all', 'Mind'],
+                  ['primary', 'Elsődleges'],
+                  ['regular', 'Egyéb'],
+                ] as const).map(([value, label]) => (
+                  <Pressable key={value} onPress={() => setPrimaryFilter(value)} style={[styles.option, { backgroundColor: primaryFilter === value ? colors.teal : palette.surfaceElevated }]}>
+                    <Text style={{ color: primaryFilter === value ? colors.white : palette.textSecondary, fontWeight: '800' }}>{label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <Text style={[styles.fieldLabel, { color: palette.textSecondary }]}>Kapcsolat típusa</Text>
+              <View style={styles.optionRow}>
+                {[
+                  ['all', 'Mind'],
+                  ['orvos', 'Orvos'],
+                  ['mentő', 'Mentő'],
+                  ['család', 'Család'],
+                  ['műszaki', 'Műszaki'],
+                  ['egyesület', 'Egyéb szervezet'],
+                ].map(([value, label]) => (
+                  <Pressable key={value} onPress={() => setRelationFilter(value === 'all' ? 'all' : label.toLocaleLowerCase('hu-HU'))} style={[styles.option, { backgroundColor: (relationFilter === (value === 'all' ? 'all' : label.toLocaleLowerCase('hu-HU'))) ? colors.teal : palette.surfaceElevated }]}>
+                    <Text style={{ color: (relationFilter === (value === 'all' ? 'all' : label.toLocaleLowerCase('hu-HU'))) ? colors.white : palette.textSecondary, fontWeight: '800' }}>{label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <View style={styles.actions}>
+                <Pressable onPress={() => { setPrimaryFilter('all'); setRelationFilter('all'); setSortBy('priority'); setSearch(''); }} style={styles.cancel}>
+                  <Text style={{ color: palette.textSecondary, fontWeight: '800' }}>Szűrők törlése</Text>
+                </Pressable>
+                <Pressable onPress={() => setFilterVisible(false)} style={[styles.save, { backgroundColor: colors.teal }]}>
+                  <Text style={styles.saveText}>Megjelenítés</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={visible} transparent animationType="slide" onRequestClose={() => setVisible(false)}>
         <View style={[styles.overlay, { backgroundColor: isDark ? 'rgba(3, 10, 24, 0.78)' : 'rgba(23, 43, 77, 0.38)' }]}>
@@ -314,6 +416,10 @@ const styles = StyleSheet.create({
   header: { minHeight: 64, paddingHorizontal: spacing.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: { flex: 1, marginHorizontal: spacing.sm, textAlign: 'center', fontSize: 20, fontWeight: '900' },
   flex: { flex: 1 },
+  searchRow: { marginHorizontal: spacing.lg, marginTop: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  search: { flex: 1, minHeight: 50, paddingHorizontal: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderRadius: radius.lg },
+  searchInput: { flex: 1, fontSize: 13 },
+  filterButton: { width: 50, height: 50, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderRadius: radius.lg },
   content: { padding: spacing.lg, paddingBottom: 110, gap: spacing.md },
   hero: { padding: spacing.lg, flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderWidth: 1, borderRadius: radius.lg },
   heroIcon: { width: 56, height: 56, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
@@ -335,6 +441,9 @@ const styles = StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end' },
   modal: { maxHeight: '92%', borderTopWidth: 1, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl },
   modalContent: { padding: spacing.xl, gap: spacing.md },
+  filterHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  optionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  option: { minHeight: 38, paddingHorizontal: spacing.md, alignItems: 'center', justifyContent: 'center', borderRadius: radius.round },
   modalTitle: { fontSize: 20, fontWeight: '900' },
   input: { minHeight: 48, paddingHorizontal: spacing.md, borderWidth: 1, borderRadius: radius.lg },
   textArea: { minHeight: 82, paddingTop: spacing.md, textAlignVertical: 'top' },
