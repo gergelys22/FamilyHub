@@ -310,6 +310,105 @@ export default function BudgetScreen() {
         </View>
 
         {tab === 'transactions' ? (
+          <View style={styles.chartsGrid}>
+            <View style={[styles.chartCard, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+              <View style={styles.chartHeader}>
+                <Text style={[styles.chartTitle, { color: palette.textPrimary }]}>Kiadások</Text>
+                <Text style={[styles.chartSubtitle, { color: palette.textMuted }]}>Kategóriánként</Text>
+              </View>
+              {categoryTotals.length > 0 ? (
+                <>
+                  <View style={styles.donutWrap}>
+                    <View style={[styles.donut, { backgroundColor: palette.surfaceMuted }]}>
+                      {categoryTotals.map((item, index) => {
+                        const angle = (360 / Math.max(categoryTotals.length, 1)) * index;
+                        return (
+                          <View
+                            key={item.key}
+                            style={[
+                              styles.donutSegment,
+                              {
+                                backgroundColor: item.color,
+                                transform: [
+                                  { rotate: `${angle}deg` },
+                                  { translateY: -58 },
+                                  { rotate: `${-angle}deg` },
+                                ],
+                              },
+                            ]}
+                          />
+                        );
+                      })}
+                      <View style={[styles.donutInner, { backgroundColor: palette.surface }]}>
+                        <Text style={[styles.donutLabel, { color: palette.textMuted }]}>Összesen</Text>
+                        <Text style={[styles.donutValue, { color: palette.textPrimary }]}>
+                          {formatHuf(monthlySpent)}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                  <View style={styles.categoryLegend}>
+                    {categoryTotals.slice(0, 5).map((item) => (
+                      <View key={item.key} style={styles.legendRow}>
+                        <View style={[styles.legendDot, { backgroundColor: item.color }]} />
+                        <Text numberOfLines={1} style={[styles.legendName, { color: palette.textSecondary }]}>
+                          {item.label}
+                        </Text>
+                        <Text style={[styles.legendValue, { color: palette.textPrimary }]}>
+                          {Math.round((item.value / Math.max(monthlySpent, 1)) * 100)}%
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </>
+              ) : (
+                <View style={styles.chartEmpty}>
+                  <Ionicons name="pie-chart-outline" size={38} color={palette.textMuted} />
+                  <Text style={[styles.emptyChartText, { color: palette.textMuted }]}>Még nincs kiadási adat</Text>
+                </View>
+              )}
+            </View>
+
+            <View style={[styles.chartCard, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+              <View style={styles.chartHeader}>
+                <Text style={[styles.chartTitle, { color: palette.textPrimary }]}>Havi trend</Text>
+                <Text style={[styles.chartSubtitle, { color: palette.textMuted }]}>Utolsó 6 hónap</Text>
+              </View>
+              <View style={styles.barChart}>
+                {monthlyTotals.map((item) => {
+                  const height = item.value > 0
+                    ? Math.max(18, Math.round((item.value / maxMonthlyValue) * 118))
+                    : 8;
+                  return (
+                    <View key={item.key} style={styles.barColumn}>
+                      <View style={styles.barTrack}>
+                        {item.value > 0 ? (
+                          <View
+                            style={[
+                              styles.bar,
+                              {
+                                height,
+                                backgroundColor: item.isCurrent ? palette.primary : palette.primaryLight,
+                                opacity: item.isCurrent ? 1 : 0.62,
+                              },
+                            ]}
+                          />
+                        ) : (
+                          <View style={[styles.bar, { height: 8, backgroundColor: palette.surfaceMuted }]} />
+                        )}
+                      </View>
+                      <Text style={[styles.barLabel, { color: item.isCurrent ? palette.primary : palette.textMuted }]}>
+                        {item.label}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+        ) : null}
+
+        {tab === 'transactions' ? (
           <>
             {monthTransactions.length === 0 ? (
               <Text style={[styles.empty, { color: palette.textMuted }]}>Ebben a hónapban nincs rögzített kiadás.</Text>
@@ -490,6 +589,79 @@ const styles = StyleSheet.create({
   summarySide: { alignItems: 'flex-end' },
   summarySmall: { fontSize: 9, fontWeight: '800' },
   summarySmallValue: { marginTop: 3, fontSize: 12, fontWeight: '900' },
+  chartsGrid: { gap: spacing.md },
+  chartCard: {
+    minHeight: 260,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderRadius: radius.xl,
+    ...shadows.card,
+  },
+  chartHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  chartTitle: { fontSize: 16, fontWeight: '900' },
+  chartSubtitle: { fontSize: 10, fontWeight: '700' },
+  donutWrap: {
+    height: 150,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  donut: {
+    width: 136,
+    height: 136,
+    borderRadius: 68,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  donutSegment: {
+    position: 'absolute',
+    left: 63,
+    top: 63,
+    width: 10,
+    height: 26,
+    borderRadius: 5,
+  },
+  donutInner: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  donutLabel: { fontSize: 9, fontWeight: '800' },
+  donutValue: { marginTop: 3, maxWidth: 82, fontSize: 13, fontWeight: '900', textAlign: 'center' },
+  categoryLegend: { gap: 5 },
+  legendRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  legendDot: { width: 9, height: 9, borderRadius: 5 },
+  legendName: { flex: 1, fontSize: 11, fontWeight: '700' },
+  legendValue: { fontSize: 11, fontWeight: '900' },
+  chartEmpty: { minHeight: 180, alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
+  emptyChartText: { fontSize: 11, fontWeight: '700' },
+  barChart: {
+    height: 165,
+    marginTop: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-around',
+  },
+  barColumn: {
+    width: 42,
+    height: 150,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  barTrack: {
+    height: 132,
+    justifyContent: 'flex-end',
+  },
+  bar: {
+    width: 24,
+    borderRadius: 12,
+  },
+  barLabel: { height: 18, marginTop: 4, fontSize: 9, fontWeight: '800', textAlign: 'center' },
   card: { minHeight: 78, padding: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderWidth: 1, borderRadius: radius.lg, ...shadows.card },
   categoryIcon: { width: 44, height: 44, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   cardTitle: { fontSize: 14, fontWeight: '900' },
