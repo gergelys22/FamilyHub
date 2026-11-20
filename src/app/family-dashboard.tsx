@@ -6,6 +6,7 @@ import { useAuth } from '@/providers/auth-provider';
 import { useTheme } from '@/providers/theme-provider';
 import type { Family } from '@/services/families';
 import { Ionicons } from '@expo/vector-icons';
+import { ScreenCloseButton } from '@/components/screen-close-button';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -217,9 +218,7 @@ export default function FamilyDashboardScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.back} accessibilityLabel="Vissza">
-          <Ionicons name="chevron-back" size={25} color={palette.textPrimary} />
-        </Pressable>
+        <ScreenCloseButton />
         <View style={styles.headerTitleWrap}>
           <Text style={styles.screenTitle}>Vezérlőpult</Text>
           <Text numberOfLines={1} style={styles.screenSubtitle}>

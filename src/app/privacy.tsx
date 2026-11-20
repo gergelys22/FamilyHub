@@ -1,6 +1,7 @@
 import { colors, darkColors, radius, spacing } from '@/constants/theme';
 import { useTheme } from '@/providers/theme-provider';
 import { Ionicons } from '@expo/vector-icons';
+import { ScreenCloseButton } from '@/components/screen-close-button';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,9 +21,7 @@ export default function PrivacyScreen() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={[styles.headerButton, { backgroundColor: palette.surface }]} accessibilityRole="button" accessibilityLabel="Vissza">
-          <Ionicons name="chevron-back" size={25} color={palette.textPrimary} />
-        </Pressable>
+        <ScreenCloseButton />
         <Text style={[styles.title, { color: palette.textPrimary }]}>Adatvédelem</Text>
         <Ionicons name="shield-checkmark-outline" size={22} color={colors.success} />
       </View>

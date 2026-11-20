@@ -11,6 +11,7 @@ import {
 import { useAuth } from '@/providers/auth-provider';
 import { useTheme } from '@/providers/theme-provider';
 import { Ionicons } from '@expo/vector-icons';
+import { ScreenCloseButton } from '@/components/screen-close-button';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -244,9 +245,7 @@ export default function SchoolChildren() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} accessibilityLabel="Vissza" style={[styles.headerButton, { backgroundColor: palette.surface }]}>
-          <Ionicons name="chevron-back" size={24} color={palette.textPrimary} />
-        </Pressable>
+        <ScreenCloseButton />
         <Text style={[styles.headerTitle, { color: palette.textPrimary }]}>Iskolai központ</Text>
         <Pressable
           onPress={() => router.push({

@@ -3,6 +3,7 @@ import { darkColors } from '@/constants/theme';
 import { useTheme } from '@/providers/theme-provider';
 import { getFamilyMembers, getMyFamilies, type FamilyMember } from '@/services/families';
 import { Ionicons } from '@expo/vector-icons';
+import { ScreenCloseButton } from '@/components/screen-close-button';
 import { useRouter } from 'expo-router';
 import {
   Alert,
@@ -45,9 +46,7 @@ export default function LocationSharingScreen() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.headerButton}>
-          <Ionicons name="chevron-back" size={25} color={palette.textPrimary} />
-        </Pressable>
+        <ScreenCloseButton />
         <Text style={[styles.title, { color: palette.textPrimary }]}>Helymegosztás</Text>
         <Ionicons name="shield-checkmark-outline" size={22} color={colors.success} />
       </View>

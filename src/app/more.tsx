@@ -19,7 +19,11 @@ function MenuItem({ icon, label, color = colors.primary, onPress, palette }: Men
       accessibilityRole="button"
       accessibilityLabel={`${label} megnyitása`}
       onPress={onPress}
-      style={({ pressed }) => [styles.menuItem, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.menuItem,
+        pressed && { backgroundColor: palette.surfaceMuted },
+        pressed && styles.pressed,
+      ]}
     >
       <Ionicons name={icon} size={23} color={color} />
       <Text style={[styles.menuLabel, { color: palette.textPrimary }]}>{label}</Text>
@@ -47,7 +51,7 @@ export default function MoreScreen() {
           onPress={() => router.push('/profile')}
           style={({ pressed }) => [
             styles.profileCard,
-            { backgroundColor: palette.surface },
+            { backgroundColor: palette.surface, borderColor: palette.border },
             pressed && styles.pressed,
           ]}
         >
@@ -61,7 +65,15 @@ export default function MoreScreen() {
           <Ionicons name="chevron-forward" size={20} color={palette.primary} />
         </Pressable>
 
-        <View style={styles.menu}>
+        <View
+          style={[
+            styles.menu,
+            {
+              backgroundColor: palette.surface,
+              borderColor: palette.border,
+            },
+          ]}
+        >
           <MenuItem
             icon="people-outline"
             label="Családtagok"
@@ -134,12 +146,31 @@ export default function MoreScreen() {
             pressed && styles.pressed,
           ]}
         >
-          <View style={styles.securityIcon}>
+          <View
+            style={[
+              styles.securityIcon,
+              { backgroundColor: isDark ? '#0C4A45' : '#D2F6EC' },
+            ]}
+          >
             <Ionicons name="shield-checkmark" size={27} color="#20BFA7" />
           </View>
           <View style={styles.securityContent}>
-            <Text style={styles.securityTitle}>Adatvédelem és biztonság</Text>
-            <Text style={styles.securityText}>Adatkezelési tájékoztató</Text>
+            <Text
+              style={[
+                styles.securityTitle,
+                { color: isDark ? '#7EE7D3' : '#117C6C' },
+              ]}
+            >
+              Adatvédelem és biztonság
+            </Text>
+            <Text
+              style={[
+                styles.securityText,
+                { color: isDark ? '#A6CEC7' : '#4B9E90' },
+              ]}
+            >
+              Adatkezelési tájékoztató
+            </Text>
           </View>
           <Ionicons name="chevron-forward" size={19} color="#20BFA7" />
         </Pressable>

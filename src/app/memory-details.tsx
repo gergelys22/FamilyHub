@@ -2,6 +2,7 @@ import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme'
 import { useTheme } from '@/providers/theme-provider';
 import { useMemories } from '@/hooks/use-memories';
 import { Ionicons } from '@expo/vector-icons';
+import { ScreenCloseButton } from '@/components/screen-close-button';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -61,14 +62,7 @@ export default function MemoryDetailsScreen() {
                 <Ionicons name="image-outline" size={44} color={palette.textMuted} />
               </View>
             )}
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Vissza az emlékekhez"
-              onPress={() => router.back()}
-              style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
-            >
-              <Ionicons name="chevron-back" size={26} color={colors.white} />
-            </Pressable>
+            <ScreenCloseButton accessibilityLabel="Vissza az emlékekhez" />
           </View>
 
           <View style={[styles.detailsCard, { backgroundColor: palette.surface }]}>

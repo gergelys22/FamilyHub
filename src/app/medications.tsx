@@ -9,6 +9,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ScreenCloseButton } from '@/components/screen-close-button';
 
 export default function MedicationsScreen() {
   const router = useRouter(); const { profile } = useAuth();
@@ -20,6 +21,52 @@ export default function MedicationsScreen() {
   function openForm(item?: Medication) { setEditing(item ?? null); setName(item?.name ?? ''); setDose(item?.dosage_text ?? ''); setInstructions(item?.instructions ?? ''); setVisible(true); }
   async function save() { if (!familyId || !profile?.id || !name.trim() || !dose.trim()) return Alert.alert('Hiányzó adat', 'Add meg a gyógyszer nevét és adagját.'); setBusy(true); try { await saveMedication({ id: editing?.id, familyId, profileId: profile.id, name, dosageText: dose, instructions }); await reload(); setVisible(false); } catch (error) { Alert.alert('Mentés sikertelen', error instanceof Error ? error.message : 'Próbáld újra.'); } finally { setBusy(false); } }
   function remove(item: Medication) { Alert.alert('Gyógyszer törlése', `Törlöd a(z) ${item.name} gyógyszert?`, [{ text: 'Mégse', style: 'cancel' }, { text: 'Törlés', style: 'destructive', onPress: () => void deleteMedication(item.id).then(() => reload()).catch((error) => Alert.alert('Hiba', error.message)) }]); }
-  return <SafeAreaView style={[styles.safe, { backgroundColor: palette.background }]} edges={['top']}><View style={styles.header}><Pressable onPress={() => router.back()} style={[styles.back, { backgroundColor: palette.surface }]}><Ionicons name="chevron-back" size={25} color={palette.textPrimary} /></Pressable><Text style={[styles.title, { color: palette.textPrimary }]}>Gyógyszerek</Text><Ionicons name="medkit-outline" size={22} color={palette.primary} /></View><ScrollView contentContainerStyle={styles.content}><View style={styles.hero}><Ionicons name="medkit" size={28} color={colors.pink} /><View><Text style={styles.heroTitle}>Családi gyógyszerek</Text><Text style={styles.heroText}>Az adagolást mindig egyeztesd orvossal.</Text></View></View>{items.map((item) => <Pressable key={item.id} onPress={() => openForm(item)} onLongPress={() => remove(item)} style={styles.card}><View style={styles.icon}><Ionicons name="medkit-outline" size={24} color={colors.teal} /></View><View style={styles.flex}><Text style={styles.name}>{item.name}</Text><Text style={styles.dose}>{item.dosage_text ?? 'Adagolás nincs megadva'}</Text>{item.instructions ? <Text style={styles.meta}>{item.instructions}</Text> : null}</View><Ionicons name="create-outline" size={20} color={colors.primary} /></Pressable>)}{items.length === 0 ? <Text style={styles.empty}>Még nincs gyógyszer rögzítve.</Text> : null}</ScrollView><Pressable onPress={() => openForm()} style={styles.fab}><Ionicons name="add" size={31} color={colors.white} /></Pressable><Modal visible={visible} transparent animationType="slide" onRequestClose={() => setVisible(false)}><View style={styles.overlay}><View style={styles.modal}><Text style={styles.modalTitle}>{editing ? 'Gyógyszer szerkesztése' : 'Új gyógyszer'}</Text><TextInput value={name} onChangeText={setName} placeholder="Gyógyszer neve" style={styles.input} /><TextInput value={dose} onChangeText={setDose} placeholder="Adagolás, például 10 mg" style={styles.input} /><TextInput value={instructions} onChangeText={setInstructions} placeholder="Megjegyzés (opcionális)" style={styles.input} /><View style={styles.actions}><Pressable onPress={() => setVisible(false)} style={styles.cancel}><Text>Mégse</Text></Pressable><Pressable disabled={busy} onPress={() => void save()} style={styles.save}><Text style={styles.saveText}>{busy ? 'Mentés…' : 'Mentés'}</Text></Pressable></View></View></View></Modal></SafeAreaView>;
+  return (
+    <SafeAreaView style={[styles.safe, { backgroundColor: palette.background }]} edges={['top']}>
+      <View style={styles.header}>
+        <ScreenCloseButton />
+        <Text style={[styles.title, { color: palette.textPrimary }]}>Gyógyszerek</Text>
+        <Ionicons name="medkit-outline" size={22} color={palette.primary} />
+      </View>
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.hero}>
+          <Ionicons name="medkit" size={28} color={colors.pink} />
+          <View>
+            <Text style={styles.heroTitle}>Családi gyógyszerek</Text>
+            <Text style={styles.heroText}>Az adagolást mindig egyeztesd orvossal.</Text>
+          </View>
+        </View>
+        {items.map((item) => (
+          <Pressable key={item.id} onPress={() => openForm(item)} onLongPress={() => remove(item)} style={styles.card}>
+            <View style={styles.icon}><Ionicons name="medkit-outline" size={24} color={colors.teal} /></View>
+            <View style={styles.flex}>
+              <Text style={styles.name}>{item.name}</Text>
+              <Text style={styles.dose}>{item.dosage_text ?? 'Adagolás nincs megadva'}</Text>
+              {item.instructions ? <Text style={styles.meta}>{item.instructions}</Text> : null}
+            </View>
+            <Ionicons name="create-outline" size={20} color={colors.primary} />
+          </Pressable>
+        ))}
+        {items.length === 0 ? <Text style={styles.empty}>Még nincs gyógyszer rögzítve.</Text> : null}
+      </ScrollView>
+      <Pressable onPress={() => openForm()} style={styles.fab}>
+        <Ionicons name="add" size={31} color={colors.white} />
+      </Pressable>
+      <Modal visible={visible} transparent animationType="slide" onRequestClose={() => setVisible(false)}>
+        <View style={styles.overlay}>
+          <View style={styles.modal}>
+            <Text style={styles.modalTitle}>{editing ? 'Gyógyszer szerkesztése' : 'Új gyógyszer'}</Text>
+            <TextInput value={name} onChangeText={setName} placeholder="Gyógyszer neve" style={styles.input} />
+            <TextInput value={dose} onChangeText={setDose} placeholder="Adagolás, például 10 mg" style={styles.input} />
+            <TextInput value={instructions} onChangeText={setInstructions} placeholder="Megjegyzés (opcionális)" style={styles.input} />
+            <View style={styles.actions}>
+              <Pressable onPress={() => setVisible(false)} style={styles.cancel}><Text>Mégse</Text></Pressable>
+              <Pressable disabled={busy} onPress={() => void save()} style={styles.save}><Text style={styles.saveText}>{busy ? 'Mentés…' : 'Mentés'}</Text></Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
 }
 function createStyles(colors: typeof import('@/constants/theme').colors | typeof darkColors) { return StyleSheet.create({ safe: { flex: 1, backgroundColor: colors.background }, header: { minHeight: 64, paddingHorizontal: spacing.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, back: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center', borderRadius: radius.round, backgroundColor: colors.surface }, title: { fontSize: 27, fontWeight: '900', color: colors.textPrimary }, content: { padding: spacing.lg, paddingBottom: 110, gap: spacing.md }, hero: { padding: spacing.lg, flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceElevated }, heroTitle: { color: colors.textPrimary, fontWeight: '900', fontSize: 16 }, heroText: { color: colors.textSecondary, fontSize: 11, marginTop: 3 }, card: { minHeight: 78, padding: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderRadius: radius.lg, backgroundColor: colors.surface, ...shadows.card }, icon: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: 24, backgroundColor: colors.primarySoft }, flex: { flex: 1 }, name: { color: colors.textPrimary, fontSize: 14, fontWeight: '900' }, dose: { color: colors.textSecondary, fontSize: 12, marginTop: 4 }, meta: { color: colors.textMuted, fontSize: 11, marginTop: 3 }, empty: { color: colors.textMuted, textAlign: 'center', padding: spacing.xl }, fab: { position: 'absolute', right: spacing.lg, bottom: spacing.xl, width: 58, height: 58, alignItems: 'center', justifyContent: 'center', borderRadius: 29, backgroundColor: colors.primary, ...shadows.floating }, overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: '#172B4D66' }, modal: { padding: spacing.xl, gap: spacing.md, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, backgroundColor: colors.surface }, modalTitle: { color: colors.textPrimary, fontSize: 20, fontWeight: '900' }, input: { minHeight: 48, paddingHorizontal: spacing.md, borderRadius: radius.lg, backgroundColor: colors.background, color: colors.textPrimary }, actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm }, cancel: { padding: spacing.md }, save: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderRadius: radius.lg, backgroundColor: colors.primary }, saveText: { color: colors.white, fontWeight: '900' } }); }

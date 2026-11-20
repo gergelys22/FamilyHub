@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, darkColors, radius, spacing } from '@/constants/theme';
 import { useTheme } from '@/providers/theme-provider';
 import { createFamilyInvite, InviteCreatedError, InviteRole } from '@/services/family-invites';
+import { ScreenCloseButton } from '@/components/screen-close-button';
 
 const roleOptions: {
   value: InviteRole;
@@ -177,19 +178,11 @@ export default function InviteMemberScreen() {
         />
 
         <View style={styles.header}>
-          <Pressable
-            accessibilityLabel="Bezárás"
-            accessibilityRole="button"
+          <ScreenCloseButton
+            accessibilityLabel="Meghívó bezárása"
             disabled={submitting}
-            onPress={() => router.replace('/')}
-            style={({ pressed }) => [
-              styles.closeButton,
-              { backgroundColor: palette.surface, borderColor: palette.border },
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text style={[styles.closeText, { color: palette.textSecondary }]}>×</Text>
-          </Pressable>
+            onPress={() => !submitting && router.replace('/')}
+          />
           <Text style={[styles.headerTitle, { color: palette.textSecondary }]}>Új családtag</Text>
           <View style={styles.headerSpacer} />
         </View>

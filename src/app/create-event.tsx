@@ -1,5 +1,6 @@
 import DateTimeField from '@/components/date-time-field';
 import LocationAutocomplete from '@/components/location-autocomplete';
+import { ScreenCloseButton } from '@/components/screen-close-button';
 import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
 import { useTheme } from '@/providers/theme-provider';
 import { createFamilyEvent, type EventCategory } from '@/services/events';
@@ -125,24 +126,31 @@ export default function CreateEventScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={[styles.header, { backgroundColor: palette.background }]}>
-          <Pressable onPress={() => router.back()} style={styles.iconButton}>
-            <SymbolView
-              name={{ ios: 'xmark', android: 'close', web: 'close' }}
-              size={22}
-              tintColor={palette.textPrimary}
-              weight={{ ios: 'semibold', android: medium }}
-              style={styles.symbol}
-            />
-          </Pressable>
-          <Text style={styles.headerTitle}>Új esemény</Text>
+          <ScreenCloseButton />
+          <Text style={[styles.headerTitle, { color: palette.textPrimary }]}>Új esemény</Text>
           <View style={styles.headerSpacer} />
         </View>
         <ScrollView
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.familyBadge}>
-            <Text style={styles.familyBadgeText}>{familyName}</Text>
+          <View
+            style={[
+              styles.familyBadge,
+              {
+                backgroundColor: isDark ? '#17335C' : palette.primarySoft,
+                borderColor: isDark ? '#315687' : '#CBDCFF',
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.familyBadgeText,
+                { color: isDark ? palette.primaryLight : palette.primaryDark },
+              ]}
+            >
+              {familyName}
+            </Text>
           </View>
           <View style={styles.field}>
             <Text style={styles.label}>Esemény címe</Text>
@@ -292,7 +300,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.round,
-    backgroundColor: '#17335C',
+    borderWidth: 1,
   },
   familyBadgeText: { color: colors.primaryLight, fontSize: 11, fontWeight: '800' },
   field: { gap: spacing.sm },

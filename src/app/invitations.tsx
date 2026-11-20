@@ -7,6 +7,7 @@ import {
   rejectFamilyInvite,
 } from '@/services/family-invites';
 import { useRouter } from 'expo-router';
+import { ScreenCloseButton } from '@/components/screen-close-button';
 import { SymbolView } from 'expo-symbols';
 import medium from 'expo-symbols/androidWeights/medium';
 import { useCallback, useEffect, useState } from 'react';
@@ -129,18 +130,7 @@ export default function InvitationsScreen() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top', 'bottom']}>
       <View style={[styles.header, { backgroundColor: palette.background }]}>
-        <Pressable
-          onPress={() => router.back()}
-          style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
-        >
-          <SymbolView
-            name={{ ios: 'chevron.left', android: 'arrow_back', web: 'arrow_back' }}
-            size={23}
-            tintColor={palette.textPrimary}
-            weight={{ ios: 'semibold', android: medium }}
-            style={styles.symbol}
-          />
-        </Pressable>
+        <ScreenCloseButton />
         <Text style={[styles.headerTitle, { color: palette.textPrimary }]}>Családi meghívások</Text>
         <View style={styles.headerSpacer} />
       </View>

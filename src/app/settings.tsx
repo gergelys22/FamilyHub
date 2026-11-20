@@ -1,6 +1,7 @@
 import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
 import { useTheme } from '@/providers/theme-provider';
 import { Ionicons } from '@expo/vector-icons';
+import { ScreenCloseButton } from '@/components/screen-close-button';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import {
@@ -63,9 +64,7 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={[styles.headerButton, { backgroundColor: palette.surface }]}>
-          <Ionicons name="chevron-back" size={25} color={palette.textPrimary} />
-        </Pressable>
+        <ScreenCloseButton />
         <Text style={[styles.title, { color: palette.textPrimary }]}>Beállítások</Text>
         <Ionicons name="settings-outline" size={22} color={palette.primary} />
       </View>

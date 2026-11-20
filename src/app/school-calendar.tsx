@@ -2,6 +2,7 @@ import { colors, darkColors, radius, spacing } from '@/constants/theme';
 import { getFamilySchoolItems, type FamilySchoolItem } from '@/services/family-content';
 import { useTheme } from '@/providers/theme-provider';
 import { Ionicons } from '@expo/vector-icons';
+import { ScreenCloseButton } from '@/components/screen-close-button';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -84,9 +85,7 @@ export default function SchoolCalendarScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: palette.background }]} edges={['top']}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} accessibilityLabel="Vissza" style={[styles.headerButton, { backgroundColor: palette.surface }]}>
-          <Ionicons name="chevron-back" size={24} color={palette.textPrimary} />
-        </Pressable>
+        <ScreenCloseButton />
         <View style={styles.headerTitleWrap}>
           <Text style={[styles.title, { color: palette.textPrimary }]}>Gyermek naptára</Text>
           <Text style={[styles.subtitle, { color: palette.textSecondary }]}>{childName || 'Kiválasztott gyermek'}</Text>

@@ -3,6 +3,7 @@ import { darkColors } from '@/constants/theme';
 import { useTheme } from '@/providers/theme-provider';
 import { useAuth } from '@/providers/auth-provider';
 import { Ionicons } from '@expo/vector-icons';
+import { ScreenCloseButton } from '@/components/screen-close-button';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -153,15 +154,7 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <Pressable
-          accessibilityLabel="Vissza"
-          accessibilityRole="button"
-          hitSlop={8}
-          onPress={() => router.back()}
-          style={({ pressed }) => [styles.headerButton, pressed && styles.pressed]}
-        >
-          <Ionicons name="chevron-back" size={24} color={palette.textPrimary} />
-        </Pressable>
+        <ScreenCloseButton />
         <Text style={[styles.headerTitle, { color: palette.textPrimary }]}>Profil</Text>
         <Pressable
           accessibilityRole="button"

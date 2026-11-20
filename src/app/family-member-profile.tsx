@@ -2,6 +2,7 @@ import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme'
 import { useTheme } from '@/providers/theme-provider';
 import { getProfile } from '@/services/families';
 import { Ionicons } from '@expo/vector-icons';
+import { ScreenCloseButton } from '@/components/screen-close-button';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -135,14 +136,7 @@ export default function FamilyMemberProfileScreen() {
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
         <View style={styles.header}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Vissza a beszélgetéshez"
-            onPress={() => router.back()}
-            style={({ pressed }) => [styles.headerButton, pressed && styles.pressed]}
-          >
-            <Ionicons name="chevron-back" size={25} color={palette.textPrimary} />
-          </Pressable>
+          <ScreenCloseButton accessibilityLabel="Vissza a beszélgetéshez" />
           <Text style={[styles.headerTitle, { color: palette.textPrimary }]}>Családi csoport</Text>
           <View style={styles.headerPlaceholder} />
         </View>
@@ -196,14 +190,7 @@ export default function FamilyMemberProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.profileHeader}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Vissza a beszélgetéshez"
-            onPress={() => router.back()}
-            style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
-          >
-            <Ionicons name="chevron-back" size={25} color={palette.textPrimary} />
-          </Pressable>
+          <ScreenCloseButton accessibilityLabel="Vissza a beszélgetéshez" />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Profilbeállítások"

@@ -4,6 +4,7 @@ import { deleteFamilyEvent, getFamilyEvent, type FamilyEvent } from '@/services/
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import medium from 'expo-symbols/androidWeights/medium';
+import { ScreenCloseButton } from '@/components/screen-close-button';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -224,24 +225,7 @@ export default function EventDetailsScreen() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <Pressable
-          accessibilityLabel="Vissza"
-          accessibilityRole="button"
-          onPress={() => router.back()}
-          style={({ pressed }) => [styles.headerButton, pressed && styles.pressed]}
-        >
-          <SymbolView
-            name={{
-              ios: 'chevron.left',
-              android: 'arrow_back',
-              web: 'arrow_back',
-            }}
-            size={23}
-            tintColor={palette.textPrimary}
-            weight={{ ios: 'semibold', android: medium }}
-            style={styles.symbol}
-          />
-        </Pressable>
+        <ScreenCloseButton />
 
         <Text style={styles.headerTitle}>Esemény részletei</Text>
 

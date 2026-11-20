@@ -12,6 +12,7 @@ import {
 import { getFamilyMembers, getMyFamilies, type FamilyMember } from '@/services/families';
 import { formatPickerValue, parseLocalDateTime } from '@/utils/event-date-time';
 import { Ionicons } from '@expo/vector-icons';
+import { ScreenCloseButton } from '@/components/screen-close-button';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -193,9 +194,7 @@ export default function TasksScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.back} accessibilityLabel="Vissza">
-          <Ionicons name="chevron-back" size={25} color={palette.textPrimary} />
-        </Pressable>
+        <ScreenCloseButton />
         <Text style={styles.title}>{listType === 'task' ? 'Teendők' : 'Bevásárlólista'}</Text>
         <Ionicons name={listType === 'task' ? 'checkmark-circle-outline' : 'cart-outline'} size={23} color={palette.primary} />
       </View>

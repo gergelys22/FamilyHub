@@ -4,6 +4,7 @@ import { useChatMessages } from '@/hooks/use-chat';
 import { useAuth } from '@/providers/auth-provider';
 import { getChatConversation, type ChatConversation } from '@/services/chat';
 import { Ionicons } from '@expo/vector-icons';
+import { ScreenCloseButton } from '@/components/screen-close-button';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -51,9 +52,7 @@ export default function ChatDetailsScreen() {
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top', 'bottom']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboard}>
         <View style={[styles.header, { backgroundColor: palette.surface, borderBottomColor: palette.border }]}>
-          <Pressable onPress={() => router.back()} style={styles.headerButton}>
-            <Ionicons name="chevron-back" size={25} color={palette.textPrimary} />
-          </Pressable>
+          <ScreenCloseButton />
           <Pressable
             onPress={() =>
               router.push({

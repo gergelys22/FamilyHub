@@ -3,6 +3,7 @@ import { darkColors } from '@/constants/theme';
 import { useTheme } from '@/providers/theme-provider';
 import { getFamilyMembers, getMyFamilies, type FamilyMember } from '@/services/families';
 import { Ionicons } from '@expo/vector-icons';
+import { ScreenCloseButton } from '@/components/screen-close-button';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useEffect, useState } from 'react';
@@ -48,9 +49,7 @@ export default function FamilyTreeScreen() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
       <View style={[styles.header, { backgroundColor: palette.background }]}>
-        <Pressable onPress={() => router.back()} style={styles.headerButton}>
-          <Ionicons name="chevron-back" size={25} color={palette.textPrimary} />
-        </Pressable>
+        <ScreenCloseButton />
         <Text style={[styles.title, { color: palette.textPrimary }]}>Családfa</Text>
         <Ionicons name="options-outline" size={22} color={colors.primary} />
       </View>
