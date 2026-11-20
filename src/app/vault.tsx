@@ -138,6 +138,16 @@ export default function VaultScreen() {
           onPress={() => router.push('/emergency-contacts')}
           palette={palette}
         />
+        <VaultItem
+          icon="medical"
+          color="#F15D6C"
+          backgroundColor="#FFE5EA"
+          title="Sürgősségi kártya"
+          description="Vércsoport, allergiák és orvosi adatok"
+          count="0"
+          onPress={() => router.push('/safety-card')}
+          palette={palette}
+        />
 
         <View style={styles.tipCard}>
           <View style={styles.tipIcon}>

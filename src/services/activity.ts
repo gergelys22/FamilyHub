@@ -18,7 +18,10 @@ export type ActivityType =
   | 'medication_deleted'
   | 'emergency_contact_created'
   | 'emergency_contact_updated'
-  | 'emergency_contact_deleted';
+  | 'emergency_contact_deleted'
+  | 'safety_profile_updated'
+  | 'safety_check_created'
+  | 'safety_check_completed';
 
 export type ActivityEntityType =
   | 'task'
@@ -27,7 +30,9 @@ export type ActivityEntityType =
   | 'memory'
   | 'family_member'
   | 'medication'
-  | 'emergency_contact';
+  | 'emergency_contact'
+  | 'safety_profile'
+  | 'safety_check';
 
 export type ActivityLog = {
   id: string;
