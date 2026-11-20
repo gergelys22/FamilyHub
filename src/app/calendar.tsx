@@ -426,7 +426,7 @@ export default function CalendarScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F8FBFF' },
-  content: { paddingHorizontal: spacing.lg, paddingBottom: 100, gap: spacing.md },
+  content: { paddingHorizontal: spacing.lg, paddingBottom: 112, gap: spacing.md },
   flex: { flex: 1 },
   familySwitcherHidden: {
     position: 'absolute',
@@ -655,7 +655,7 @@ const styles = StyleSheet.create({
   floatingAdd: {
     position: 'absolute',
     right: spacing.lg,
-    bottom: spacing.xl,
+    bottom: 92,
     width: 60,
     height: 60,
     alignItems: 'center',

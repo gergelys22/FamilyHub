@@ -445,7 +445,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
-  content: { flexGrow: 1, paddingHorizontal: spacing.lg, paddingBottom: 100 },
+  content: { flexGrow: 1, paddingHorizontal: spacing.lg, paddingBottom: 112 },
   backgroundGlow: {
     position: 'absolute',
     top: 72,
@@ -688,7 +688,7 @@ const styles = StyleSheet.create({
   floatingAdd: {
     position: 'absolute',
     right: spacing.lg,
-    bottom: spacing.xl,
+    bottom: 92,
     width: 58,
     height: 58,
     alignItems: 'center',

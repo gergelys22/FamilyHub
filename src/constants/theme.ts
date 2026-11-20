@@ -23,10 +23,10 @@ export const colors = {
   purple: '#8B78F6',
   teal: '#20BFA7',
 
-  navigationBackground: '#FFFFFF',
-  navigationBorder: '#E7EEF9',
-  glassBackground: 'rgba(255, 255, 255, 0.78)',
-  glassBorder: 'rgba(201, 217, 243, 0.72)',
+  navigationBackground: 'rgba(255, 255, 255, 0.86)',
+  navigationBorder: 'rgba(201, 217, 243, 0.78)',
+  glassBackground: 'rgba(255, 255, 255, 0.72)',
+  glassBorder: 'rgba(201, 217, 243, 0.82)',
   white: '#FFFFFF',
 } as const;
 
@@ -42,10 +42,10 @@ export const darkColors = {
   textSecondary: '#BCC8D8',
   textMuted: '#8D9CB2',
   primarySoft: '#193A77',
-  navigationBackground: '#101F33',
-  navigationBorder: '#29405B',
-  glassBackground: 'rgba(20, 35, 56, 0.88)',
-  glassBorder: 'rgba(141, 156, 178, 0.2)',
+  navigationBackground: 'rgba(16, 31, 51, 0.88)',
+  navigationBorder: 'rgba(141, 156, 178, 0.28)',
+  glassBackground: 'rgba(20, 35, 56, 0.82)',
+  glassBorder: 'rgba(141, 156, 178, 0.28)',
 } as const;
 
 export const gradients = {
@@ -70,11 +70,11 @@ export const shadows = {
     elevation: 5,
   },
   navigation: {
-    shadowColor: '#7693C2',
+    shadowColor: '#55749C',
     shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    elevation: 10,
   },
 } as const;
 

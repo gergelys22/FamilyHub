@@ -1,6 +1,7 @@
 import { colors, darkColors } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/providers/auth-provider';
 import { PresenceProvider } from '@/providers/presence-provider';
+import { GlassSurface } from '@/components/glass-surface';
 import { ThemeProvider, useTheme } from '@/providers/theme-provider';
 import { Tabs } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -100,7 +101,25 @@ function AppNavigator() {
           tabBarActiveTintColor: palette.primary,
           tabBarInactiveTintColor: palette.textMuted,
           tabBarHideOnKeyboard: true,
-          tabBarStyle: [styles.tabBar, { backgroundColor: palette.glassBackground, borderTopColor: palette.glassBorder }],
+          tabBarBackground: () => (
+            <GlassSurface
+              dark={isDark}
+              style={[
+                styles.tabBarGlass,
+                {
+                  backgroundColor: palette.glassBackground,
+                  borderColor: palette.glassBorder,
+                },
+              ]}
+            />
+          ),
+          tabBarStyle: [
+            styles.tabBar,
+            {
+              backgroundColor: 'transparent',
+              borderColor: palette.glassBorder,
+            },
+          ],
           tabBarItemStyle: styles.tabItem,
           tabBarLabelStyle: styles.tabLabel,
         }}
@@ -297,12 +316,31 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   tabBar: {
-    backgroundColor: colors.navigationBackground,
-    borderTopColor: colors.navigationBorder,
-    borderTopWidth: 1,
-    height: 70,
-    paddingTop: 5,
-    paddingBottom: 7,
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    bottom: 10,
+    height: 68,
+    marginHorizontal: 0,
+    paddingTop: 6,
+    paddingBottom: 8,
+    borderWidth: 1,
+    borderRadius: 28,
+    overflow: 'hidden',
+    shadowColor: '#55749C',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.16,
+    shadowRadius: 18,
+    elevation: 14,
+  },
+  tabBarGlass: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    borderWidth: 1,
+    borderRadius: 28,
   },
   tabItem: {
     paddingHorizontal: 2,
@@ -317,11 +355,11 @@ const styles = StyleSheet.create({
     height: 27,
   },
   iconContainer: {
-    width: 40,
-    height: 30,
+    width: 44,
+    height: 34,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 16,
+    borderRadius: 17,
   },
   iconContainerActive: {
     backgroundColor: colors.primarySoft,

@@ -9,7 +9,7 @@ export function GlassSurface({ dark = false, style, children, ...props }: GlassS
   return (
     <BlurView
       {...props}
-      intensity={dark ? 28 : 20}
+      intensity={dark ? 34 : 26}
       tint={dark ? 'dark' : 'light'}
       style={[styles.surface, style]}
     >

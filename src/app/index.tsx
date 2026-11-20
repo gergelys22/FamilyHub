@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
     height: 190,
     opacity: 0.92,
   },
-  content: { paddingHorizontal: spacing.lg, paddingBottom: 36, gap: spacing.md },
+  content: { paddingHorizontal: spacing.lg, paddingBottom: 112, gap: spacing.md },
   contentWide: {
     width: '100%',
     maxWidth: 1120,
@@ -711,7 +711,7 @@ const styles = StyleSheet.create({
   floatingAddButton: {
     position: 'absolute',
     right: spacing.lg,
-    bottom: spacing.xl,
+    bottom: 92,
     width: 56,
     height: 56,
     alignItems: 'center',
