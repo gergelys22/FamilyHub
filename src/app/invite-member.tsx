@@ -15,7 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, radius, spacing } from '@/constants/theme';
-import { createFamilyInvite, InviteRole } from '@/services/family-invites';
+import { createFamilyInvite, InviteCreatedError, InviteRole } from '@/services/family-invites';
 
 const roleOptions: {
   value: InviteRole;
@@ -55,6 +55,7 @@ export default function InviteMemberScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [emailSent, setEmailSent] = useState(true);
 
   const normalizedEmail = email.trim().toLowerCase();
   const canSubmit = familyId.length > 0 && normalizedEmail.includes('@') && !submitting;
@@ -66,8 +67,14 @@ export default function InviteMemberScreen() {
 
     try {
       await createFamilyInvite(familyId, normalizedEmail, role);
+      setEmailSent(true);
       setSuccess(true);
     } catch (error) {
+      if (error instanceof InviteCreatedError) {
+        setEmailSent(false);
+        setSuccess(true);
+        return;
+      }
       setErrorMessage(
         error instanceof Error ? error.message : 'A meghívás létrehozása sikertelen.',
       );
@@ -81,6 +88,7 @@ export default function InviteMemberScreen() {
     setRole('adult');
     setErrorMessage(null);
     setSuccess(false);
+    setEmailSent(true);
   }
 
   if (success) {
@@ -94,12 +102,16 @@ export default function InviteMemberScreen() {
           </View>
           <Text style={styles.successTitle}>Meghívás rögzítve</Text>
           <Text style={styles.successDescription}>
-            A meghívás elkészült {normalizedEmail} számára, és 7 napig érvényes.
+            {emailSent
+              ? `A meghívás elkészült ${normalizedEmail} számára e-mailben és 7 napig érvényes.`
+              : `A meghívás rögzítve lett ${normalizedEmail} számára, de az e-mail küldése most sikertelen.`}
           </Text>
           <View style={styles.infoBox}>
             <Text style={styles.infoIcon}>i</Text>
             <Text style={styles.infoText}>
-              Az automatikus e-mail-küldést a saját SMTP beállításakor kapcsoljuk be.
+              {emailSent
+                ? 'A meghívás értesítésként és e-mailben is elküldésre kerül.'
+                : 'A meghívás alkalmazáson belül továbbra is megjelenik, ha a meghívott már regisztrált.'}
             </Text>
           </View>
           <Pressable

@@ -2,6 +2,7 @@ import { FamilyHeader } from '@/components/family-header';
 import { FamilySwitcher } from '@/components/family-switcher';
 import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
 import { useNotifications } from '@/hooks/use-notifications';
+import { useUnreadMessages } from '@/hooks/use-unread-messages';
 import { useAuth } from '@/providers/auth-provider';
 import { useTheme } from '@/providers/theme-provider';
 import { getChatConversations } from '@/services/chat';
@@ -231,6 +232,7 @@ export default function HomeScreen() {
   const greeting = getGreeting();
   const { unreadCount } = useNotifications();
   const [activeFamily, setActiveFamily] = useState<Family | null>(null);
+  const unreadMessageCount = useUnreadMessages(activeFamily?.id, profile?.id);
   const [upcomingEvents, setUpcomingEvents] = useState<FamilyEvent[]>([]);
   const [eventsError, setEventsError] = useState<string | null>(null);
   const [conversationCount, setConversationCount] = useState(0);
@@ -303,6 +305,7 @@ export default function HomeScreen() {
         <FamilyHeader
           userInitial={userInitial}
           unreadNotificationCount={unreadCount}
+          unreadMessageCount={unreadMessageCount}
           onNotificationsPress={() => router.push('/notifications')}
           onMessagesPress={() => router.push('/messages')}
           onProfilePress={() => router.push('/profile')}

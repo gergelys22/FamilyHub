@@ -3,11 +3,13 @@ import { GlassSurface } from '@/components/glass-surface';
 import { useTheme } from '@/providers/theme-provider';
 import { SymbolView } from 'expo-symbols';
 import medium from 'expo-symbols/androidWeights/medium';
+import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 type FamilyHeaderProps = {
   userInitial?: string;
   unreadNotificationCount?: number;
+  unreadMessageCount?: number;
   onNotificationsPress?: () => void;
   onMessagesPress?: () => void;
   onProfilePress?: () => void;
@@ -16,6 +18,7 @@ type FamilyHeaderProps = {
 export function FamilyHeader({
   userInitial = 'A',
   unreadNotificationCount = 0,
+  unreadMessageCount = 0,
   onNotificationsPress,
   onMessagesPress,
   onProfilePress,
@@ -24,6 +27,7 @@ export function FamilyHeader({
   const palette = isDark ? darkColors : colors;
   const badgeText =
     unreadNotificationCount > 99 ? '99+' : String(unreadNotificationCount);
+  const messageBadgeText = unreadMessageCount > 99 ? '99+' : String(unreadMessageCount);
 
   return (
     <GlassSurface
@@ -64,14 +68,16 @@ export function FamilyHeader({
             pressed && styles.pressed,
           ]}
         >
-          <SymbolView
-            name={{ ios: 'bubble.left.and.bubble.right.fill', android: 'forum', web: 'forum' }}
-            size={22}
-            tintColor={palette.teal}
-            type="hierarchical"
-            weight={{ ios: 'semibold', android: medium }}
-            style={styles.symbol}
-          />
+        <Ionicons
+          name="chatbubble-outline"
+          size={24}
+          color={unreadMessageCount > 0 ? palette.danger : palette.teal}
+        />
+        {unreadMessageCount > 0 ? (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{messageBadgeText}</Text>
+          </View>
+        ) : null}
         </Pressable>
 
         <Pressable
