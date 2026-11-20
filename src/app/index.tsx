@@ -1,10 +1,12 @@
 import { FamilyHeader } from '@/components/family-header';
 import { FamilySwitcher } from '@/components/family-switcher';
+import { PresenceDot } from '@/components/presence-dot';
 import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useUnreadMessages } from '@/hooks/use-unread-messages';
 import { useAuth } from '@/providers/auth-provider';
 import { useTheme } from '@/providers/theme-provider';
+import { usePresence } from '@/providers/presence-provider';
 import { getChatConversations } from '@/services/chat';
 import { getFamilyEvents, type FamilyEvent } from '@/services/events';
 import type { Family } from '@/services/families';
@@ -229,6 +231,7 @@ export default function HomeScreen() {
   const palette = isDark ? darkColors : colors;
   const router = useRouter();
   const { profile, profileError } = useAuth();
+  const { isProfileOnline } = usePresence();
   const greeting = getGreeting();
   const { unreadCount } = useNotifications();
   const [activeFamily, setActiveFamily] = useState<Family | null>(null);
@@ -349,7 +352,11 @@ export default function HomeScreen() {
                 <View style={styles.avatar}>
                   <Text style={styles.avatarText}>{userInitial}</Text>
                 </View>
-                <View style={styles.onlineDot} />
+                <PresenceDot
+                  visible={isProfileOnline(profile?.id)}
+                  size={14}
+                  style={styles.onlineDot}
+                />
               </View>
               <Text numberOfLines={1} style={styles.personName}>
                 {firstName}

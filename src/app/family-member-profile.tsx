@@ -3,12 +3,15 @@ import { useTheme } from '@/providers/theme-provider';
 import { getProfile } from '@/services/families';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenCloseButton } from '@/components/screen-close-button';
+import { PresenceDot } from '@/components/presence-dot';
+import { usePresence } from '@/providers/presence-provider';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type Member = {
+  profileId?: string;
   name: string;
   role: string;
   birthDate: string;
@@ -94,11 +97,17 @@ function InfoRow({
 }
 
 function MemberAvatar({ member }: { member: Member }) {
+  const { isProfileOnline } = usePresence();
   return (
     <View style={[styles.avatar, { backgroundColor: member.color }]}>
       <Text style={[styles.avatarText, { color: member.textColor }]}>
         {member.initial}
       </Text>
+      <PresenceDot
+        visible={isProfileOnline(member.profileId)}
+        size={15}
+        style={styles.memberPresenceDot}
+      />
     </View>
   );
 }
@@ -116,6 +125,7 @@ export default function FamilyMemberProfileScreen() {
       .then((profile) => {
         const name = profile.display_name;
         setLoadedMember({
+          profileId: profile.id,
           name,
           role: 'Családtag',
           birthDate: profile.birth_date ? new Date(profile.birth_date).toLocaleDateString('hu-HU') : 'Születési dátum nincs megadva',
@@ -332,12 +342,17 @@ const styles = StyleSheet.create({
   avatar: {
     width: 116,
     height: 116,
+    position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 58,
     borderWidth: 4,
     borderColor: colors.white,
     ...shadows.card,
+  },
+  memberPresenceDot: {
+    right: 2,
+    bottom: 8,
   },
   avatarText: { fontSize: 48, fontWeight: '900' },
   profileName: {

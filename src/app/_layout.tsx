@@ -1,5 +1,6 @@
 import { colors, darkColors } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/providers/auth-provider';
+import { PresenceProvider } from '@/providers/presence-provider';
 import { ThemeProvider, useTheme } from '@/providers/theme-provider';
 import { Tabs } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -65,7 +66,9 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <AppNavigator />
+        <PresenceProvider>
+          <AppNavigator />
+        </PresenceProvider>
       </AuthProvider>
     </ThemeProvider>
   );

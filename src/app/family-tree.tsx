@@ -4,6 +4,8 @@ import { useTheme } from '@/providers/theme-provider';
 import { getFamilyMembers, getMyFamilies, type FamilyMember } from '@/services/families';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenCloseButton } from '@/components/screen-close-button';
+import { PresenceDot } from '@/components/presence-dot';
+import { usePresence } from '@/providers/presence-provider';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useEffect, useState } from 'react';
@@ -17,6 +19,7 @@ function toPerson(member: FamilyMember, index: number): Person {
 }
 
 function PersonCard({ person, onPress, palette }: { person: Person; onPress: () => void; palette: typeof colors | typeof darkColors }) {
+  const { isProfileOnline } = usePresence();
   return (
     <Pressable
       style={({ pressed }) => [styles.personCard, { backgroundColor: palette.surface }, pressed && styles.pressed]}
@@ -24,6 +27,11 @@ function PersonCard({ person, onPress, palette }: { person: Person; onPress: () 
     >
       <View style={[styles.personAvatar, { backgroundColor: person.color }]}>
         <Text style={styles.personInitial}>{person.initial}</Text>
+        <PresenceDot
+          visible={isProfileOnline(person.id)}
+          size={13}
+          style={styles.personPresenceDot}
+        />
       </View>
       <Text style={[styles.personName, { color: palette.textPrimary }]}>{person.name}</Text>
       <Text style={[styles.personYear, { color: palette.textMuted }]}>{person.year}</Text>
@@ -172,12 +180,17 @@ const styles = StyleSheet.create({
   personAvatar: {
     width: 58,
     height: 58,
+    position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 29,
     borderWidth: 3,
     borderColor: colors.white,
     ...shadows.card,
+  },
+  personPresenceDot: {
+    right: -3,
+    bottom: 1,
   },
   personInitial: { color: colors.textPrimary, fontSize: 22, fontWeight: '900' },
   personName: {
