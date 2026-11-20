@@ -31,8 +31,10 @@ export function useUnreadMessages(
   useEffect(() => {
     if (!familyId || !profileId) return;
 
+    const channelName =
+      `unread-messages:${familyId}:${profileId}:${Date.now()}:${Math.random()}`;
     const channel = supabase
-      .channel(`unread-messages:${familyId}:${profileId}`)
+      .channel(channelName)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => {
         void load();
       })

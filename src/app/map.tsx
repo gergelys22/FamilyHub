@@ -280,7 +280,12 @@ export default function MapScreen() {
 
         <View style={styles.topBar}>
           <Text style={[styles.title, { color: palette.textPrimary }]}>Térkép</Text>
-          <View style={styles.topAction}>
+          <View
+            style={[
+              styles.topAction,
+              { backgroundColor: palette.surface, borderColor: palette.border },
+            ]}
+          >
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="További lehetőségek"
@@ -336,13 +341,29 @@ export default function MapScreen() {
         {activeFamily ? (
           <>
             {loading ? (
-              <View style={styles.loadingCard}>
+              <View
+                style={[
+                  styles.loadingCard,
+                  {
+                    backgroundColor: isDark ? '#10233E' : palette.surface,
+                    borderColor: isDark ? '#294469' : palette.border,
+                  },
+                ]}
+              >
                 <ActivityIndicator color={colors.primaryLight} />
                 <Text style={[styles.loadingText, { color: palette.textMuted }]}>Helyszínek betöltése…</Text>
               </View>
             ) : error ? (
-              <View style={styles.errorCard}>
-                <Text style={styles.errorText}>{error}</Text>
+              <View
+                style={[
+                  styles.errorCard,
+                  {
+                    backgroundColor: isDark ? '#3B1622' : '#FFF1F3',
+                    borderColor: isDark ? '#7F2439' : '#F8C8D0',
+                  },
+                ]}
+              >
+                <Text style={[styles.errorText, { color: isDark ? '#FDA4AF' : '#A52A3A' }]}>{error}</Text>
               </View>
             ) : filteredLocationEvents.length ? (
               <>
@@ -466,8 +487,21 @@ export default function MapScreen() {
                 </View>
               </>
             ) : (
-              <View style={styles.emptyCard}>
-                <View style={styles.emptyIcon}>
+              <View
+                style={[
+                  styles.emptyCard,
+                  {
+                    backgroundColor: palette.surface,
+                    borderColor: palette.border,
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.emptyIcon,
+                    { backgroundColor: isDark ? '#17335C' : palette.primarySoft },
+                  ]}
+                >
                   <SymbolView
                     name={{
                       ios: 'mappin.slash',
@@ -481,8 +515,8 @@ export default function MapScreen() {
                     style={styles.emptySymbol}
                   />
                 </View>
-                <Text style={styles.emptyTitle}>Még nincs helyszín a térképen</Text>
-                <Text style={styles.emptyText}>
+                <Text style={[styles.emptyTitle, { color: palette.textPrimary }]}>Még nincs helyszín a térképen</Text>
+                <Text style={[styles.emptyText, { color: palette.textMuted }]}>
                   Adj helyszínt egy közös eseményhez, és itt rögtön elérhető lesz.
                 </Text>
                 <Pressable
@@ -524,8 +558,13 @@ export default function MapScreen() {
                   onPress={() => setFilterVisible(false)}
                   style={styles.filterBackdrop}
                 />
-                <View style={styles.filterCard}>
-                  <Text style={styles.filterTitle}>Események szűrése</Text>
+                <View
+                  style={[
+                    styles.filterCard,
+                    { backgroundColor: palette.surface, borderColor: palette.border },
+                  ]}
+                >
+                  <Text style={[styles.filterTitle, { color: palette.textPrimary }]}>Események szűrése</Text>
                   {[
                     ['all', 'Minden kategória'],
                     ...Object.keys(categoryColors).map((category) => [
@@ -540,11 +579,14 @@ export default function MapScreen() {
                       onPress={() => selectCategory(value as typeof categoryFilter)}
                       style={({ pressed }) => [
                         styles.filterOption,
-                        categoryFilter === value && styles.filterOptionSelected,
+                        categoryFilter === value && [
+                          styles.filterOptionSelected,
+                          { backgroundColor: isDark ? '#193A77' : palette.primarySoft },
+                        ],
                         pressed && styles.pressed,
                       ]}
                     >
-                      <Text style={styles.filterOptionText}>{label}</Text>
+                      <Text style={[styles.filterOptionText, { color: palette.textSecondary }]}>{label}</Text>
                       {categoryFilter === value ? (
                         <Text style={styles.filterCheck}>✓</Text>
                       ) : null}
@@ -554,8 +596,21 @@ export default function MapScreen() {
               </View>
             </Modal>
 
-            <View style={styles.infoCard}>
-              <View style={styles.infoIcon}>
+            <View
+              style={[
+                styles.infoCard,
+                {
+                  backgroundColor: isDark ? '#0B302F' : '#ECF8F5',
+                  borderColor: isDark ? '#17544D' : '#CBEADF',
+                },
+              ]}
+            >
+              <View
+                style={[
+                  styles.infoIcon,
+                  { backgroundColor: isDark ? '#0C4A45' : '#D8F7EF' },
+                ]}
+              >
                 <SymbolView
                   name={{
                     ios: 'lock.shield.fill',
@@ -563,15 +618,15 @@ export default function MapScreen() {
                     web: 'shield_lock',
                   }}
                   size={21}
-                  tintColor="#6EE7B7"
+                  tintColor={isDark ? '#6EE7B7' : '#16856F'}
                   type="hierarchical"
                   weight={{ ios: 'semibold', android: medium }}
                   style={styles.infoSymbol}
                 />
               </View>
               <View style={styles.flex}>
-                <Text style={styles.infoTitle}>Csak közös eseményhelyszínek</Text>
-                <Text style={styles.infoText}>
+                <Text style={[styles.infoTitle, { color: isDark ? '#D1FAE5' : '#18584C' }]}>Csak közös eseményhelyszínek</Text>
+                <Text style={[styles.infoText, { color: isDark ? '#93C5B5' : palette.textSecondary }]}>
                   Ez a képernyő nem követi a családtagok élő helyzetét.
                 </Text>
               </View>
@@ -609,6 +664,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: radius.round,
     backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
     ...shadows.card,
   },
   topActionButton: {
@@ -813,6 +870,8 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: radius.xl,
     backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
     zIndex: 1,
     ...shadows.card,
   },
