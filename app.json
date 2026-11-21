@@ -18,9 +18,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyCd_6acRhQPSyS6IGtDLyBz1pY48SH4pBE"
-        }
+        
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.gergely2002.FamilyHub"
