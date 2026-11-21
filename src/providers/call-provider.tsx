@@ -5,7 +5,6 @@ import { useTheme } from '@/providers/theme-provider';
 import { answerCall, createCall, finishCall, type CallType, type ChatCall } from '@/services/calls';
 import { getChatConversation } from '@/services/chat';
 import { Ionicons } from '@expo/vector-icons';
-import { registerGlobals } from '@livekit/react-native';
 import { useRouter, type Href } from 'expo-router';
 import {
     createContext,
@@ -18,8 +17,7 @@ import {
 } from 'react';
 import { Alert, Modal, Pressable, StyleSheet, Text, Vibration, View } from 'react-native';
 
-// A LiveKit működéséhez a WebRTC globálisokat az app indulásakor be kell regisztrálni.
-registerGlobals();
+
 
 const INCOMING_MAX_AGE_MS = 60_000;
 

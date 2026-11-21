@@ -1,8 +1,9 @@
+import { GlassSurface } from '@/components/glass-surface';
 import { colors, darkColors } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/providers/auth-provider';
+import { CallProvider } from '@/providers/call-provider';
 import { PresenceProvider } from '@/providers/presence-provider';
 import { SecurityProvider } from '@/providers/security-provider';
-import { GlassSurface } from '@/components/glass-surface';
 import { ThemeProvider, useTheme } from '@/providers/theme-provider';
 import { Tabs } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -66,15 +67,17 @@ const tabs: TableDefinition[] = [
 
 export default function RootLayout() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
+  <ThemeProvider>
+    <AuthProvider>
+      <CallProvider>
         <PresenceProvider>
           <SecurityProvider>
             <AppNavigator />
           </SecurityProvider>
         </PresenceProvider>
-      </AuthProvider>
-    </ThemeProvider>
+      </CallProvider>
+    </AuthProvider>
+  </ThemeProvider>
   );
 }
 
@@ -250,6 +253,15 @@ function AppNavigator() {
             options={{
               href: null,
               title: 'Beszélgetés',
+              tabBarStyle: { display: 'none' },
+            }}
+          />
+
+          <Tabs.Screen
+            name="call"
+            options={{
+              href: null,
+              title: 'Hívás',
               tabBarStyle: { display: 'none' },
             }}
           />
