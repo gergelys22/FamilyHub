@@ -3,6 +3,7 @@ import { ScreenCloseButton } from '@/components/screen-close-button';
 import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
 import { useChatMessages } from '@/hooks/use-chat';
 import { useAuth } from '@/providers/auth-provider';
+import { useCall } from '@/providers/call-provider';
 import { useTheme } from '@/providers/theme-provider';
 import {
   CHAT_ATTACHMENT_MAX_BYTES,
@@ -54,6 +55,7 @@ export default function ChatDetailsScreen() {
   const { isDark } = useTheme();
   const palette = isDark ? darkColors : colors;
   const { profile } = useAuth();
+  const { placeCall } = useCall();
   const { conversationId } = useLocalSearchParams<{ conversationId?: string }>();
   const [conversation, setConversation] = useState<ChatConversation | null>(null);
   const [draft, setDraft] = useState('');
@@ -231,6 +233,22 @@ export default function ChatDetailsScreen() {
               <Text style={styles.headerTitle}>{title}</Text>
               <Text style={styles.headerSubtitle}>{subtitle}</Text>
             </View>
+          </Pressable>
+          <Pressable
+            accessibilityLabel="Hanghívás indítása"
+            disabled={!conversationId}
+            onPress={() => conversationId && void placeCall({ conversationId, type: 'audio', name: title })}
+            style={styles.headerButton}
+          >
+            <Ionicons name="call-outline" size={22} color={palette.primary} />
+          </Pressable>
+          <Pressable
+            accessibilityLabel="Videóhívás indítása"
+            disabled={!conversationId}
+            onPress={() => conversationId && void placeCall({ conversationId, type: 'video', name: title })}
+            style={styles.headerButton}
+          >
+            <Ionicons name="videocam-outline" size={24} color={palette.primary} />
           </Pressable>
           <Pressable
             onPress={() =>
