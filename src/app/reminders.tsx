@@ -1,5 +1,5 @@
-import { colors, radius, shadows, spacing } from '@/constants/theme';
-import { darkColors } from '@/constants/theme';
+import { colors, radius, shadows, spacing , darkColors } from '@/constants/theme';
+
 import { useTheme } from '@/providers/theme-provider';
 import { useAuth } from '@/providers/auth-provider';
 import { getMyFamilies } from '@/services/families';
@@ -14,7 +14,7 @@ import { ScreenCloseButton } from '@/components/screen-close-button';
 export default function RemindersScreen() {
   const router = useRouter(); const { profile } = useAuth(); const [familyId, setFamilyId] = useState<string | null>(null); const [items, setItems] = useState<Reminder[]>([]); const [visible, setVisible] = useState(false); const [editing, setEditing] = useState<Reminder | null>(null); const [title, setTitle] = useState(''); const [detail, setDetail] = useState(''); const [dueAt, setDueAt] = useState(''); const [busy, setBusy] = useState(false);
   const { isDark } = useTheme(); const palette = isDark ? darkColors : colors;
-  const [pendingItems, setPendingItems] = useState<Array<{ title: string; detail: string; dueAt: string }>>([]);
+  const [pendingItems, setPendingItems] = useState<{ title: string; detail: string; dueAt: string }[]>([]);
   async function reload(id = familyId) { if (id) setItems(await getReminders(id)); }
   useEffect(() => { void getMyFamilies().then((families) => { const id = families[0]?.id ?? null; setFamilyId(id); void reload(id); }).catch((error) => Alert.alert('Hiba', error.message)); }, []);
   function openForm(item?: Reminder) {

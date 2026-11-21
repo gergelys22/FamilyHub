@@ -1,8 +1,7 @@
 import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
 import { useTheme } from '@/providers/theme-provider';
 import { useNotifications } from '@/hooks/use-notifications';
-import type { AppNotification } from '@/services/notifications';
-import {
+import type { AppNotification ,
   getNotificationPreferences,
   saveNotificationPreferences,
   type NotificationPreferences,
@@ -234,7 +233,7 @@ export default function NotificationsScreen() {
     );
   });
 
-  const notificationTypes: Array<{ key: string; label: string; icon: IconName }> = [
+  const notificationTypes: { key: string; label: string; icon: IconName }[] = [
     { key: 'family_invite', label: 'Meghívások', icon: 'person-add-outline' },
     { key: 'calendar', label: 'Események', icon: 'calendar-outline' },
     { key: 'task', label: 'Teendők', icon: 'checkbox-outline' },

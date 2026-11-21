@@ -16,10 +16,7 @@ export function PresenceProvider({ children }: PropsWithChildren) {
   const [onlineProfileIds, setOnlineProfileIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (!profile?.id) {
-      setOnlineProfileIds(new Set());
-      return;
-    }
+    if (!profile?.id) return;
 
     let channel: RealtimeChannel | null = supabase.channel('familyhub-presence', {
       config: { presence: { key: profile.id } },

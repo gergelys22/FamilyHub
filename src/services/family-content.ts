@@ -253,7 +253,7 @@ export async function deleteMedication(id: string) {
   if (error) throw new Error(error.message);
 }
 
-export async function saveMedications(inputs: Array<{
+export async function saveMedications(inputs: {
   familyId: string;
   profileId: string;
   personProfileId?: string | null;
@@ -265,7 +265,7 @@ export async function saveMedications(inputs: Array<{
   scheduleTime?: string | null;
   isActive?: boolean;
   endsOn?: string | null;
-}>) {
+}[]) {
   if (inputs.length === 0) return [];
   const { data, error } = await supabase
     .from('medications')
@@ -334,7 +334,7 @@ export async function saveEmergencyContact(input: {
   return data as EmergencyContact;
 }
 
-export async function saveEmergencyContacts(inputs: Array<{
+export async function saveEmergencyContacts(inputs: {
   familyId: string;
   profileId: string;
   name: string;
@@ -344,7 +344,7 @@ export async function saveEmergencyContacts(inputs: Array<{
   priority?: number;
   isPrimary?: boolean;
   notes?: string;
-}>) {
+}[]) {
   if (inputs.length === 0) return [];
   const { data, error } = await supabase
     .from('family_emergency_contacts')
@@ -385,14 +385,14 @@ export async function saveReminder(input: { id?: string; familyId: string; profi
   return data as Reminder;
 }
 
-export async function saveReminders(inputs: Array<{
+export async function saveReminders(inputs: {
   familyId: string;
   profileId: string;
   title: string;
   detail?: string;
   dueAt: string;
   category?: string;
-}>) {
+}[]) {
   if (inputs.length === 0) return [];
   const { data, error } = await supabase
     .from('family_reminders')
@@ -473,7 +473,7 @@ export async function createFamilyTask(input: {
   return task;
 }
 
-export async function createFamilyTasks(inputs: Array<{
+export async function createFamilyTasks(inputs: {
   familyId: string;
   profileId: string;
   assignedToProfileId?: string | null;
@@ -482,7 +482,7 @@ export async function createFamilyTasks(inputs: Array<{
   detail?: string;
   quantity?: string;
   dueAt?: string | null;
-}>) {
+}[]) {
   if (inputs.length === 0) return [];
   const { data, error } = await supabase
     .from('family_tasks')
@@ -617,7 +617,7 @@ export async function createFamilySchoolItem(input: {
   return data as FamilySchoolItem;
 }
 
-export async function createFamilySchoolItems(inputs: Array<{
+export async function createFamilySchoolItems(inputs: {
   familyId: string;
   childProfileId: string;
   profileId: string;
@@ -628,7 +628,7 @@ export async function createFamilySchoolItems(inputs: Array<{
   metadata?: Record<string, string | boolean | number | null>;
   startsAt?: string | null;
   dueAt?: string | null;
-}>) {
+}[]) {
   if (inputs.length === 0) return [];
   const { data, error } = await supabase
     .from('family_school_items')

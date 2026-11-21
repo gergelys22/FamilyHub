@@ -57,13 +57,13 @@ export default function TasksScreen() {
   const [dueTime, setDueTime] = useState('18:00');
   const [busy, setBusy] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
-  const [pendingItems, setPendingItems] = useState<Array<{
+  const [pendingItems, setPendingItems] = useState<{
     title: string;
     detail: string;
     quantity: string;
     assignedToProfileId: string | null;
     dueAt: string | null;
-  }>>([]);
+  }[]>([]);
 
   const memberNameById = useMemo(
     () => new Map(members.map((member) => [member.profile_id, member.display_name])),

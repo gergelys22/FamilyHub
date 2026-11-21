@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Animated, StyleSheet, ViewStyle } from 'react-native';
 
 import { colors } from '@/constants/theme';
@@ -14,7 +14,7 @@ export function PresenceDot({
   size = 14,
   style,
 }: PresenceDotProps) {
-  const pulse = useRef(new Animated.Value(0)).current;
+  const [pulse] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     if (!visible) {

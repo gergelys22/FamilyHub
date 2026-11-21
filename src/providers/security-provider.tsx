@@ -63,10 +63,7 @@ export function SecurityProvider({ children }: PropsWithChildren) {
   }, []);
 
   useEffect(() => {
-    if (!securityEnabled) {
-      setIsLocked(false);
-      return;
-    }
+    if (!securityEnabled) return;
     const subscription = AppState.addEventListener('change', (nextState) => {
       if (nextState === 'background' || nextState === 'inactive') {
         setIsLocked(true);

@@ -1,9 +1,9 @@
-import { colors, darkColors, radius, spacing } from '@/constants/theme';
-import { getFamilySchoolItems, type FamilySchoolItem } from '@/services/family-content';
-import { useTheme } from '@/providers/theme-provider';
-import { Ionicons } from '@expo/vector-icons';
 import { ScreenCloseButton } from '@/components/screen-close-button';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { colors, darkColors, radius, spacing } from '@/constants/theme';
+import { useTheme } from '@/providers/theme-provider';
+import { getFamilySchoolItems, type FamilySchoolItem } from '@/services/family-content';
+import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -36,37 +36,37 @@ function sameDay(date: Date | null, selected: Date) {
 }
 
 export default function SchoolCalendarScreen() {
-  const router = useRouter();
   const { childId, childName, familyId } = useLocalSearchParams<{ childId?: string; childName?: string; familyId?: string }>();
   const { isDark } = useTheme();
   const palette = isDark ? darkColors : colors;
   const [cursor, setCursor] = useState(() => new Date());
   const [selectedDay, setSelectedDay] = useState(() => new Date());
   const [items, setItems] = useState<FamilySchoolItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const days = useMemo(() => monthDays(cursor), [cursor]);
 
+  const requestKey = childId && familyId ? `${familyId}:${childId}` : null;
+  const loading = requestKey !== null && loadedKey !== requestKey;
+
   useEffect(() => {
-    if (!childId || !familyId) {
-      setLoading(false);
+    if (!childId || !familyId || !requestKey) {
       return;
     }
     let active = true;
-    setLoading(true);
     void getFamilySchoolItems(familyId, childId)
       .then((result) => {
         if (active) setItems(result);
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
         if (active) Alert.alert('Betöltés sikertelen', error instanceof Error ? error.message : 'Próbáld újra később.');
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (active) setLoadedKey(requestKey);
       });
     return () => {
       active = false;
     };
-  }, [childId, familyId]);
+  }, [childId, familyId, requestKey]);
 
   const selectedItems = items.filter((item) => sameDay(itemDate(item), selectedDay));
   const monthItems = items.filter((item) => {

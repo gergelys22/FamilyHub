@@ -23,7 +23,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 type FilterType = 'all' | 'task' | 'event' | 'document' | 'memory' | 'family_member' | 'health';
 
-const filterMeta: Array<{ key: FilterType; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }> = [
+const filterMeta: { key: FilterType; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
   { key: 'all', label: 'Összes', icon: 'time-outline' },
   { key: 'task', label: 'Teendők', icon: 'checkbox-outline' },
   { key: 'event', label: 'Események', icon: 'calendar-outline' },

@@ -124,7 +124,7 @@ export default function SchoolChildren() {
   const [equipment, setEquipment] = useState('');
   const [agenda, setAgenda] = useState('');
   const [busy, setBusy] = useState(false);
-  const [pendingItems, setPendingItems] = useState<Array<{
+  const [pendingItems, setPendingItems] = useState<{
     itemType: ModuleType;
     title: string;
     detail: string;
@@ -132,7 +132,7 @@ export default function SchoolChildren() {
     metadata: Record<string, string | boolean | number | null>;
     startsAt: string | null;
     dueAt: string | null;
-  }>>([]);
+  }[]>([]);
   const children = useMemo(() => members.filter(isChild), [members]);
   const selectedChild = children.find((child) => child.profile_id === selectedChildId) ?? children[0];
 

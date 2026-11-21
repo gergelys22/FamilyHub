@@ -1,20 +1,38 @@
-import { colors, radius, shadows, spacing } from '@/constants/theme';
-import { darkColors } from '@/constants/theme';
-import { useTheme } from '@/providers/theme-provider';
-import { useAuth } from '@/providers/auth-provider';
-import { getMyFamilies, getFamilyMembers, type FamilyMember } from '@/services/families';
-import { createFamilyDocument, deleteFamilyDocument, getFamilyDocuments, updateFamilyDocument, type FamilyDocument } from '@/services/family-content';
+import { ScreenCloseButton } from '@/components/screen-close-button';
+import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
-import * as DocumentPicker from 'expo-document-picker';
+import { useAuth } from '@/providers/auth-provider';
+import { useTheme } from '@/providers/theme-provider';
+import { getFamilyMembers, getMyFamilies, type FamilyMember } from '@/services/families';
+import { createFamilyDocument, deleteFamilyDocument, getFamilyDocuments, type FamilyDocument } from '@/services/family-content';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import * as DocumentPicker from 'expo-document-picker';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Linking, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ScreenCloseButton } from '@/components/screen-close-button';
+
+const DOCUMENT_TYPES = [
+  ['szemelyi', 'Személyi'],
+  ['biztositas', 'Biztosítás'],
+  ['orvosi', 'Orvosi'],
+  ['iskola', 'Iskola'],
+  ['egyeb', 'Egyéb'],
+] as const;
+
+const TYPE_FILTERS = [['all', 'Mind'], ...DOCUMENT_TYPES] as const;
+
+function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
 
 export default function DocumentsScreen() {
-  const router = useRouter(); const { profile } = useAuth(); const [familyId, setFamilyId] = useState<string | null>(null); const [items, setItems] = useState<FamilyDocument[]>([]); const [members, setMembers] = useState<FamilyMember[]>([]); const [search, setSearch] = useState(''); const [busy, setBusy] = useState(false); const input = useRef<TextInput>(null);
+  const { profile } = useAuth();
+  const [familyId, setFamilyId] = useState<string | null>(null);
+  const [items, setItems] = useState<FamilyDocument[]>([]);
+  const [members, setMembers] = useState<FamilyMember[]>([]);
+  const [search, setSearch] = useState('');
+  const [busy, setBusy] = useState(false);
+  const input = useRef<TextInput>(null);
   const [metadataVisible, setMetadataVisible] = useState(false);
   const [pendingFile, setPendingFile] = useState<{ uri: string; name: string; mimeType?: string; size?: number } | null>(null);
   const [documentName, setDocumentName] = useState('');
@@ -28,22 +46,36 @@ export default function DocumentsScreen() {
   const [expiryFilter, setExpiryFilter] = useState<'all' | 'valid' | 'expired' | 'soon'>('all');
   const [sizeFilter, setSizeFilter] = useState<'all' | 'small' | 'medium' | 'large'>('all');
   const [sortBy, setSortBy] = useState<'name' | 'newest' | 'expiry' | 'size'>('newest');
-  const { isDark } = useTheme(); const palette = isDark ? darkColors : colors;
-  async function reload(id = familyId) { if (id) setItems(await getFamilyDocuments(id)); }
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
+  const [now] = useState(() => Date.now());
+
+  async function reload(id = familyId) {
+    if (id) setItems(await getFamilyDocuments(id));
+  }
+
   useEffect(() => {
+    let active = true;
     void getMyFamilies()
       .then(async (families) => {
         const id = families[0]?.id ?? null;
+        if (!active) return;
         setFamilyId(id);
         if (!id) return;
-        const [familyMembers] = await Promise.all([
+        const [familyMembers, documents] = await Promise.all([
           getFamilyMembers(id),
-          reload(id),
+          getFamilyDocuments(id),
         ]);
+        if (!active) return;
         setMembers(familyMembers);
+        setItems(documents);
       })
-      .catch((error) => Alert.alert('Hiba', error instanceof Error ? error.message : 'A családi adatok betöltése sikertelen.'));
+      .catch((error: unknown) => Alert.alert('Hiba', errorMessage(error, 'A családi adatok betöltése sikertelen.')));
+    return () => {
+      active = false;
+    };
   }, []);
+
   async function upload() {
     if (!familyId || !profile?.id) return;
     try {
@@ -60,7 +92,7 @@ export default function DocumentsScreen() {
       setRestricted(false);
       setMetadataVisible(true);
     } catch (error) {
-      Alert.alert('Fájl kiválasztása sikertelen', error instanceof Error ? error.message : 'Próbáld újra.');
+      Alert.alert('Fájl kiválasztása sikertelen', errorMessage(error, 'Próbáld újra.'));
     }
   }
 
@@ -105,22 +137,44 @@ export default function DocumentsScreen() {
           relatedProfileId,
           restricted,
         });
-      } catch (error) {
+      } catch (createError) {
         await supabase.storage.from('family-documents').remove([path]);
-        throw error;
+        throw createError;
       }
       setMetadataVisible(false);
       setPendingFile(null);
       await reload();
       Alert.alert('Sikeres feltöltés', `${documentName.trim()} elmentve.`);
     } catch (error) {
-      Alert.alert('Feltöltés sikertelen', error instanceof Error ? error.message : 'Próbáld újra.');
+      Alert.alert('Feltöltés sikertelen', errorMessage(error, 'Próbáld újra.'));
     } finally {
       setBusy(false);
     }
   }
-  async function open(item: FamilyDocument) { const { data, error } = await supabase.storage.from('family-documents').createSignedUrl(item.storage_path, 300); if (error || !data?.signedUrl) return Alert.alert('Megnyitás sikertelen', error?.message ?? 'A fájl nem érhető el.'); await Linking.openURL(data.signedUrl); }
-  function remove(item: FamilyDocument) { Alert.alert('Dokumentum törlése', `Törlöd: ${item.name}?`, [{ text: 'Mégse', style: 'cancel' }, { text: 'Törlés', style: 'destructive', onPress: () => void deleteFamilyDocument(item).then(() => reload()).catch((error) => Alert.alert('Hiba', error.message)) }]); }
+
+  async function open(item: FamilyDocument) {
+    const { data, error } = await supabase.storage.from('family-documents').createSignedUrl(item.storage_path, 300);
+    if (error || !data?.signedUrl) {
+      Alert.alert('Megnyitás sikertelen', error?.message ?? 'A fájl nem érhető el.');
+      return;
+    }
+    await Linking.openURL(data.signedUrl);
+  }
+
+  function remove(item: FamilyDocument) {
+    Alert.alert('Dokumentum törlése', `Törlöd: ${item.name}?`, [
+      { text: 'Mégse', style: 'cancel' },
+      {
+        text: 'Törlés',
+        style: 'destructive',
+        onPress: () =>
+          void deleteFamilyDocument(item)
+            .then(() => reload())
+            .catch((error: unknown) => Alert.alert('Hiba', errorMessage(error, 'A törlés sikertelen.'))),
+      },
+    ]);
+  }
+
   const normalizedSearch = search.trim().toLocaleLowerCase('hu-HU');
   const filtered = items
     .filter((item) => {
@@ -143,7 +197,6 @@ export default function DocumentsScreen() {
           if (expiryFilter !== 'valid') return false;
         } else {
           const expiry = new Date(item.expires_at).getTime();
-          const now = Date.now();
           const thirtyDays = 30 * 24 * 60 * 60 * 1000;
           if (expiryFilter === 'expired' && expiry >= now) return false;
           if (expiryFilter === 'valid' && expiry < now) return false;
@@ -163,6 +216,7 @@ export default function DocumentsScreen() {
       }
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: palette.background }]} edges={['top']}>
       <View style={styles.header}>
@@ -200,7 +254,7 @@ export default function DocumentsScreen() {
                 </Text>
               ) : null}
               {item.expires_at ? (
-                <Text style={[styles.expiry, { color: new Date(item.expires_at).getTime() < Date.now() ? palette.danger : palette.warning }]}>
+                <Text style={[styles.expiry, { color: new Date(item.expires_at).getTime() < now ? palette.danger : palette.warning }]}>
                   Lejárat: {new Date(item.expires_at).toLocaleDateString('hu-HU')}
                 </Text>
               ) : null}
@@ -235,14 +289,7 @@ export default function DocumentsScreen() {
             </View>
             <Text style={[styles.modalLabel, { color: palette.textSecondary }]}>Fájltípus</Text>
             <View style={styles.typeOptions}>
-              {[
-                ['all', 'Mind'],
-                ['szemelyi', 'Személyi'],
-                ['biztositas', 'Biztosítás'],
-                ['orvosi', 'Orvosi'],
-                ['iskola', 'Iskola'],
-                ['egyeb', 'Egyéb'],
-              ].map(([value, label]) => (
+              {TYPE_FILTERS.map(([value, label]) => (
                 <Pressable key={value} onPress={() => setTypeFilter(value)} style={[styles.typeChip, { backgroundColor: typeFilter === value ? palette.primary : palette.surfaceElevated }]}>
                   <Text style={{ color: typeFilter === value ? palette.white : palette.textSecondary, fontWeight: '800' }}>{label}</Text>
                 </Pressable>
@@ -275,7 +322,15 @@ export default function DocumentsScreen() {
               ))}
             </View>
             <View style={styles.modalActions}>
-              <Pressable onPress={() => { setTypeFilter('all'); setExpiryFilter('all'); setSizeFilter('all'); setSortBy('newest'); }} style={styles.cancelButton}>
+              <Pressable
+                onPress={() => {
+                  setTypeFilter('all');
+                  setExpiryFilter('all');
+                  setSizeFilter('all');
+                  setSortBy('newest');
+                }}
+                style={styles.cancelButton}
+              >
                 <Text style={{ color: palette.textSecondary, fontWeight: '800' }}>Szűrők törlése</Text>
               </Pressable>
               <Pressable onPress={() => setFilterVisible(false)} style={[styles.saveButton, { backgroundColor: palette.primary }]}>
@@ -289,7 +344,9 @@ export default function DocumentsScreen() {
         visible={metadataVisible}
         transparent
         animationType="slide"
-        onRequestClose={() => !busy && setMetadataVisible(false)}
+        onRequestClose={() => {
+          if (!busy) setMetadataVisible(false);
+        }}
       >
         <View style={[styles.modalOverlay, { backgroundColor: isDark ? 'rgba(3, 10, 24, 0.78)' : 'rgba(23, 43, 77, 0.38)' }]}>
           <View style={[styles.modal, { backgroundColor: palette.surface, borderColor: palette.border }]}>
@@ -303,13 +360,7 @@ export default function DocumentsScreen() {
             />
             <Text style={[styles.modalLabel, { color: palette.textSecondary }]}>Típus</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.typeOptions}>
-              {[
-                ['szemelyi', 'Személyi'],
-                ['biztositas', 'Biztosítás'],
-                ['orvosi', 'Orvosi'],
-                ['iskola', 'Iskola'],
-                ['egyeb', 'Egyéb'],
-              ].map(([value, label]) => (
+              {DOCUMENT_TYPES.map(([value, label]) => (
                 <Pressable
                   key={value}
                   onPress={() => setDocumentType(value)}
@@ -386,6 +437,7 @@ export default function DocumentsScreen() {
     </SafeAreaView>
   );
 }
+
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   header: { minHeight: 68, paddingHorizontal: spacing.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

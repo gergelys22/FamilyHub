@@ -1,5 +1,4 @@
-import { colors, radius, shadows, spacing } from '@/constants/theme';
-import { darkColors } from '@/constants/theme';
+import { colors, radius, shadows, spacing , darkColors } from '@/constants/theme';
 import { useTheme } from '@/providers/theme-provider';
 import { useAuth } from '@/providers/auth-provider';
 import { Ionicons } from '@expo/vector-icons';
