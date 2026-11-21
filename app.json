@@ -1,3 +1,4 @@
+
 {
   "expo": {
     "name": "FamilyHub",
@@ -8,18 +9,23 @@
     "scheme": "familyhub",
     "userInterfaceStyle": "dark",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "A FamilyHub a mikrofont hang- és videóhívásokhoz, valamint hangüzenetek rögzítéséhez használja."
+      }
     },
     "android": {
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "config": {
-        
-      },
+      "config": {},
       "predictiveBackGestureEnabled": false,
       "package": "com.gergely2002.FamilyHub"
     },
@@ -51,7 +57,7 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "A FamilyHub a mikrofon használhatja hangüzenetek rögzítéséhez."
+          "microphonePermission": "A FamilyHub a mikrofont hangüzenetek rögzítéséhez és hívásokhoz használja."
         }
       ],
       [
