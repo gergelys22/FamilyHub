@@ -1,29 +1,30 @@
 import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
-import { useTheme } from '@/providers/theme-provider';
 import { useNotifications } from '@/hooks/use-notifications';
-import type { AppNotification ,
+import { useAuth } from '@/providers/auth-provider';
+import { useTheme } from '@/providers/theme-provider';
+import { getFamilyMembers, getMyFamilies, type FamilyMember } from '@/services/families';
+import {
   getNotificationPreferences,
   saveNotificationPreferences,
+  type AppNotification,
   type NotificationPreferences,
 } from '@/services/notifications';
-import { useAuth } from '@/providers/auth-provider';
-import { getMyFamilies, getFamilyMembers, type FamilyMember } from '@/services/families';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
-  Text,
-  View,
   Switch,
-  Modal,
+  Text,
   TextInput,
+  View,
 } from 'react-native';
-import { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type NotificationFilter = 'all' | 'events' | 'system';
