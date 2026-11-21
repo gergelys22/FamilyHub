@@ -19,7 +19,7 @@
       },
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyDDlJn3EgoZ1pdO2F5FrAmwql0-xI_dk8k"
+          "apiKey": "AIzaSyCd_6acRhQPSyS6IGtDLyBz1pY48SH4pBE"
         }
       },
       "predictiveBackGestureEnabled": false,
@@ -72,7 +72,9 @@
           "microphonePermission": false
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      "@livekit/react-native-expo-plugin",
+      "@config-plugins/react-native-webrtc"
     ],
     "experiments": {
       "typedRoutes": true,
