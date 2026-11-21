@@ -58,19 +58,21 @@
           "faceIDPermission": "A FamilyHub a Face ID-t használhatja az érzékeny képernyők feloldásához."
         }
       ],
-      ["expo-audio",
+      [
+        "expo-audio",
         {
           "microphonePermission": "A FamilyHub a mikrofon használhatja hangüzenetek rögzítéséhez."
         }
       ],
-      ["expo-image-picker",
+      [
+        "expo-image-picker",
         {
           "photosPermission": "A FamilyHub hozzáférést kér a profilképed kiválasztásához.",
           "cameraPermission": "A FamilyHub hozzáférést kér profilkép készítéséhez.",
           "microphonePermission": false
         }
-      ]
-
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,
