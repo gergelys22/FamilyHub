@@ -1,10 +1,12 @@
 import { supabase } from '@/lib/supabase';
 import {
-  ChatConversation,
-  ChatMessage,
   getChatConversations,
   getChatMessages,
+  sendChatAttachment,
   sendChatMessage,
+  type ChatAttachmentInput,
+  type ChatConversation,
+  type ChatMessage,
 } from '@/services/chat';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -37,6 +39,7 @@ export function useChatConversations(familyId: string | null) {
       .channel(`chat-conversations:${familyId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_conversations', filter: `family_id=eq.${familyId}` }, load)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, load)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_message_attachments' }, load)
       .subscribe();
     return () => {
       void supabase.removeChannel(channel);
@@ -74,17 +77,30 @@ export function useChatMessages(conversationId: string | null, profileId: string
     const channel = supabase
       .channel(`chat-messages:${conversationId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `conversation_id=eq.${conversationId}` }, load)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_message_attachments', filter: `conversation_id=eq.${conversationId}` }, load)
       .subscribe();
     return () => {
       void supabase.removeChannel(channel);
     };
   }, [conversationId, load]);
 
+  const upsertMessage = useCallback((message: ChatMessage) => {
+    setMessages((current) =>
+      current.some((item) => item.id === message.id)
+        ? current.map((item) => (item.id === message.id ? message : item))
+        : [...current, message],
+    );
+  }, []);
+
   const send = useCallback(async (body: string) => {
     if (!conversationId || !profileId || !body.trim()) return;
-    const message = await sendChatMessage(conversationId, profileId, body);
-    setMessages((current) => (current.some((item) => item.id === message.id) ? current : [...current, message]));
-  }, [conversationId, profileId]);
+    upsertMessage(await sendChatMessage(conversationId, profileId, body));
+  }, [conversationId, profileId, upsertMessage]);
 
-  return { messages, loading, error, refresh: load, send };
+  const sendAttachment = useCallback(async (file: ChatAttachmentInput, caption = '') => {
+    if (!conversationId || !profileId) return;
+    upsertMessage(await sendChatAttachment(conversationId, profileId, file, caption));
+  }, [conversationId, profileId, upsertMessage]);
+
+  return { messages, loading, error, refresh: load, send, sendAttachment };
 }

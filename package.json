@@ -9,6 +9,7 @@
     "@react-native-community/netinfo": "12.0.1",
     "@supabase/supabase-js": "^2.116.0",
     "expo": "~57.0.33",
+    "expo-audio": "~57.0.5",
     "expo-blur": "~57.0.3",
     "expo-constants": "~57.0.11",
     "expo-dev-client": "~57.0.21",

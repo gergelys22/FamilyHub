@@ -1,13 +1,15 @@
-import { colors, radius, shadows, spacing , darkColors } from '@/constants/theme';
-import { useTheme } from '@/providers/theme-provider';
+import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
 import { useChatConversations } from '@/hooks/use-chat';
 import { useAuth } from '@/providers/auth-provider';
-import { getMyFamilies } from '@/services/families';
+import { useTheme } from '@/providers/theme-provider';
+import { describeChatMessage, findOrCreateDirectConversation, findOrCreateFamilyGroup } from '@/services/chat';
+import { getFamilyMembers, getMyFamilies, type FamilyMember } from '@/services/families';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   Alert,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -78,17 +80,67 @@ export default function MessagesScreen() {
   const palette = isDark ? darkColors : colors;
   const { profile } = useAuth();
   const [familyId, setFamilyId] = useState<string | null>(null);
+  const [members, setMembers] = useState<FamilyMember[]>([]);
+  const [composeVisible, setComposeVisible] = useState(false);
+  const [starting, setStarting] = useState(false);
   const {
     conversations: chatConversations,
     loading,
     error,
   } = useChatConversations(familyId);
   const [search, setSearch] = useState('');
-  const displayName = profile?.display_name || 'Gergely';
+
   useEffect(() => {
-    void getMyFamilies().then((families) => setFamilyId(families[0]?.id ?? null));
+    let active = true;
+    void getMyFamilies()
+      .then(async (families) => {
+        const id = families[0]?.id ?? null;
+        if (!active) return;
+        setFamilyId(id);
+        if (!id) return;
+        const familyMembers = await getFamilyMembers(id);
+        if (active) setMembers(familyMembers);
+      })
+      .catch((caught: unknown) => {
+        if (active) {
+          Alert.alert(
+            'Betöltés sikertelen',
+            caught instanceof Error ? caught.message : 'Próbáld újra később.',
+          );
+        }
+      });
+    return () => {
+      active = false;
+    };
   }, []);
-  const conversations: Conversation[] = chatConversations.map((conversation) => {
+
+  async function startConversation(target: { type: 'member'; profileId: string } | { type: 'group' }) {
+    if (!familyId || !profile?.id || starting) return;
+    setStarting(true);
+    try {
+      const conversationId =
+        target.type === 'group'
+          ? await findOrCreateFamilyGroup(
+              familyId,
+              profile.id,
+              members.map((member) => member.profile_id),
+            )
+          : await findOrCreateDirectConversation(familyId, profile.id, target.profileId);
+      setComposeVisible(false);
+      router.push({ pathname: '/chat-details', params: { conversationId } });
+    } catch (caught) {
+      Alert.alert(
+        'Beszélgetés indítása sikertelen',
+        caught instanceof Error ? caught.message : 'Próbáld újra később.',
+      );
+    } finally {
+      setStarting(false);
+    }
+  }
+
+  const conversations: Conversation[] = chatConversations
+    .filter((conversation) => conversation.members.some((member) => member.id === profile?.id))
+    .map((conversation) => {
     const firstMember =
       conversation.members.find((member) => member.id !== profile?.id) ??
       conversation.members[0];
@@ -98,7 +150,9 @@ export default function MessagesScreen() {
     return {
       id: conversation.id,
       name,
-      preview: conversation.lastMessage?.body || 'Még nincs üzenet',
+      preview: conversation.lastMessage
+        ? describeChatMessage(conversation.lastMessage) || 'Még nincs üzenet'
+        : 'Még nincs üzenet',
       time: conversation.lastMessage
         ? new Date(conversation.lastMessage.created_at).toLocaleTimeString('hu-HU', {
             hour: '2-digit',
@@ -121,6 +175,7 @@ export default function MessagesScreen() {
           .includes(query),
       )
     : conversations;
+  const otherMembers = members.filter((member) => member.profile_id !== profile?.id);
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
@@ -165,11 +220,11 @@ export default function MessagesScreen() {
       >
         {loading ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>Beszélgetések betöltése…</Text>
+            <Text style={[styles.emptyText, { color: palette.textMuted }]}>Beszélgetések betöltése…</Text>
           </View>
         ) : error ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>{error.message}</Text>
+            <Text style={[styles.emptyText, { color: palette.textMuted }]}>{error.message}</Text>
           </View>
         ) : filteredConversations.length > 0 ? (
           filteredConversations.map((conversation) => (
@@ -187,9 +242,9 @@ export default function MessagesScreen() {
           ))
         ) : (
           <View style={styles.emptyState}>
-            <Ionicons name="chatbubbles-outline" size={42} color={colors.textMuted} />
-            <Text style={styles.emptyTitle}>Nincs találat</Text>
-            <Text style={styles.emptyText}>
+            <Ionicons name="chatbubbles-outline" size={42} color={palette.textMuted} />
+            <Text style={[styles.emptyTitle, { color: palette.textPrimary }]}>Nincs találat</Text>
+            <Text style={[styles.emptyText, { color: palette.textMuted }]}>
               {search
                 ? 'Próbálj másik nevet vagy kifejezést keresni.'
                 : 'Még nincs létrehozott beszélgetés.'}
@@ -201,16 +256,73 @@ export default function MessagesScreen() {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Új üzenet írása"
-        onPress={() =>
-          Alert.alert(
-            'Új üzenet',
-            `Hamarosan üzenetet írhatsz a családodnak, ${displayName}.`,
-          )
-        }
+        onPress={() => setComposeVisible(true)}
         style={({ pressed }) => [styles.composeButton, pressed && styles.pressed]}
       >
         <Ionicons name="create-outline" size={27} color={colors.white} />
       </Pressable>
+
+      <Modal
+        visible={composeVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          if (!starting) setComposeVisible(false);
+        }}
+      >
+        <View style={[styles.modalOverlay, { backgroundColor: isDark ? 'rgba(3, 10, 24, 0.78)' : 'rgba(23, 43, 77, 0.38)' }]}>
+          <View style={[styles.modal, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: palette.textPrimary }]}>Új üzenet</Text>
+              <Pressable
+                accessibilityLabel="Bezárás"
+                disabled={starting}
+                hitSlop={8}
+                onPress={() => setComposeVisible(false)}
+              >
+                <Ionicons name="close" size={24} color={palette.textSecondary} />
+              </Pressable>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Pressable
+                disabled={starting}
+                onPress={() => void startConversation({ type: 'group' })}
+                style={({ pressed }) => [styles.pickRow, { borderColor: palette.border }, pressed && styles.pressed]}
+              >
+                <View style={[styles.pickAvatar, { backgroundColor: palette.primarySoft }]}>
+                  <Ionicons name="people" size={22} color={palette.primary} />
+                </View>
+                <Text style={[styles.pickName, { color: palette.textPrimary }]}>Családi csoport</Text>
+                <Ionicons name="chevron-forward" size={18} color={palette.textMuted} />
+              </Pressable>
+              {otherMembers.map((member) => {
+                const label = member.nickname || member.display_name;
+                return (
+                  <Pressable
+                    key={member.profile_id}
+                    disabled={starting}
+                    onPress={() => void startConversation({ type: 'member', profileId: member.profile_id })}
+                    style={({ pressed }) => [styles.pickRow, { borderColor: palette.border }, pressed && styles.pressed]}
+                  >
+                    <View style={[styles.pickAvatar, { backgroundColor: palette.primarySoft }]}>
+                      <Text style={[styles.pickInitial, { color: palette.primary }]}>
+                        {label.charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+                    <Text style={[styles.pickName, { color: palette.textPrimary }]}>{label}</Text>
+                    <Ionicons name="chevron-forward" size={18} color={palette.textMuted} />
+                  </Pressable>
+                );
+              })}
+              {otherMembers.length === 0 ? (
+                <Text style={[styles.emptyText, { color: palette.textMuted }]}>
+                  Még nincs másik családtag, akinek írhatnál.
+                </Text>
+              ) : null}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -303,4 +415,25 @@ const styles = StyleSheet.create({
     ...shadows.floating,
   },
   pressed: { opacity: 0.72, transform: [{ scale: 0.96 }] },
+  modalOverlay: { flex: 1, justifyContent: 'flex-end' },
+  modal: {
+    maxHeight: '75%',
+    padding: spacing.xl,
+    gap: spacing.md,
+    borderTopWidth: 1,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+  },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  modalTitle: { fontSize: 20, fontWeight: '900' },
+  pickRow: {
+    minHeight: 62,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  pickAvatar: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center', borderRadius: 21 },
+  pickInitial: { fontSize: 16, fontWeight: '900' },
+  pickName: { flex: 1, fontSize: 15, fontWeight: '800' },
 });
