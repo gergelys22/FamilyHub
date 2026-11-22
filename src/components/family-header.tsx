@@ -1,9 +1,9 @@
-import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
 import { GlassSurface } from '@/components/glass-surface';
+import { colors, darkColors, radius, spacing } from '@/constants/theme';
 import { useTheme } from '@/providers/theme-provider';
+import { Ionicons } from '@expo/vector-icons';
 import { SymbolView } from 'expo-symbols';
 import medium from 'expo-symbols/androidWeights/medium';
-import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 type FamilyHeaderProps = {
@@ -15,6 +15,10 @@ type FamilyHeaderProps = {
   onProfilePress?: () => void;
 };
 
+function formatBadge(count: number) {
+  return count > 99 ? '99+' : String(count);
+}
+
 export function FamilyHeader({
   userInitial = 'A',
   unreadNotificationCount = 0,
@@ -25,9 +29,8 @@ export function FamilyHeader({
 }: FamilyHeaderProps) {
   const { isDark } = useTheme();
   const palette = isDark ? darkColors : colors;
-  const badgeText =
-    unreadNotificationCount > 99 ? '99+' : String(unreadNotificationCount);
-  const messageBadgeText = unreadMessageCount > 99 ? '99+' : String(unreadMessageCount);
+  const hasNotifications = unreadNotificationCount > 0;
+  const hasMessages = unreadMessageCount > 0;
 
   return (
     <GlassSurface
@@ -38,7 +41,7 @@ export function FamilyHeader({
       ]}
     >
       <View style={styles.brand}>
-        <View style={styles.logo}>
+        <View style={[styles.logo, { backgroundColor: palette.primarySoft }]}>
           <SymbolView
             name={{
               ios: 'house.and.flag.fill',
@@ -46,38 +49,41 @@ export function FamilyHeader({
               web: 'family_home',
             }}
             size={22}
-            tintColor={palette.textPrimary}
+            tintColor={palette.primary}
             type="hierarchical"
             weight={{ ios: 'semibold', android: medium }}
             style={styles.symbol}
           />
         </View>
-
         <Text style={[styles.brandText, { color: palette.textPrimary }]}>CsaládTér</Text>
       </View>
 
       <View style={styles.actions}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Üzenetek megnyitása"
+          accessibilityLabel={
+            hasMessages
+              ? `Üzenetek megnyitása. ${unreadMessageCount} olvasatlan.`
+              : 'Üzenetek megnyitása'
+          }
           hitSlop={8}
           onPress={onMessagesPress}
           style={({ pressed }) => [
-            styles.notificationsButton,
-            { borderColor: palette.border, backgroundColor: palette.surface },
+            styles.iconButton,
+            { backgroundColor: palette.surface, borderColor: palette.border },
             pressed && styles.pressed,
           ]}
         >
-        <Ionicons
-          name="chatbubble-outline"
-          size={24}
-          color={unreadMessageCount > 0 ? palette.danger : palette.teal}
-        />
-        {unreadMessageCount > 0 ? (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{messageBadgeText}</Text>
-          </View>
-        ) : null}
+          <Ionicons
+            name={hasMessages ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'}
+            size={22}
+            color={hasMessages ? palette.primary : palette.textSecondary}
+          />
+          {hasMessages ? (
+            <View style={[styles.badge, { borderColor: palette.surface, backgroundColor: palette.danger }]}>
+              <Text style={styles.badgeText}>{formatBadge(unreadMessageCount)}</Text>
+            </View>
+          ) : null}
         </Pressable>
 
         <Pressable
@@ -86,30 +92,26 @@ export function FamilyHeader({
           hitSlop={8}
           onPress={onNotificationsPress}
           style={({ pressed }) => [
-            styles.notificationsButton,
-            { borderColor: palette.border, backgroundColor: palette.surface },
+            styles.iconButton,
+            { backgroundColor: palette.surface, borderColor: palette.border },
             pressed && styles.pressed,
           ]}
         >
           <SymbolView
             name={{
-              ios: unreadNotificationCount > 0 ? 'bell.badge.fill' : 'bell.fill',
-              android:
-                unreadNotificationCount > 0 ? 'notifications_active' : 'notifications',
-              web: unreadNotificationCount > 0 ? 'notifications_active' : 'notifications',
+              ios: hasNotifications ? 'bell.badge.fill' : 'bell.fill',
+              android: hasNotifications ? 'notifications_active' : 'notifications',
+              web: hasNotifications ? 'notifications_active' : 'notifications',
             }}
-            size={23}
-            tintColor={
-              unreadNotificationCount > 0 ? palette.primaryLight : palette.textSecondary
-            }
+            size={22}
+            tintColor={hasNotifications ? palette.primary : palette.textSecondary}
             type="hierarchical"
             weight={{ ios: 'semibold', android: medium }}
             style={styles.symbol}
           />
-
-          {unreadNotificationCount > 0 ? (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{badgeText}</Text>
+          {hasNotifications ? (
+            <View style={[styles.badge, { borderColor: palette.surface, backgroundColor: palette.danger }]}>
+              <Text style={styles.badgeText}>{formatBadge(unreadNotificationCount)}</Text>
             </View>
           ) : null}
         </Pressable>
@@ -120,12 +122,14 @@ export function FamilyHeader({
           hitSlop={8}
           onPress={onProfilePress}
           style={({ pressed }) => [
-            styles.profileButton,
-            { borderColor: palette.surface },
+            styles.profileRing,
+            { borderColor: palette.primarySoft },
             pressed && styles.pressed,
           ]}
         >
-          <Text style={styles.profileText}>{userInitial}</Text>
+          <View style={[styles.profileButton, { backgroundColor: palette.primary }]}>
+            <Text style={styles.profileText}>{userInitial.charAt(0).toUpperCase()}</Text>
+          </View>
         </Pressable>
       </View>
     </GlassSurface>
@@ -138,15 +142,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderBottomWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(255, 255, 255, 0.55)',
-    shadowColor: '#55749C',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 4,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   brand: {
     flexDirection: 'row',
@@ -154,71 +151,69 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   logo: {
-    width: 38,
-    height: 38,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.md,
-    backgroundColor: colors.primarySoft,
   },
   symbol: {
-    width: 26,
-    height: 26,
+    width: 24,
+    height: 24,
   },
   brandText: {
-    color: colors.textPrimary,
     fontSize: 20,
     fontWeight: '900',
-    letterSpacing: -0.4,
+    letterSpacing: -0.5,
   },
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
   },
-  notificationsButton: {
-    width: 42,
-    height: 42,
+  iconButton: {
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radius.round,
-    backgroundColor: colors.surface,
-    ...shadows.card,
   },
   badge: {
     position: 'absolute',
-    top: -3,
+    top: -4,
     right: -4,
-    minWidth: 20,
-    height: 20,
-    paddingHorizontal: 5,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: colors.surface,
     borderRadius: radius.round,
-    backgroundColor: colors.danger,
   },
   badgeText: {
-    color: colors.white,
+    color: '#FFFFFF',
     fontSize: 9,
     fontWeight: '900',
   },
-  profileButton: {
+  profileRing: {
     width: 44,
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: colors.white,
+    borderWidth: 2,
     borderRadius: radius.round,
-    backgroundColor: '#F4C7A1',
-    ...shadows.card,
+  },
+  profileButton: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.round,
   },
   profileText: {
-    color: '#75431E',
+    color: '#FFFFFF',
+    fontSize: 15,
     fontWeight: '900',
   },
   pressed: {

@@ -5,8 +5,8 @@ import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme'
 import { useNotifications } from '@/hooks/use-notifications';
 import { useUnreadMessages } from '@/hooks/use-unread-messages';
 import { useAuth } from '@/providers/auth-provider';
-import { useTheme } from '@/providers/theme-provider';
 import { usePresence } from '@/providers/presence-provider';
+import { useTheme } from '@/providers/theme-provider';
 import { getChatConversations } from '@/services/chat';
 import { getFamilyEvents, type FamilyEvent } from '@/services/events';
 import type { Family } from '@/services/families';

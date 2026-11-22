@@ -1,19 +1,28 @@
 import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
+import { useAuth } from '@/providers/auth-provider';
 import { useTheme } from '@/providers/theme-provider';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import type { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+
+// A lebegő/üveg tabsáv magassága (a rendszersáv nélkül) + kis ráhagyás.
+// Ha a sáv még mindig takarja az alját, növeld ezt az értéket.
+const TAB_BAR_CLEARANCE = 96;
+
+type Palette = typeof colors | typeof darkColors;
 
 type MenuItemProps = {
   icon: React.ComponentProps<typeof Ionicons>['name'];
   label: string;
-  color?: string;
+  accent: string;
   onPress: () => void;
-  palette: typeof colors | typeof darkColors;
+  palette: Palette;
+  last?: boolean;
 };
 
-function MenuItem({ icon, label, color = colors.primary, onPress, palette }: MenuItemProps) {
+function MenuItem({ icon, label, accent, onPress, palette, last }: MenuItemProps) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -21,14 +30,27 @@ function MenuItem({ icon, label, color = colors.primary, onPress, palette }: Men
       onPress={onPress}
       style={({ pressed }) => [
         styles.menuItem,
+        !last && { borderBottomColor: palette.border, borderBottomWidth: StyleSheet.hairlineWidth },
         pressed && { backgroundColor: palette.surfaceMuted },
-        pressed && styles.pressed,
       ]}
     >
-      <Ionicons name={icon} size={23} color={color} />
+      <View style={[styles.iconTile, { backgroundColor: `${accent}24` }]}>
+        <Ionicons name={icon} size={20} color={accent} />
+      </View>
       <Text style={[styles.menuLabel, { color: palette.textPrimary }]}>{label}</Text>
-      <Ionicons name="chevron-forward" size={18} color={palette.textPrimary} />
+      <Ionicons name="chevron-forward" size={18} color={palette.textMuted} />
     </Pressable>
+  );
+}
+
+function Section({ title, palette, children }: { title: string; palette: Palette; children: ReactNode }) {
+  return (
+    <View style={styles.section}>
+      <Text style={[styles.sectionTitle, { color: palette.textMuted }]}>{title}</Text>
+      <View style={[styles.menu, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+        {children}
+      </View>
+    </View>
   );
 }
 
@@ -36,11 +58,16 @@ export default function MoreScreen() {
   const router = useRouter();
   const { isDark } = useTheme();
   const palette = isDark ? darkColors : colors;
+  const { profile } = useAuth();
+  const insets = useSafeAreaInsets();
+
+  const displayName = profile?.display_name ?? 'Profil';
+  const initial = displayName.charAt(0).toUpperCase();
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: TAB_BAR_CLEARANCE + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
         <Text style={[styles.title, { color: palette.textPrimary }]}>Több</Text>
@@ -55,102 +82,117 @@ export default function MoreScreen() {
             pressed && styles.pressed,
           ]}
         >
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>G</Text>
+          <View style={[styles.avatarRing, { borderColor: palette.primarySoft }]}>
+            <View style={[styles.avatar, { backgroundColor: palette.primary }]}>
+              <Text style={styles.avatarText}>{initial}</Text>
+            </View>
           </View>
           <View style={styles.profileContent}>
-            <Text style={[styles.profileName, { color: palette.textPrimary }]}>Gergely</Text>
-            <Text style={[styles.profileRole, { color: palette.textSecondary }]}>Családszervező</Text>
+            <Text style={[styles.profileName, { color: palette.textPrimary }]}>{displayName}</Text>
+            <Text style={[styles.profileRole, { color: palette.textSecondary }]}>Profil és fiók megnyitása</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={palette.primary} />
         </Pressable>
 
-        <View
-          style={[
-            styles.menu,
-            {
-              backgroundColor: palette.surface,
-              borderColor: palette.border,
-            },
-          ]}
-        >
+        <Section title="Család" palette={palette}>
           <MenuItem
             icon="people-outline"
             label="Családtagok"
+            accent="#3B82F6"
             onPress={() => router.push('/invite-member')}
             palette={palette}
           />
           <MenuItem
             icon="git-network-outline"
             label="Családfa"
+            accent="#8B5CF6"
             onPress={() => router.push('/family-tree')}
             palette={palette}
           />
           <MenuItem
+            icon="location-outline"
+            label="Helymegosztás"
+            accent="#14B8A6"
+            onPress={() => router.push('/location-sharing')}
+            palette={palette}
+          />
+          <MenuItem
+            icon="happy-outline"
+            label="Gyermekmodul"
+            accent="#F59E0B"
+            onPress={() => router.push('/school-children')}
+            palette={palette}
+            last
+          />
+        </Section>
+
+        <Section title="Szervezés" palette={palette}>
+          <MenuItem
+            icon="checkbox-outline"
+            label="Teendők és bevásárlás"
+            accent="#22A06B"
+            onPress={() => router.push('/tasks' as never)}
+            palette={palette}
+          />
+          <MenuItem
+            icon="alarm-outline"
+            label="Emlékeztetők"
+            accent="#F97316"
+            onPress={() => router.push('/reminders')}
+            palette={palette}
+          />
+          <MenuItem
+            icon="wallet-outline"
+            label="Családi költségvetés"
+            accent="#0EA5E9"
+            onPress={() => router.push('/budget')}
+            palette={palette}
+          />
+          <MenuItem
+            icon="medkit-outline"
+            label="Gyógyszerek"
+            accent={palette.danger}
+            onPress={() => router.push('/medications')}
+            palette={palette}
+            last
+          />
+        </Section>
+
+        <Section title="Áttekintés és biztonság" palette={palette}>
+          <MenuItem
             icon="speedometer-outline"
             label="Vezérlőpult"
+            accent="#6366F1"
             onPress={() => router.push('/family-dashboard')}
             palette={palette}
           />
           <MenuItem
             icon="pulse-outline"
             label="Aktivitásnapló"
+            accent="#EC4899"
             onPress={() => router.push('/activity-log')}
-            palette={palette}
-          />
-          <MenuItem
-            icon="wallet-outline"
-            label="Családi költségvetés"
-            onPress={() => router.push('/budget')}
-            palette={palette}
-          />
-          <MenuItem
-            icon="happy-outline"
-            label="Gyermekmodul"
-            onPress={() => router.push('/school-children')}
             palette={palette}
           />
           <MenuItem
             icon="shield-checkmark-outline"
             label="Páncélterem"
+            accent="#10B981"
             onPress={() => router.push('/vault')}
-            palette={palette}
-          />
-          <MenuItem
-            icon="medkit-outline"
-            label="Gyógyszerek"
-            color={colors.danger}
-            onPress={() => router.push('/medications')}
-            palette={palette}
-          />
-          <MenuItem
-            icon="alarm-outline"
-            label="Emlékeztetők"
-            onPress={() => router.push('/reminders')}
-            palette={palette}
-          />
-          <MenuItem
-            icon="checkbox-outline"
-            label="Teendők és bevásárlás"
-            onPress={() => router.push('/tasks' as never)}
-            palette={palette}
-          />
-          <MenuItem
-            icon="location-outline"
-            label="Helymegosztás"
-            onPress={() => router.push('/location-sharing')}
             palette={palette}
           />
           <MenuItem
             icon="settings-outline"
             label="Beállítások"
+            accent="#64748B"
             onPress={() => router.push('/settings')}
             palette={palette}
+            last
           />
-        </View>
+        </Section>
 
         <Pressable
           accessibilityRole="button"
+          accessibilityLabel="Adatvédelem és biztonság megnyitása"
           onPress={() => router.push('/privacy')}
           style={({ pressed }) => [
             styles.securityCard,
@@ -158,29 +200,14 @@ export default function MoreScreen() {
             pressed && styles.pressed,
           ]}
         >
-          <View
-            style={[
-              styles.securityIcon,
-              { backgroundColor: isDark ? '#0C4A45' : '#D2F6EC' },
-            ]}
-          >
-            <Ionicons name="shield-checkmark" size={27} color="#20BFA7" />
+          <View style={[styles.securityIcon, { backgroundColor: isDark ? '#0C4A45' : '#D2F6EC' }]}>
+            <Ionicons name="shield-checkmark" size={26} color="#20BFA7" />
           </View>
           <View style={styles.securityContent}>
-            <Text
-              style={[
-                styles.securityTitle,
-                { color: isDark ? '#7EE7D3' : '#117C6C' },
-              ]}
-            >
+            <Text style={[styles.securityTitle, { color: isDark ? '#7EE7D3' : '#117C6C' }]}>
               Adatvédelem és biztonság
             </Text>
-            <Text
-              style={[
-                styles.securityText,
-                { color: isDark ? '#A6CEC7' : '#4B9E90' },
-              ]}
-            >
+            <Text style={[styles.securityText, { color: isDark ? '#A6CEC7' : '#3F8A7D' }]}>
               Adatkezelési tájékoztató
             </Text>
           </View>
@@ -192,51 +219,70 @@ export default function MoreScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#F8FBFF' },
-  content: { paddingHorizontal: spacing.lg, paddingBottom: 36, gap: spacing.md },
+  safeArea: { flex: 1 },
+  content: { paddingHorizontal: spacing.lg, gap: spacing.lg },
   title: {
     paddingTop: spacing.sm,
-    color: colors.textPrimary,
     fontSize: 30,
     fontWeight: '900',
     letterSpacing: -0.7,
   },
   profileCard: {
-    minHeight: 104,
     padding: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: '#EEF4FF',
     ...shadows.card,
   },
-  avatar: {
-    width: 70,
-    height: 70,
+  avatarRing: {
+    width: 68,
+    height: 68,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 35,
-    backgroundColor: '#D6B38D',
     borderWidth: 3,
-    borderColor: colors.white,
+    borderRadius: 34,
   },
-  avatarText: { color: '#5F351D', fontSize: 26, fontWeight: '900' },
+  avatar: {
+    width: 54,
+    height: 54,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 27,
+  },
+  avatarText: { color: '#FFFFFF', fontSize: 22, fontWeight: '900' },
   profileContent: { flex: 1, gap: 3 },
-  profileName: { color: colors.textPrimary, fontSize: 19, fontWeight: '900' },
-  profileRole: { color: colors.textSecondary, fontSize: 13, fontWeight: '700' },
-  menu: { gap: 2, padding: spacing.sm, borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  profileName: { fontSize: 19, fontWeight: '900' },
+  profileRole: { fontSize: 13, fontWeight: '700' },
+  section: { gap: spacing.sm },
+  sectionTitle: {
+    paddingHorizontal: spacing.xs,
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  menu: {
+    overflow: 'hidden',
+    borderRadius: radius.lg,
+    borderWidth: 1,
+  },
   menuItem: {
-    minHeight: 52,
+    minHeight: 56,
     paddingHorizontal: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.lg,
+    gap: spacing.md,
+  },
+  iconTile: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: radius.md,
   },
-  menuLabel: { flex: 1, color: colors.textSecondary, fontSize: 14, fontWeight: '800' },
+  menuLabel: { flex: 1, fontSize: 15, fontWeight: '800' },
   securityCard: {
     minHeight: 84,
     padding: spacing.md,
@@ -244,7 +290,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     borderRadius: radius.lg,
-    backgroundColor: '#E9FBF6',
   },
   securityIcon: {
     width: 48,
@@ -252,10 +297,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 24,
-    backgroundColor: '#D2F6EC',
   },
   securityContent: { flex: 1, gap: 4 },
-  securityTitle: { color: '#117C6C', fontSize: 13, fontWeight: '900' },
-  securityText: { color: '#4B9E90', fontSize: 11, fontWeight: '700' },
+  securityTitle: { fontSize: 14, fontWeight: '900' },
+  securityText: { fontSize: 12, fontWeight: '700' },
   pressed: { opacity: 0.72, transform: [{ scale: 0.98 }] },
 });

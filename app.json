@@ -1,4 +1,3 @@
-
 {
   "expo": {
     "name": "FamilyHub",
@@ -17,7 +16,9 @@
     "android": {
       "permissions": [
         "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS"
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.CAMERA",
+        "android.permission.BLUETOOTH_CONNECT"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
@@ -63,14 +64,20 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "A FamilyHub hozzáférést kér a profilképed kiválasztásához.",
-          "cameraPermission": "A FamilyHub hozzáférést kér profilkép készítéséhez.",
-          "microphonePermission": false
+          "photosPermission": "A FamilyHub hozzáférést kér képek és videók kiválasztásához.",
+          "cameraPermission": "A FamilyHub hozzáférést kér fotók és videók készítéséhez.",
+          "microphonePermission": "A FamilyHub a mikrofont videók és hangüzenetek rögzítéséhez használja."
         }
       ],
       "expo-asset",
       "@livekit/react-native-expo-plugin",
-      "@config-plugins/react-native-webrtc"
+      [
+        "@config-plugins/react-native-webrtc",
+        {
+          "cameraPermission": "A FamilyHub a kamerát videóhívásokhoz használja.",
+          "microphonePermission": "A FamilyHub a mikrofont hang- és videóhívásokhoz használja."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
