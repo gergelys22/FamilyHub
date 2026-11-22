@@ -17,66 +17,27 @@ import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-function getGreeting(date: Date = new Date()): string {
+type Palette = typeof colors | typeof darkColors;
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+type HomeRoute = '/calendar' | '/create-event' | '/invite-member' | '/memories' | '/vault';
+
+function getGreeting(date: Date): string {
   const hour = date.getHours();
   if (hour >= 5 && hour < 12) return 'Jó reggelt';
   if (hour >= 12 && hour < 18) return 'Jó napot';
   if (hour >= 18 && hour < 22) return 'Jó estét';
-  return 'Stia';
+  return 'Jó éjszakát';
 }
 
-type IconName = {
-  ios: string;
-  android?: string;
-  web?: string;
-};
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
-type HomeRoute =
-  | '/calendar'
-  | '/create-event'
-  | '/invite-member'
-  | '/memories'
-  | '/vault';
-
-function getCrossPlatformIcon(name: IconName): IoniconName {
-  switch (name.ios) {
-    case 'sun.max.fill':
-      return 'sunny';
-    case 'calendar':
-      return 'calendar';
-    case 'bell.fill':
-      return 'notifications';
-    case 'bubble.left.and.bubble.right.fill':
-      return 'chatbubbles';
-    case 'photo.on.rectangle.angled':
-      return 'images';
-    case 'lock.shield.fill':
-      return 'shield-checkmark';
-    case 'chevron.right':
-      return 'chevron-forward';
-    case 'plus':
-      return 'add';
-    default:
-      return 'help-circle-outline';
-  }
+function startOfDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
 }
 
-function AppSymbol({
-  name,
-  color,
-  size = 22,
-}: {
-  name: IconName;
-  color: string;
-  size?: number;
-}) {
-  return (
-    <Ionicons
-      name={getCrossPlatformIcon(name)}
-      size={size}
-      color={color}
-    />
-  );
+function relativeDayLabel(eventDate: Date, now: Date) {
+  const days = Math.round((startOfDay(eventDate) - startOfDay(now)) / 86_400_000);
+  if (days <= 0) return 'MA';
+  if (days === 1) return 'HOLNAP';
+  return `${days} NAP`;
 }
 
 function SectionHeader({
@@ -88,7 +49,7 @@ function SectionHeader({
   title: string;
   action?: string;
   onPress?: () => void;
-  palette: typeof colors | typeof darkColors;
+  palette: Palette;
 }) {
   return (
     <View style={styles.sectionHeader}>
@@ -99,8 +60,10 @@ function SectionHeader({
           accessibilityLabel={`${title}: ${action}`}
           hitSlop={8}
           onPress={onPress}
+          style={styles.sectionActionRow}
         >
-          <Text style={[styles.sectionAction, { color: palette.primary }]}>{action} ›</Text>
+          <Text style={[styles.sectionAction, { color: palette.primary }]}>{action}</Text>
+          <Ionicons name="chevron-forward" size={14} color={palette.primary} />
         </Pressable>
       ) : null}
     </View>
@@ -114,19 +77,19 @@ function TodayStat({
   label,
   palette,
 }: {
-  icon: IconName;
+  icon: IoniconName;
   color: string;
   value: number;
   label: string;
-  palette: typeof colors | typeof darkColors;
+  palette: Palette;
 }) {
   return (
     <View style={styles.todayStat}>
-      <View style={[styles.todayStatIcon, { backgroundColor: `${color}20` }]}>
-        <AppSymbol name={icon} color={color} size={18} />
+      <View style={[styles.todayStatIcon, { backgroundColor: `${color}22` }]}>
+        <Ionicons name={icon} size={20} color={color} />
       </View>
-      <Text style={[styles.todayStatValue, { color: palette.primary }]}>{value}</Text>
-      <Text style={[styles.todayStatLabel, { color: palette.primaryLight }]}>{label}</Text>
+      <Text style={[styles.todayStatValue, { color: palette.textPrimary }]}>{value}</Text>
+      <Text style={[styles.todayStatLabel, { color: palette.textSecondary }]}>{label}</Text>
     </View>
   );
 }
@@ -134,15 +97,19 @@ function TodayStat({
 function NextEventCard({
   title,
   meta,
+  eventDate,
+  badge,
   color,
   onPress,
   palette,
 }: {
   title: string;
   meta: string;
+  eventDate: Date | null;
+  badge: string | null;
   color: string;
   onPress: () => void;
-  palette: typeof colors | typeof darkColors;
+  palette: Palette;
 }) {
   return (
     <Pressable
@@ -155,27 +122,32 @@ function NextEventCard({
         pressed && styles.pressed,
       ]}
     >
-      <View style={[styles.nextEventIcon, { backgroundColor: color }]}>
-        <AppSymbol
-          name={{ ios: 'calendar', android: 'calendar_month', web: 'calendar_month' }}
-          color={colors.white}
-          size={27}
-        />
+      <View style={[styles.dateTile, { backgroundColor: eventDate ? color : palette.surfaceMuted }]}>
+        {eventDate ? (
+          <>
+            <Text style={styles.dateTileMonth}>
+              {eventDate.toLocaleDateString('hu-HU', { month: 'short' }).replace('.', '').toUpperCase()}
+            </Text>
+            <Text style={styles.dateTileDay}>{eventDate.getDate()}</Text>
+          </>
+        ) : (
+          <Ionicons name="calendar-outline" size={26} color={palette.textMuted} />
+        )}
       </View>
       <View style={styles.flex}>
         <Text numberOfLines={1} style={[styles.listTitle, { color: palette.textPrimary }]}>
           {title}
         </Text>
-        <Text style={[styles.listMeta, { color: palette.textSecondary }]}>{meta}</Text>
+        <Text numberOfLines={2} style={[styles.listMeta, { color: palette.textSecondary }]}>
+          {meta}
+        </Text>
       </View>
-      <View style={[styles.todayBadge, { backgroundColor: palette.primarySoft }]}>
-        <Text style={[styles.todayBadgeText, { color: palette.primaryLight }]}>MA</Text>
-      </View>
-      <AppSymbol
-        name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
-        color={palette.primary}
-        size={16}
-      />
+      {badge ? (
+        <View style={[styles.todayBadge, { backgroundColor: palette.primarySoft }]}>
+          <Text style={[styles.todayBadgeText, { color: palette.primary }]}>{badge}</Text>
+        </View>
+      ) : null}
+      <Ionicons name="chevron-forward" size={18} color={palette.textMuted} />
     </Pressable>
   );
 }
@@ -190,10 +162,10 @@ function QuickAccessCard({
 }: {
   title: string;
   subtitle: string;
-  icon: IconName;
+  icon: IoniconName;
   color: string;
   onPress: () => void;
-  palette: typeof colors | typeof darkColors;
+  palette: Palette;
 }) {
   return (
     <Pressable
@@ -206,22 +178,14 @@ function QuickAccessCard({
         pressed && styles.pressed,
       ]}
     >
-      <View
-        style={[
-          styles.quickAccessIcon,
-          {
-            backgroundColor: palette === darkColors
-              ? color === colors.purple ? '#2A2450' : '#123F43'
-              : color === colors.purple ? '#E8D7FF' : '#C9F4E9',
-          },
-        ]}
-      >
-        <AppSymbol name={icon} color={color} size={29} />
+      <View style={[styles.quickAccessIcon, { backgroundColor: `${color}22` }]}>
+        <Ionicons name={icon} size={26} color={color} />
       </View>
       <View style={styles.quickAccessContent}>
         <Text style={[styles.quickAccessTitle, { color: palette.textPrimary }]}>{title}</Text>
         <Text style={[styles.quickAccessSubtitle, { color: palette.textMuted }]}>{subtitle}</Text>
       </View>
+      <Ionicons name="arrow-forward" size={18} color={color} style={styles.quickAccessArrow} />
     </Pressable>
   );
 }
@@ -232,7 +196,8 @@ export default function HomeScreen() {
   const router = useRouter();
   const { profile, profileError } = useAuth();
   const { isProfileOnline } = usePresence();
-  const greeting = getGreeting();
+  const [now] = useState(() => new Date());
+  const greeting = getGreeting(now);
   const { unreadCount } = useNotifications();
   const [activeFamily, setActiveFamily] = useState<Family | null>(null);
   const unreadMessageCount = useUnreadMessages(activeFamily?.id, profile?.id);
@@ -247,7 +212,7 @@ export default function HomeScreen() {
     month: 'long',
     day: 'numeric',
     weekday: 'long',
-  }).format(new Date());
+  }).format(now);
 
   useEffect(() => {
     if (!activeFamily) return;
@@ -270,18 +235,14 @@ export default function HomeScreen() {
   const nextEvent = upcomingEvents[0] ?? null;
   const nextEventDate = nextEvent ? new Date(nextEvent.starts_at) : null;
   const eventMeta = nextEventDate
-    ? `${nextEventDate.toLocaleDateString('hu-HU', { month: 'short', day: 'numeric' })} · ${nextEventDate.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' })}${nextEvent.location_name ? ` · ${nextEvent.location_name}` : ''}`
-    : 'Nincs közelgő esemény';
+    ? `${nextEventDate.toLocaleDateString('hu-HU', { month: 'short', day: 'numeric' })} · ${nextEventDate.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' })}${nextEvent?.location_name ? ` · ${nextEvent.location_name}` : ''}`
+    : 'Hozz létre egy közös családi programot.';
+  const todayEventCount = upcomingEvents.filter(
+    (event) => new Date(event.starts_at).toDateString() === now.toDateString(),
+  ).length;
 
   function openRoute(route: HomeRoute) {
-    if (route === '/invite-member' && activeFamily) {
-      router.push({
-        pathname: route,
-        params: { familyId: activeFamily.id, familyName: activeFamily.name },
-      });
-      return;
-    }
-    if (route === '/create-event' && activeFamily) {
+    if ((route === '/invite-member' || route === '/create-event') && activeFamily) {
       router.push({
         pathname: route,
         params: { familyId: activeFamily.id, familyName: activeFamily.name },
@@ -295,16 +256,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
-      <LinearGradient
-        pointerEvents="none"
-        colors={isDark ? ['#12335A', '#071A33', '#071A33'] : ['#DDEBFF', '#F6F9FF', '#F6F9FF']}
-        locations={[0, 0.72, 1]}
-        style={styles.backgroundGlow}
-      />
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <FamilyHeader
           userInitial={userInitial}
           unreadNotificationCount={unreadCount}
@@ -314,119 +266,133 @@ export default function HomeScreen() {
           onProfilePress={() => router.push('/profile')}
         />
 
-        <View style={styles.heroCard}>
-          <LinearGradient
-            pointerEvents="none"
-            colors={isDark ? ['#173F86', '#102B4C', '#102B4C'] : ['#FFF4D5', '#FFFFFF00', '#FFFFFF00']}
-            locations={[0, 0.62, 1]}
-            start={{ x: 1, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={styles.heroGlow}
-          />
-          <Text style={[styles.greeting, { color: palette.textPrimary }]}>
+        <LinearGradient
+          colors={isDark ? ['#1B4FC4', '#12307A'] : ['#2F6BFF', '#1B3FD8']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.heroCard}
+        >
+          <View style={styles.heroCircleLarge} />
+          <View style={styles.heroCircleSmall} />
+          <Text style={styles.greeting}>
             {greeting}, {firstName}! <Text style={styles.wave}>👋</Text>
           </Text>
-          <Text style={[styles.heroDate, { color: palette.textSecondary }]}>{todayLabel}</Text>
-        </View>
+          <Text style={styles.heroDate}>{todayLabel}</Text>
+          <View style={styles.heroPills}>
+            <View style={styles.heroPill}>
+              <Ionicons name="calendar-outline" size={14} color="#FFFFFF" />
+              <Text style={styles.heroPillText}>
+                {todayEventCount > 0 ? `${todayEventCount} mai esemény` : 'Ma nincs esemény'}
+              </Text>
+            </View>
+            {unreadCount > 0 ? (
+              <View style={styles.heroPill}>
+                <Ionicons name="notifications-outline" size={14} color="#FFFFFF" />
+                <Text style={styles.heroPillText}>{unreadCount} új értesítés</Text>
+              </View>
+            ) : null}
+          </View>
+        </LinearGradient>
 
         <View style={styles.familySwitcherSource}>
           <FamilySwitcher compact onActiveFamilyChange={setActiveFamily} />
         </View>
 
         {profileError ? (
-          <View style={styles.errorCard}>
-            <Text style={styles.errorText}>
+          <View
+            style={[
+              styles.errorCard,
+              {
+                backgroundColor: isDark ? '#3B1622' : '#FFF1F3',
+                borderColor: isDark ? '#7F2439' : '#F9C5CC',
+              },
+            ]}
+          >
+            <Ionicons name="alert-circle-outline" size={20} color={isDark ? '#FDA4AF' : '#C64052'} />
+            <Text style={[styles.errorText, { color: isDark ? '#FDA4AF' : '#C64052' }]}>
               A profil betöltése sikertelen: {profileError}
             </Text>
           </View>
         ) : null}
 
-        <View>
-          <ScrollView
-            horizontal
-            contentContainerStyle={styles.peopleRow}
-            showsHorizontalScrollIndicator={false}
-          >
-            <View style={styles.person}>
-              <View style={styles.avatarRing}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{userInitial}</Text>
-                </View>
-                <PresenceDot
-                  visible={isProfileOnline(profile?.id)}
-                  size={14}
-                  style={styles.onlineDot}
-                />
+        <ScrollView
+          horizontal
+          contentContainerStyle={styles.peopleRow}
+          showsHorizontalScrollIndicator={false}
+        >
+          <View style={styles.person}>
+            <View style={[styles.avatarRing, { borderColor: palette.primary }]}>
+              <View style={[styles.avatar, { backgroundColor: palette.primary }]}>
+                <Text style={styles.avatarText}>{userInitial}</Text>
               </View>
-              <Text numberOfLines={1} style={styles.personName}>
-                {firstName}
+              <PresenceDot
+                visible={isProfileOnline(profile?.id)}
+                size={14}
+                style={StyleSheet.flatten([styles.onlineDot, { borderColor: palette.background }])}
+              />
+            </View>
+            <Text numberOfLines={1} style={[styles.personName, { color: palette.textPrimary }]}>
+              {firstName}
+            </Text>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Családtag meghívása"
+            onPress={() => openRoute('/invite-member')}
+            style={({ pressed }) => [styles.person, pressed && styles.pressed]}
+          >
+            <View
+              style={[
+                styles.addPerson,
+                { borderColor: palette.primary, backgroundColor: palette.primarySoft },
+              ]}
+            >
+              <Ionicons name="person-add-outline" size={22} color={palette.primary} />
+            </View>
+            <Text style={[styles.personName, { color: palette.textSecondary }]}>Meghívás</Text>
+          </Pressable>
+        </ScrollView>
+
+        <View style={[styles.todayCard, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+          <View style={styles.todayCardHeader}>
+            <View style={[styles.todayTitleIcon, { backgroundColor: `${colors.warning}26` }]}>
+              <Ionicons name="sunny" size={22} color={colors.warning} />
+            </View>
+            <View style={styles.flex}>
+              <Text style={[styles.todayTitle, { color: palette.textPrimary }]}>Ma a családban</Text>
+              <Text style={[styles.todaySubtitle, { color: palette.textMuted }]}>
+                Minden fontos egy helyen
               </Text>
             </View>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => openRoute('/invite-member')}
-              style={({ pressed }) => [styles.person, pressed && styles.pressed]}
-            >
-              <View style={styles.addPerson}>
-                <Text style={styles.familyCount}>+1</Text>
-              </View>
-              <Text style={styles.personMuted}>Családtag</Text>
-            </Pressable>
-          </ScrollView>
-        </View>
-
-        <View style={[styles.todayCard, { backgroundColor: palette.surfaceElevated }]}>
-          <LinearGradient
-            pointerEvents="none"
-            colors={isDark ? ['#164D70', '#102B4C', '#102B4C'] : ['#D5F5F1', '#E9F5FF', '#E9F5FF']}
-            locations={[0, 0.58, 1]}
-            start={{ x: 1, y: 0 }}
-            end={{ x: 0, y: 0.8 }}
-            style={styles.todayCardGlow}
-          />
-          <View style={styles.todayCardHeader}>
-            <View style={styles.todayTitleRow}>
-              <View style={styles.todayTitleIcon}>
-                <AppSymbol
-                  name={{ ios: 'sun.max.fill', android: 'wb_sunny', web: 'light_mode' }}
-                  color={colors.warning}
-                  size={29}
-                />
-              </View>
-              <Text style={[styles.todayTitle, { color: palette.textPrimary }]}>Ma a családban</Text>
-            </View>
-            <Text style={[styles.todaySubtitle, { color: palette.textMuted }]}>Minden fontos egy helyen</Text>
           </View>
           <View style={styles.todayStats}>
             <TodayStat
-              value={upcomingEvents.filter((event) => {
-                const date = new Date(event.starts_at);
-                const today = new Date();
-                return date.toDateString() === today.toDateString();
-              }).length}
+              value={todayEventCount}
               label="esemény"
               color={colors.primary}
               palette={palette}
-              icon={{ ios: 'calendar', android: 'calendar_month', web: 'calendar_month' }}
+              icon="calendar"
             />
+            <View style={[styles.statDivider, { backgroundColor: palette.border }]} />
             <TodayStat
               value={unreadCount}
               label="értesítés"
               color={colors.purple}
               palette={palette}
-              icon={{ ios: 'bell.fill', android: 'notifications', web: 'notifications' }}
+              icon="notifications"
             />
+            <View style={[styles.statDivider, { backgroundColor: palette.border }]} />
             <TodayStat
               value={conversationCount}
-              label="üzenet"
+              label="beszélgetés"
               color={colors.teal}
               palette={palette}
-              icon={{ ios: 'bubble.left.and.bubble.right.fill', android: 'forum', web: 'forum' }}
+              icon="chatbubbles"
             />
           </View>
         </View>
 
-        <View>
+        <View style={styles.section}>
           <SectionHeader
             title="Következő esemény"
             action="Naptár"
@@ -437,18 +403,22 @@ export default function HomeScreen() {
             color={colors.primary}
             title={nextEvent?.title ?? 'Nincs közelgő esemény'}
             meta={eventMeta}
+            eventDate={nextEventDate}
+            badge={nextEventDate ? relativeDayLabel(nextEventDate, now) : null}
             onPress={() => openRoute('/calendar')}
             palette={palette}
           />
-          {eventsError ? <Text style={styles.errorText}>{eventsError}</Text> : null}
+          {eventsError ? (
+            <Text style={[styles.errorText, { color: isDark ? '#FDA4AF' : '#C64052' }]}>{eventsError}</Text>
+          ) : null}
         </View>
 
-        <View>
+        <View style={styles.section}>
           <SectionHeader title="Gyors hozzáférés" palette={palette} />
           <View style={styles.quickAccessGrid}>
             <QuickAccessCard
               color={colors.purple}
-              icon={{ ios: 'photo.on.rectangle.angled', android: 'photo_library', web: 'photo_library' }}
+              icon="images"
               subtitle="Képek és videók"
               title="Emlékek"
               onPress={() => openRoute('/memories')}
@@ -456,7 +426,7 @@ export default function HomeScreen() {
             />
             <QuickAccessCard
               color={colors.teal}
-              icon={{ ios: 'lock.shield.fill', android: 'shield_lock', web: 'shield_lock' }}
+              icon="shield-checkmark"
               subtitle="Biztonságos adatok"
               title="Páncélterem"
               onPress={() => openRoute('/vault')}
@@ -465,59 +435,72 @@ export default function HomeScreen() {
           </View>
         </View>
       </ScrollView>
+
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Új esemény létrehozása"
         onPress={() => openRoute('/create-event')}
-        style={({ pressed }) => [styles.floatingAddButton, pressed && styles.pressed]}
+        style={({ pressed }) => [
+          styles.floatingAddButton,
+          { backgroundColor: palette.primary },
+          pressed && styles.pressed,
+        ]}
       >
-        <AppSymbol
-          name={{ ios: 'plus', android: 'add', web: 'add' }}
-          color={colors.white}
-          size={28}
-        />
+        <Ionicons name="add" size={30} color="#FFFFFF" />
       </Pressable>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  backgroundGlow: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 190,
-    opacity: 0.92,
-  },
-  content: { paddingHorizontal: spacing.lg, paddingBottom: 112, gap: spacing.md },
-  contentWide: {
-    width: '100%',
-    maxWidth: 1120,
-    alignSelf: 'center',
-    paddingHorizontal: spacing.xl,
-  },
-  hero: { gap: spacing.xs, paddingVertical: spacing.xs },
+  safeArea: { flex: 1 },
+  content: { paddingHorizontal: spacing.lg, paddingBottom: 112, gap: spacing.lg },
+  flex: { flex: 1 },
+  section: { gap: spacing.sm },
   heroCard: {
-    minHeight: 92,
-    paddingTop: spacing.sm,
-    paddingHorizontal: spacing.xs,
-    paddingBottom: spacing.md,
-    justifyContent: 'center',
+    padding: spacing.xl,
     gap: spacing.xs,
     overflow: 'hidden',
-    borderRadius: radius.lg,
-    backgroundColor: 'transparent',
+    borderRadius: radius.xl,
+    ...shadows.floating,
   },
-  heroGlow: {
+  heroCircleLarge: {
     position: 'absolute',
-    top: 0,
-    right: 0,
-    width: '72%',
-    height: '100%',
-    opacity: 0.35,
+    top: -50,
+    right: -40,
+    width: 170,
+    height: 170,
+    borderRadius: 85,
+    backgroundColor: 'rgba(255,255,255,0.12)',
   },
+  heroCircleSmall: {
+    position: 'absolute',
+    bottom: -40,
+    right: 60,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  greeting: { color: '#FFFFFF', fontSize: 25, fontWeight: '900', letterSpacing: -0.5 },
+  wave: { fontSize: 24 },
+  heroDate: {
+    color: 'rgba(255,255,255,0.82)',
+    fontSize: 13,
+    fontWeight: '700',
+    textTransform: 'capitalize',
+  },
+  heroPills: { marginTop: spacing.sm, flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  heroPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: radius.round,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  heroPillText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
   familySwitcherSource: {
     position: 'absolute',
     width: 1,
@@ -525,19 +508,6 @@ const styles = StyleSheet.create({
     opacity: 0,
     overflow: 'hidden',
   },
-  heroDate: {
-    color: colors.textMuted,
-    fontSize: 13,
-    fontWeight: '700',
-    textTransform: 'capitalize',
-  },
-  greeting: {
-    color: colors.textPrimary,
-    fontSize: 25,
-    fontWeight: '900',
-    letterSpacing: -0.5,
-  },
-  wave: { fontSize: 24 },
   sectionHeader: {
     minHeight: 28,
     flexDirection: 'row',
@@ -545,381 +515,140 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.md,
   },
-  sectionTitle: {
-    flexShrink: 1,
-    color: colors.textPrimary,
-    fontSize: 16,
-    fontWeight: '900',
-  },
-  sectionAction: { color: colors.primary, fontSize: 11, fontWeight: '800' },
+  sectionTitle: { flexShrink: 1, fontSize: 18, fontWeight: '900' },
+  sectionActionRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  sectionAction: { fontSize: 13, fontWeight: '800' },
   errorCard: {
     padding: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#F9C5CC',
-    backgroundColor: '#FFF1F3',
   },
-  errorText: { color: '#C64052', fontSize: 12 },
+  errorText: { flex: 1, fontSize: 12 },
   peopleRow: { gap: spacing.lg, paddingVertical: spacing.xs, paddingRight: spacing.lg },
   person: { width: 74, alignItems: 'center', gap: spacing.xs },
   avatarRing: {
-    width: 58,
-    height: 58,
+    width: 60,
+    height: 60,
     padding: 3,
-    borderRadius: 29,
+    borderRadius: 30,
     borderWidth: 2,
-    borderColor: colors.primaryLight,
-    backgroundColor: colors.white,
-    ...shadows.card,
   },
   avatar: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 25,
-    backgroundColor: '#D6B38D',
+    borderRadius: 26,
   },
-  avatarText: { color: '#3B2415', fontSize: 18, fontWeight: '900' },
+  avatarText: { color: '#FFFFFF', fontSize: 20, fontWeight: '900' },
   onlineDot: {
     position: 'absolute',
     right: -2,
-    bottom: 4,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
+    bottom: 2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     borderWidth: 3,
-    borderColor: colors.white,
-    backgroundColor: colors.success,
   },
-  personName: { color: colors.textSecondary, fontSize: 11, fontWeight: '700' },
-  personMuted: { color: colors.textMuted, fontSize: 10 },
+  personName: { fontSize: 12, fontWeight: '700' },
   addPerson: {
-    width: 58,
-    height: 58,
+    width: 60,
+    height: 60,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 29,
-    borderWidth: 0,
-    backgroundColor: '#EEF5FF',
+    borderRadius: 30,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+  },
+  todayCard: {
+    padding: spacing.lg,
+    gap: spacing.lg,
+    borderRadius: radius.lg,
+    borderWidth: 1,
     ...shadows.card,
   },
-  familyCount: { color: colors.primary, fontSize: 22, fontWeight: '900' },
-  todayCard: {
-    minHeight: 140,
-    padding: spacing.lg,
-    gap: spacing.md,
-    overflow: 'hidden',
-    borderRadius: radius.lg,
-    backgroundColor: '#E9F5FF',
-  },
-  todayCardGlow: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: '48%',
-    height: '100%',
-    opacity: 0.72,
-  },
-  todayCardHeader: { gap: spacing.xs },
-  todayTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
+  todayCardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   todayTitleIcon: {
-    width: 34,
-    height: 34,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 17,
-    backgroundColor: '#FFF5D9',
+    borderRadius: 20,
   },
-  todayTitle: { color: colors.primaryDark, fontSize: 17, fontWeight: '900' },
-  todaySubtitle: { color: colors.textMuted, fontSize: 11 },
-  todayStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  todayStat: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-  },
+  todayTitle: { fontSize: 17, fontWeight: '900' },
+  todaySubtitle: { marginTop: 2, fontSize: 12 },
+  todayStats: { flexDirection: 'row', alignItems: 'stretch' },
+  todayStat: { flex: 1, alignItems: 'center', gap: 4 },
   todayStatIcon: {
-    width: 34,
-    height: 34,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 19,
+    borderRadius: 20,
   },
-  todayStatValue: { color: colors.primary, fontSize: 13, fontWeight: '900' },
-  todayStatLabel: { color: colors.primaryDark, fontSize: 11, fontWeight: '800' },
+  todayStatValue: { fontSize: 24, fontWeight: '900', letterSpacing: -0.5 },
+  todayStatLabel: { fontSize: 12, fontWeight: '800' },
+  statDivider: { width: StyleSheet.hairlineWidth, marginVertical: spacing.xs },
   nextEventCard: {
-    minHeight: 94,
-    padding: spacing.lg,
+    padding: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: '#EEF2F8',
-    backgroundColor: colors.surface,
     ...shadows.card,
   },
-  nextEventIcon: {
+  dateTile: {
     width: 58,
-    height: 58,
+    height: 62,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.lg,
-    backgroundColor: colors.primary,
+    borderRadius: radius.md,
   },
+  dateTileMonth: { color: 'rgba(255,255,255,0.85)', fontSize: 11, fontWeight: '900', letterSpacing: 0.6 },
+  dateTileDay: { color: '#FFFFFF', fontSize: 24, fontWeight: '900', lineHeight: 28 },
+  listTitle: { fontSize: 16, fontWeight: '900' },
+  listMeta: { marginTop: 3, fontSize: 12, lineHeight: 17 },
   todayBadge: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: radius.round,
-    backgroundColor: colors.primarySoft,
   },
-  todayBadgeText: { color: colors.primary, fontSize: 11, fontWeight: '900' },
+  todayBadgeText: { fontSize: 11, fontWeight: '900' },
   quickAccessGrid: { flexDirection: 'row', gap: spacing.md },
   quickAccessCard: {
     flex: 1,
-    minHeight: 144,
+    minHeight: 150,
     padding: spacing.lg,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     gap: spacing.sm,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
     ...shadows.card,
   },
   quickAccessIcon: {
-    width: 48,
-    height: 48,
+    width: 50,
+    height: 50,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.md,
   },
   quickAccessContent: { alignSelf: 'stretch' },
-  quickAccessTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: '900' },
-  quickAccessSubtitle: { marginTop: 3, color: colors.textMuted, fontSize: 11 },
+  quickAccessTitle: { fontSize: 17, fontWeight: '900' },
+  quickAccessSubtitle: { marginTop: 3, fontSize: 12 },
+  quickAccessArrow: { position: 'absolute', top: spacing.lg, right: spacing.lg },
   floatingAddButton: {
     position: 'absolute',
     right: spacing.lg,
     bottom: 92,
-    width: 56,
-    height: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 28,
-    backgroundColor: colors.primary,
-    ...shadows.floating,
-  },
-  summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
-  summaryCard: {
-    minWidth: 180,
-    flex: 1,
-    minHeight: 105,
-    padding: spacing.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    ...shadows.card,
-  },
-  summaryCardCompact: { minWidth: '46%', minHeight: 96, padding: spacing.md },
-  summaryIcon: {
-    width: 48,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 24,
-  },
-  summaryValue: { color: colors.textPrimary, fontSize: 23, fontWeight: '900' },
-  summaryLabel: { color: colors.textSecondary, fontSize: 12, fontWeight: '700' },
-  summaryMeta: { marginTop: 2, color: colors.textMuted, fontSize: 10 },
-  quickActions: { gap: spacing.md, paddingRight: spacing.lg },
-  quickCard: {
-    width: 126,
-    minHeight: 94,
-    padding: spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    ...shadows.card,
-  },
-  quickIcon: {
-    width: 43,
-    height: 43,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 16,
-  },
-  quickLabel: {
-    color: colors.textSecondary,
-    fontSize: 11,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  dashboardColumns: { flexDirection: 'row', gap: spacing.md },
-  dashboardColumnsStacked: { flexDirection: 'column' },
-  dashboardPanel: { flex: 1, minWidth: 0 },
-  panel: {
-    padding: spacing.lg,
-    gap: spacing.sm,
-    overflow: 'hidden',
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    ...shadows.card,
-  },
-  listRow: { minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  dateBadge: {
-    width: 46,
-    height: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.md,
-    borderWidth: 1,
-    backgroundColor: colors.primarySoft,
-  },
-  dateMonth: { fontSize: 9, fontWeight: '900' },
-  dateDay: { color: colors.textPrimary, fontSize: 18, fontWeight: '900' },
-  listTitle: { color: colors.textSecondary, fontSize: 12, fontWeight: '800' },
-  listMeta: { marginTop: 3, color: colors.textMuted, fontSize: 10, lineHeight: 15 },
-  divider: { height: 1, backgroundColor: colors.border },
-  flex: { flex: 1 },
-  miniAvatarGroup: { flexDirection: 'row', paddingRight: 4 },
-  miniAvatar: {
-    width: 27,
-    height: 27,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: colors.white,
-    backgroundColor: '#D6B38D',
-  },
-  miniAvatarOverlap: { marginLeft: -8, backgroundColor: colors.primaryLight },
-  miniAvatarText: { color: '#FFFFFF', fontSize: 8, fontWeight: '900' },
-  noticeIcon: {
-    width: 39,
-    height: 39,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.md,
-    backgroundColor: colors.primarySoft,
-  },
-  noticeIconUnread: { backgroundColor: '#DCF8F2' },
-  unreadDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: colors.primaryLight,
-  },
-  emptyNotice: {
-    minHeight: 90,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-  },
-  emptyNoticeText: { color: colors.textMuted, fontSize: 11 },
-  medicineRow: {
-    minHeight: 92,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  medicineIcon: {
     width: 58,
     height: 58,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 29,
-    backgroundColor: '#FDEBF2',
-  },
-  mapPreview: { flex: 1, minHeight: 190 },
-  mapCanvas: {
-    height: 125,
-    overflow: 'hidden',
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: '#D2E1F7',
-    backgroundColor: '#EAF4FF',
-  },
-  mapRoad: {
-    position: 'absolute',
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: '#B3CCE9',
-    opacity: 0.8,
-  },
-  mapRoadOne: { top: 56, left: -25, width: '125%', transform: [{ rotate: '-12deg' }] },
-  mapRoadTwo: { top: 62, left: 5, width: '105%', transform: [{ rotate: '22deg' }] },
-  mapMarker: {
-    position: 'absolute',
-    width: 38,
-    height: 38,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 19,
-    borderWidth: 3,
-    borderColor: colors.primary,
-    backgroundColor: '#F2C8A7',
-  },
-  mapMarkerSecondary: { borderColor: colors.purple, backgroundColor: '#DCCFFF' },
-  markerText: { color: '#FFFFFF', fontSize: 11, fontWeight: '900' },
-  homeMarker: {
-    position: 'absolute',
-    left: '47%',
-    bottom: 17,
-    width: 37,
-    height: 37,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 19,
-    backgroundColor: colors.primary,
     ...shadows.floating,
   },
-  memoriesRow: { gap: spacing.md, paddingTop: spacing.xs, paddingRight: spacing.lg },
-  memoryCard: {
-    width: 185,
-    height: 150,
-    padding: spacing.lg,
-    justifyContent: 'space-between',
-    overflow: 'hidden',
-    borderRadius: radius.lg,
-    borderWidth: 1,
-  },
-  memoryGlow: {
-    position: 'absolute',
-    top: -35,
-    right: -30,
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    backgroundColor: '#FFFFFF',
-    opacity: 0.52,
-  },
-  memoryTitle: {
-    color: colors.textPrimary,
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: '900',
-  },
-  memoryMeta: { marginTop: 3, color: colors.textMuted, fontSize: 10 },
-  pressed: { opacity: 0.72, transform: [{ scale: 0.98 }] },
+  pressed: { opacity: 0.75, transform: [{ scale: 0.98 }] },
 });

@@ -1,14 +1,17 @@
+import { ScreenCloseButton } from '@/components/screen-close-button';
 import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
 import { useTheme } from '@/providers/theme-provider';
 import { deleteFamilyEvent, getFamilyEvent, type FamilyEvent } from '@/services/events';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import medium from 'expo-symbols/androidWeights/medium';
-import { ScreenCloseButton } from '@/components/screen-close-button';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -28,65 +31,37 @@ const categoryData: Record<
   family: {
     label: 'Családi',
     color: '#8B5CF6',
-    icon: {
-      ios: 'person.2.fill',
-      android: 'group',
-      web: 'group',
-    },
+    icon: { ios: 'person.2.fill', android: 'group', web: 'group' },
   },
   birthday: {
     label: 'Születésnap',
     color: '#F55B91',
-    icon: {
-      ios: 'birthday.cake.fill',
-      android: 'cake',
-      web: 'cake',
-    },
+    icon: { ios: 'birthday.cake.fill', android: 'cake', web: 'cake' },
   },
   medical: {
     label: 'Orvosi',
     color: '#34D399',
-    icon: {
-      ios: 'cross.case.fill',
-      android: 'medical_services',
-      web: 'medical_services',
-    },
+    icon: { ios: 'cross.case.fill', android: 'medical_services', web: 'medical_services' },
   },
   school: {
     label: 'Iskola',
     color: '#38BDF8',
-    icon: {
-      ios: 'graduationcap.fill',
-      android: 'school',
-      web: 'school',
-    },
+    icon: { ios: 'graduationcap.fill', android: 'school', web: 'school' },
   },
   sport: {
     label: 'Sport',
     color: '#F59E0B',
-    icon: {
-      ios: 'figure.run',
-      android: 'directions_run',
-      web: 'directions_run',
-    },
+    icon: { ios: 'figure.run', android: 'directions_run', web: 'directions_run' },
   },
   administration: {
     label: 'Ügyintézés',
     color: '#FB7185',
-    icon: {
-      ios: 'doc.text.fill',
-      android: 'description',
-      web: 'description',
-    },
+    icon: { ios: 'doc.text.fill', android: 'description', web: 'description' },
   },
   trip: {
     label: 'Kirándulás',
     color: '#22C55E',
-    icon: {
-      ios: 'mountain.2.fill',
-      android: 'landscape',
-      web: 'landscape',
-    },
+    icon: { ios: 'mountain.2.fill', android: 'landscape', web: 'landscape' },
   },
 };
 
@@ -111,26 +86,21 @@ function formatTime(value: string) {
 }
 
 function formatDay(value: string) {
-  return new Intl.DateTimeFormat('hu-HU', {
-    day: '2-digit',
-  }).format(new Date(value));
+  return new Intl.DateTimeFormat('hu-HU', { day: '2-digit' }).format(new Date(value));
 }
 
 function formatMonth(value: string) {
-  return new Intl.DateTimeFormat('hu-HU', {
-    month: 'short',
-  })
+  return new Intl.DateTimeFormat('hu-HU', { month: 'short' })
     .format(new Date(value))
     .replace('.', '')
     .toUpperCase();
 }
 
-function getEventState(value: string) {
+function getEventState(value: string, now: Date) {
   const date = new Date(value);
-  const now = new Date();
   if (date < now) return 'Lezajlott';
   if (date.toDateString() === now.toDateString()) return 'Ma';
-  return 'Közelgő esemény';
+  return 'Közelgő';
 }
 
 export default function EventDetailsScreen() {
@@ -139,14 +109,12 @@ export default function EventDetailsScreen() {
   const palette = isDark ? darkColors : colors;
   const params = useLocalSearchParams<{ eventId?: string }>();
   const eventId = firstParam(params.eventId);
+  const [now] = useState(() => new Date());
 
   const [event, setEvent] = useState<FamilyEvent | null>(null);
   const [loading, setLoading] = useState(Boolean(eventId));
-
   const [deleting, setDeleting] = useState(false);
-  const [error, setError] = useState<string | null>(
-    eventId ? null : 'Hiányzó eseményazonosító.',
-  );
+  const [error, setError] = useState<string | null>(eventId ? null : 'Hiányzó eseményazonosító.');
 
   useEffect(() => {
     if (!eventId) return;
@@ -156,16 +124,12 @@ export default function EventDetailsScreen() {
     void getFamilyEvent(eventId)
       .then((result) => {
         if (!active) return;
-
         setEvent(result);
         setError(null);
       })
       .catch((caught: unknown) => {
         if (!active) return;
-
-        setError(
-          caught instanceof Error ? caught.message : 'Az esemény betöltése sikertelen.',
-        );
+        setError(caught instanceof Error ? caught.message : 'Az esemény betöltése sikertelen.');
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -180,15 +144,8 @@ export default function EventDetailsScreen() {
     if (!event) return;
 
     Alert.alert('Esemény törlése', `Biztosan törlöd ezt az eseményt: ${event.title}?`, [
-      {
-        text: 'Mégse',
-        style: 'cancel',
-      },
-      {
-        text: 'Törlés',
-        style: 'destructive',
-        onPress: () => void removeEvent(),
-      },
+      { text: 'Mégse', style: 'cancel' },
+      { text: 'Törlés', style: 'destructive', onPress: () => void removeEvent() },
     ]);
   }
 
@@ -210,24 +167,38 @@ export default function EventDetailsScreen() {
     }
   }
 
+  async function openDirections() {
+    const location = event?.location_name?.trim();
+    if (!location) return;
+    try {
+      await Linking.openURL(
+        `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`,
+      );
+    } catch {
+      Alert.alert('Nem sikerült megnyitni', 'Ezen a készüléken most nem érhető el a térképalkalmazás.');
+    }
+  }
+
   if (loading) {
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]}>
         <View style={styles.center}>
-          <ActivityIndicator color={colors.primaryLight} size="large" />
+          <ActivityIndicator color={palette.primary} size="large" />
         </View>
       </SafeAreaView>
     );
   }
 
   const category = categoryData[event?.category ?? 'family'] ?? categoryData.family;
+  const state = event ? getEventState(event.starts_at, now) : null;
+  const stateColor = state === 'Lezajlott' ? palette.textMuted : state === 'Ma' ? palette.danger : palette.primary;
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <ScreenCloseButton />
 
-        <Text style={styles.headerTitle}>Esemény részletei</Text>
+        <Text style={[styles.headerTitle, { color: palette.textPrimary }]}>Esemény részletei</Text>
 
         <Pressable
           accessibilityLabel="Esemény törlése"
@@ -236,21 +207,18 @@ export default function EventDetailsScreen() {
           onPress={confirmDelete}
           style={({ pressed }) => [
             styles.headerButton,
+            { backgroundColor: palette.surface, borderColor: palette.border },
             pressed && styles.pressed,
-            deleting && styles.disabled,
+            (!event || deleting) && styles.disabled,
           ]}
         >
           {deleting ? (
-            <ActivityIndicator color={colors.danger} size="small" />
+            <ActivityIndicator color={palette.danger} size="small" />
           ) : (
             <SymbolView
-              name={{
-                ios: 'trash.fill',
-                android: 'delete',
-                web: 'delete',
-              }}
+              name={{ ios: 'trash.fill', android: 'delete', web: 'delete' }}
               size={22}
-              tintColor={colors.danger}
+              tintColor={palette.danger}
               type="hierarchical"
               weight={{ ios: 'semibold', android: medium }}
               style={styles.symbol}
@@ -259,53 +227,55 @@ export default function EventDetailsScreen() {
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={[styles.content, { backgroundColor: palette.background }]}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {error ? (
-          <View style={styles.errorCard}>
-            <View style={styles.errorIcon}>
-              <SymbolView
-                name={{
-                  ios: 'exclamationmark.triangle.fill',
-                  android: 'warning',
-                  web: 'warning',
-                }}
-                size={20}
-                tintColor={colors.danger}
-                style={styles.symbol}
-              />
-            </View>
+          <View
+            style={[
+              styles.errorCard,
+              {
+                backgroundColor: isDark ? '#3B1622' : '#FFF1F3',
+                borderColor: isDark ? '#7F2439' : '#FFD2D8',
+              },
+            ]}
+          >
+            <Ionicons name="alert-circle" size={22} color={palette.danger} />
             <Text style={[styles.errorText, { color: palette.danger }]}>{error}</Text>
           </View>
         ) : null}
 
         {event ? (
           <>
-            <View style={[styles.heroCard, { borderTopColor: category.color, backgroundColor: palette.surface }]}>
-              <View style={styles.heroTopRow}>
-                <View
-                  style={[
-                    styles.categoryBadge,
-                    { backgroundColor: `${category.color}18` },
-                  ]}
-                >
-                  <Text style={[styles.categoryText, { color: category.color }]}>
-                    {category.label}
-                  </Text>
-                </View>
-                <Text style={[styles.stateText, { color: palette.textSecondary }]}>{getEventState(event.starts_at)}</Text>
-              </View>
-
-              <View
-                style={[styles.categoryIcon, { backgroundColor: `${category.color}18` }]}
-              >
+            <View
+              style={[
+                styles.heroCard,
+                { borderTopColor: category.color, backgroundColor: palette.surface, borderColor: palette.border },
+              ]}
+            >
+              <LinearGradient
+                pointerEvents="none"
+                colors={[`${category.color}33`, `${category.color}00`]}
+                style={styles.heroGlow}
+              />
+              <View style={[styles.categoryIcon, { backgroundColor: `${category.color}26` }]}>
                 <SymbolView
                   name={category.icon}
-                  size={34}
+                  size={36}
                   tintColor={category.color}
                   type="hierarchical"
                   weight={{ ios: 'semibold', android: medium }}
                   style={styles.largeSymbol}
                 />
+              </View>
+
+              <View style={styles.badges}>
+                <View style={[styles.badge, { backgroundColor: `${category.color}22` }]}>
+                  <Text style={[styles.badgeText, { color: category.color }]}>{category.label}</Text>
+                </View>
+                {state ? (
+                  <View style={[styles.badge, { backgroundColor: `${stateColor}22` }]}>
+                    <Text style={[styles.badgeText, { color: stateColor }]}>{state}</Text>
+                  </View>
+                ) : null}
               </View>
 
               <Text style={[styles.title, { color: palette.textPrimary }]}>{event.title}</Text>
@@ -315,63 +285,28 @@ export default function EventDetailsScreen() {
               ) : null}
             </View>
 
-            <View style={[styles.detailsCard, { backgroundColor: palette.surface }]}>
+            <View style={[styles.detailsCard, { backgroundColor: palette.surface, borderColor: palette.border }]}>
               <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>Az esemény adatai</Text>
-              <View style={styles.detailRow}>
-                <View
-                  style={[styles.detailIcon, { backgroundColor: colors.primarySoft }]}
-                >
-                  <SymbolView
-                    name={{
-                      ios: 'calendar',
-                      android: 'calendar_month',
-                      web: 'calendar_month',
-                    }}
-                    size={22}
-                    tintColor={colors.primary}
-                    weight={{ ios: 'semibold', android: medium }}
-                    style={styles.symbol}
-                  />
-                </View>
 
+              <View style={styles.detailRow}>
+                <View style={[styles.dateChip, { backgroundColor: `${category.color}22` }]}>
+                  <Text style={[styles.dateDay, { color: category.color }]}>{formatDay(event.starts_at)}</Text>
+                  <Text style={[styles.dateMonth, { color: category.color }]}>{formatMonth(event.starts_at)}</Text>
+                </View>
                 <View style={styles.flex}>
                   <Text style={[styles.detailLabel, { color: palette.textMuted }]}>Dátum</Text>
-                  <View style={styles.dateValueRow}>
-                    <View
-                      style={[
-                        styles.dateChip,
-                        { backgroundColor: `${category.color}18` },
-                      ]}
-                    >
-                      <Text style={[styles.dateDay, { color: category.color }]}>
-                        {formatDay(event.starts_at)}
-                      </Text>
-                      <Text style={[styles.dateMonth, { color: category.color }]}>
-                        {formatMonth(event.starts_at)}
-                      </Text>
-                    </View>
-                    <Text style={[styles.detailValue, { color: palette.textPrimary }]}>{formatDate(event.starts_at)}</Text>
-                  </View>
+                  <Text style={[styles.detailValue, { color: palette.textPrimary }]}>
+                    {formatDate(event.starts_at)}
+                  </Text>
                 </View>
               </View>
 
-              <View style={styles.divider} />
+              <View style={[styles.divider, { backgroundColor: palette.border }]} />
 
               <View style={styles.detailRow}>
-                <View style={[styles.detailIcon, { backgroundColor: '#FFF3D9' }]}>
-                  <SymbolView
-                    name={{
-                      ios: 'clock.fill',
-                      android: 'schedule',
-                      web: 'schedule',
-                    }}
-                    size={22}
-                    tintColor={colors.warning}
-                    weight={{ ios: 'semibold', android: medium }}
-                    style={styles.symbol}
-                  />
+                <View style={[styles.detailIcon, { backgroundColor: `${colors.warning}26` }]}>
+                  <Ionicons name="time" size={22} color={colors.warning} />
                 </View>
-
                 <View style={styles.flex}>
                   <Text style={[styles.detailLabel, { color: palette.textMuted }]}>Időpont</Text>
                   <Text style={[styles.detailValue, { color: palette.textPrimary }]}>
@@ -383,29 +318,33 @@ export default function EventDetailsScreen() {
 
               {event.location_name ? (
                 <>
-                  <View style={styles.divider} />
+                  <View style={[styles.divider, { backgroundColor: palette.border }]} />
 
                   <View style={styles.detailRow}>
-                    <View style={[styles.detailIcon, { backgroundColor: '#E5F9F4' }]}>
-                      <SymbolView
-                        name={{
-                          ios: 'location.fill',
-                          android: 'location_on',
-                          web: 'location_on',
-                        }}
-                        size={22}
-                        tintColor={colors.success}
-                        type="hierarchical"
-                        weight={{ ios: 'semibold', android: medium }}
-                        style={styles.symbol}
-                      />
+                    <View style={[styles.detailIcon, { backgroundColor: `${colors.success}26` }]}>
+                      <Ionicons name="location" size={22} color={colors.success} />
                     </View>
-
                     <View style={styles.flex}>
                       <Text style={[styles.detailLabel, { color: palette.textMuted }]}>Helyszín</Text>
-                      <Text style={[styles.detailValue, { color: palette.textPrimary }]}>{event.location_name}</Text>
+                      <Text style={[styles.detailValue, { color: palette.textPrimary }]}>
+                        {event.location_name}
+                      </Text>
                     </View>
                   </View>
+
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`${event.location_name} megnyitása a térképen`}
+                    onPress={() => void openDirections()}
+                    style={({ pressed }) => [
+                      styles.directionsButton,
+                      { backgroundColor: palette.primary },
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Ionicons name="navigate" size={17} color="#FFFFFF" />
+                    <Text style={styles.directionsText}>Útvonaltervezés</Text>
+                  </Pressable>
                 </>
               ) : null}
             </View>
@@ -417,15 +356,8 @@ export default function EventDetailsScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  safeArea: { flex: 1 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: {
     height: 60,
     paddingHorizontal: spacing.lg,
@@ -433,152 +365,90 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  headerTitle: {
-    color: colors.textPrimary,
-    fontSize: 19,
-    fontWeight: '900',
-  },
+  headerTitle: { fontSize: 19, fontWeight: '900' },
   headerButton: {
     width: 42,
     height: 42,
     borderRadius: radius.round,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
   },
-  content: {
-    padding: spacing.lg,
-    paddingBottom: 48,
-    gap: spacing.lg,
-  },
+  content: { padding: spacing.lg, paddingBottom: 48, gap: spacing.lg },
   heroCard: {
-    padding: spacing.lg,
+    padding: spacing.xl,
     alignItems: 'center',
     gap: spacing.md,
-    borderRadius: radius.lg,
+    overflow: 'hidden',
+    borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: colors.border,
     borderTopWidth: 5,
-    backgroundColor: colors.surface,
     ...shadows.card,
   },
-  heroTopRow: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
+  heroGlow: { position: 'absolute', top: 0, left: 0, right: 0, height: 170 },
   categoryIcon: {
-    width: 78,
-    height: 78,
-    borderRadius: 26,
+    width: 84,
+    height: 84,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  categoryBadge: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.round,
-  },
-  categoryText: {
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  stateText: {
-    color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  title: {
-    color: colors.textPrimary,
-    fontSize: 25,
-    fontWeight: '900',
-    textAlign: 'center',
-  },
-  description: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    lineHeight: 20,
-    textAlign: 'center',
-  },
+  badges: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: spacing.sm },
+  badge: { paddingHorizontal: spacing.md, paddingVertical: 5, borderRadius: radius.round },
+  badgeText: { fontSize: 12, fontWeight: '900' },
+  title: { fontSize: 26, fontWeight: '900', letterSpacing: -0.5, textAlign: 'center' },
+  description: { fontSize: 14, lineHeight: 22, textAlign: 'center' },
   detailsCard: {
     padding: spacing.lg,
-    borderRadius: radius.lg,
+    gap: spacing.xs,
+    borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
     ...shadows.card,
   },
-  sectionTitle: {
-    marginBottom: spacing.xs,
-    color: colors.textPrimary,
-    fontSize: 16,
-    fontWeight: '900',
-  },
+  sectionTitle: { marginBottom: spacing.xs, fontSize: 17, fontWeight: '900' },
   detailRow: {
-    minHeight: 82,
+    minHeight: 72,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
   },
   detailIcon: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  detailLabel: {
-    color: colors.textMuted,
-    fontSize: 10,
-    fontWeight: '700',
-  },
+  detailLabel: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
   detailValue: {
-    marginTop: spacing.xs,
-    color: colors.textPrimary,
-    fontSize: 13,
+    marginTop: 3,
+    fontSize: 15,
     fontWeight: '800',
     textTransform: 'capitalize',
   },
-  dateValueRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
   dateChip: {
-    width: 42,
-    minHeight: 42,
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.sm,
+    borderRadius: radius.md,
   },
-  dateDay: {
-    fontSize: 16,
-    fontWeight: '900',
-    lineHeight: 17,
+  dateDay: { fontSize: 18, fontWeight: '900', lineHeight: 20 },
+  dateMonth: { fontSize: 9, fontWeight: '900', letterSpacing: 0.5 },
+  divider: { height: StyleSheet.hairlineWidth },
+  directionsButton: {
+    minHeight: 46,
+    marginTop: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    borderRadius: radius.lg,
   },
-  dateMonth: {
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  flex: {
-    flex: 1,
-  },
-  symbol: {
-    width: 27,
-    height: 27,
-  },
-  largeSymbol: {
-    width: 42,
-    height: 42,
-  },
+  directionsText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
+  flex: { flex: 1 },
+  symbol: { width: 26, height: 26 },
+  largeSymbol: { width: 42, height: 42 },
   errorCard: {
     padding: spacing.md,
     flexDirection: 'row',
@@ -586,28 +456,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#FFD2D8',
-    backgroundColor: '#FFF1F3',
   },
-  errorIcon: {
-    width: 34,
-    height: 34,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.round,
-    backgroundColor: '#FFE0E5',
-  },
-  errorText: {
-    flex: 1,
-    color: '#B23A4A',
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  pressed: {
-    opacity: 0.7,
-    transform: [{ scale: 0.97 }],
-  },
-  disabled: {
-    opacity: 0.45,
-  },
+  errorText: { flex: 1, fontSize: 13, lineHeight: 18 },
+  pressed: { opacity: 0.7, transform: [{ scale: 0.97 }] },
+  disabled: { opacity: 0.45 },
 });

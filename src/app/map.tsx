@@ -2,14 +2,15 @@ import { EventMap } from '@/components/event-map';
 import { FamilyHeader } from '@/components/family-header';
 import { FamilySwitcher } from '@/components/family-switcher';
 import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
-import { useTheme } from '@/providers/theme-provider';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useUnreadMessages } from '@/hooks/use-unread-messages';
 import { useAuth } from '@/providers/auth-provider';
+import { useTheme } from '@/providers/theme-provider';
 import { getFamilyEvents, type FamilyEvent } from '@/services/events';
 import type { Family } from '@/services/families';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import medium from 'expo-symbols/androidWeights/medium';
 import { useCallback, useMemo, useState } from 'react';
@@ -25,6 +26,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+type Palette = typeof colors | typeof darkColors;
 
 const categoryColors: Record<string, string> = {
   family: '#8B5CF6',
@@ -60,6 +63,12 @@ const categoryLabels: Record<FamilyEvent['category'], string> = {
   trip: 'Kirándulás',
 };
 
+const TABS: [string, string][] = [
+  ['family', 'Családtagok'],
+  ['places', 'Helyek'],
+  ['events', 'Események'],
+];
+
 function dateRange() {
   const from = new Date();
   from.setHours(0, 0, 0, 0);
@@ -79,74 +88,44 @@ function formatWhen(event: FamilyEvent) {
   })}`;
 }
 
-function EventLocationCard({
+function PlaceChip({
   event,
   selected,
   onPress,
-  onNavigate,
+  palette,
 }: {
   event: FamilyEvent;
   selected: boolean;
   onPress: () => void;
-  onNavigate: () => void;
+  palette: Palette;
 }) {
-  const color = categoryColors[event.category] ?? colors.primary;
+  const color = categoryColors[event.category] ?? palette.primary;
 
   return (
-    <View
-      style={[
-        styles.locationCard,
-        selected && { borderColor: color, backgroundColor: `${color}18` },
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      accessibilityLabel={`${event.title}, ${event.location_name}`}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.placeChip,
+        {
+          backgroundColor: selected ? `${color}22` : palette.surface,
+          borderColor: selected ? color : palette.border,
+        },
+        pressed && styles.pressed,
       ]}
     >
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ selected }}
-        onPress={onPress}
-        style={({ pressed }) => [styles.locationCardMain, pressed && styles.pressed]}
-      >
-        <View style={[styles.eventIcon, { backgroundColor: `${color}26` }]}>
-          <SymbolView
-            name={categoryIcons[event.category] ?? categoryIcons.family}
-            size={21}
-            tintColor={color}
-            type="hierarchical"
-            weight={{ ios: 'semibold', android: medium }}
-            style={styles.eventSymbol}
-          />
-        </View>
-        <View style={styles.flex}>
-          <Text numberOfLines={1} style={styles.eventTitle}>
-            {event.title}
-          </Text>
-          <Text numberOfLines={1} style={styles.eventLocation}>
-            {event.location_name}
-          </Text>
-          <Text style={styles.eventMeta}>{formatWhen(event)}</Text>
-        </View>
-      </Pressable>
-
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`${event.location_name} megnyitása a térképen`}
-        hitSlop={8}
-        onPress={onNavigate}
-        style={({ pressed }) => [styles.navigateButton, pressed && styles.pressed]}
-      >
-        <SymbolView
-          name={{
-            ios: 'arrow.triangle.turn.up.right.diamond.fill',
-            android: 'directions',
-            web: 'directions',
-          }}
-          size={21}
-          tintColor={colors.primaryLight}
-          type="hierarchical"
-          weight={{ ios: 'semibold', android: medium }}
-          style={styles.eventSymbol}
-        />
-      </Pressable>
-    </View>
+      <View style={[styles.placeDot, { backgroundColor: color }]} />
+      <View style={styles.placeChipText}>
+        <Text numberOfLines={1} style={[styles.placeChipTitle, { color: palette.textPrimary }]}>
+          {event.title}
+        </Text>
+        <Text numberOfLines={1} style={[styles.placeChipMeta, { color: palette.textMuted }]}>
+          {formatWhen(event)}
+        </Text>
+      </View>
+    </Pressable>
   );
 }
 
@@ -177,6 +156,9 @@ export default function MapScreen() {
     null;
   const displayName = profile?.display_name?.trim() || 'Felhasználó';
   const userInitial = displayName.charAt(0).toLocaleUpperCase('hu-HU') || '?';
+  const selectedColor = selectedEvent
+    ? (categoryColors[selectedEvent.category] ?? palette.primary)
+    : palette.primary;
 
   useFocusEffect(
     useCallback(() => {
@@ -192,9 +174,7 @@ export default function MapScreen() {
       void getFamilyEvents(activeFamilyId, range.from, range.to)
         .then((result) => {
           if (!active) return;
-          const withLocation = result.filter((event) =>
-            Boolean(event.location_name?.trim()),
-          );
+          const withLocation = result.filter((event) => Boolean(event.location_name?.trim()));
           setEvents(result);
           setSelectedEventId((current) =>
             withLocation.some((event) => event.id === current)
@@ -205,11 +185,7 @@ export default function MapScreen() {
         })
         .catch((caught: unknown) => {
           if (!active) return;
-          setError(
-            caught instanceof Error
-              ? caught.message
-              : 'A helyszínek betöltése sikertelen.',
-          );
+          setError(caught instanceof Error ? caught.message : 'A helyszínek betöltése sikertelen.');
         })
         .finally(() => {
           if (active) setLoading(false);
@@ -256,6 +232,13 @@ export default function MapScreen() {
     });
   }
 
+  const filterOptions: [string, string][] = [
+    ['all', 'Minden kategória'],
+    ...Object.keys(categoryColors).map(
+      (category): [string, string] => [category, categoryLabels[category as FamilyEvent['category']]],
+    ),
+  ];
+
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
       <LinearGradient
@@ -265,10 +248,7 @@ export default function MapScreen() {
         end={{ x: 0, y: 1 }}
         style={styles.backgroundGlow}
       />
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <FamilyHeader
           userInitial={userInitial}
           unreadNotificationCount={unreadCount}
@@ -279,59 +259,60 @@ export default function MapScreen() {
         />
 
         <View style={styles.topBar}>
-          <Text style={[styles.title, { color: palette.textPrimary }]}>Térkép</Text>
-          <View
-            style={[
+          <View>
+            <Text style={[styles.title, { color: palette.textPrimary }]}>Térkép</Text>
+            <Text style={[styles.subtitle, { color: palette.textSecondary }]}>
+              {filteredLocationEvents.length > 0
+                ? `${filteredLocationEvents.length} közös helyszín`
+                : 'Közös családi helyszínek'}
+            </Text>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="További lehetőségek"
+            onPress={() => router.push('/more')}
+            style={({ pressed }) => [
               styles.topAction,
               { backgroundColor: palette.surface, borderColor: palette.border },
+              pressed && styles.pressed,
             ]}
           >
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="További lehetőségek"
-              onPress={() => router.push('/more')}
-              style={({ pressed }) => [styles.topActionButton, pressed && styles.pressed]}
-            >
-              <SymbolView
-                name={{ ios: 'square.grid.2x2.fill', android: 'apps', web: 'apps' }}
-                size={21}
-                tintColor={colors.primary}
-                type="hierarchical"
-                weight={{ ios: 'semibold', android: medium }}
-                style={styles.topActionSymbol}
-              />
-            </Pressable>
-          </View>
+            <SymbolView
+              name={{ ios: 'square.grid.2x2.fill', android: 'apps', web: 'apps' }}
+              size={21}
+              tintColor={palette.primary}
+              type="hierarchical"
+              weight={{ ios: 'semibold', android: medium }}
+              style={styles.topActionSymbol}
+            />
+          </Pressable>
         </View>
 
         <View style={[styles.mapTabs, { backgroundColor: palette.surfaceElevated }]}>
-          {[
-            ['family', 'Családtagok'],
-            ['places', 'Helyek'],
-            ['events', 'Események'],
-          ].map(([value, label]) => (
-            <Pressable
-              key={value}
-              accessibilityRole="button"
-              accessibilityState={{ selected: activeTab === value }}
-              onPress={() => setActiveTab(value as typeof activeTab)}
-              style={[
-                styles.mapTab,
-                { backgroundColor: palette.surfaceElevated },
-                activeTab === value && [styles.mapTabActive, { backgroundColor: palette.primary }],
-              ]}
-            >
-              <Text
+          {TABS.map(([value, label]) => {
+            const isActive = activeTab === value;
+            return (
+              <Pressable
+                key={value}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isActive }}
+                onPress={() => setActiveTab(value as typeof activeTab)}
                 style={[
-                  styles.mapTabText,
-                  { color: palette.textSecondary },
-                  activeTab === value && styles.mapTabTextActive,
+                  styles.mapTab,
+                  isActive && [{ backgroundColor: palette.primary }, shadows.floating],
                 ]}
               >
-                {label}
-              </Text>
-            </Pressable>
-          ))}
+                <Text
+                  style={[
+                    styles.mapTabText,
+                    { color: isActive ? '#FFFFFF' : palette.textSecondary },
+                  ]}
+                >
+                  {label}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
 
         <View style={styles.familySwitcherHidden}>
@@ -343,14 +324,11 @@ export default function MapScreen() {
             {loading ? (
               <View
                 style={[
-                  styles.loadingCard,
-                  {
-                    backgroundColor: isDark ? '#10233E' : palette.surface,
-                    borderColor: isDark ? '#294469' : palette.border,
-                  },
+                  styles.stateCard,
+                  { backgroundColor: palette.surface, borderColor: palette.border },
                 ]}
               >
-                <ActivityIndicator color={colors.primaryLight} />
+                <ActivityIndicator color={palette.primary} />
                 <Text style={[styles.loadingText, { color: palette.textMuted }]}>Helyszínek betöltése…</Text>
               </View>
             ) : error ? (
@@ -363,33 +341,41 @@ export default function MapScreen() {
                   },
                 ]}
               >
+                <Ionicons name="alert-circle-outline" size={20} color={isDark ? '#FDA4AF' : '#A52A3A'} />
                 <Text style={[styles.errorText, { color: isDark ? '#FDA4AF' : '#A52A3A' }]}>{error}</Text>
               </View>
             ) : filteredLocationEvents.length ? (
               <>
-                <View style={[styles.mapCard, { backgroundColor: palette.surfaceElevated, borderColor: palette.border }]}>
-                  <EventMap
-                    events={filteredLocationEvents}
-                    selectedEventId={selectedEvent?.id ?? null}
-                  />
+                <View
+                  style={[
+                    styles.mapCard,
+                    { backgroundColor: palette.surfaceElevated, borderColor: palette.border },
+                  ]}
+                >
+                  <EventMap events={filteredLocationEvents} selectedEventId={selectedEvent?.id ?? null} />
 
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel="Események szűrése"
                     onPress={() => setFilterVisible(true)}
                     style={({ pressed }) => [
+                      styles.mapButton,
                       styles.mapFilterButton,
+                      { backgroundColor: palette.surface },
                       pressed && styles.pressed,
                     ]}
                   >
                     <SymbolView
                       name={{ ios: 'line.3.horizontal.decrease', android: 'filter_list', web: 'filter_list' }}
                       size={21}
-                      tintColor={colors.primaryDark}
+                      tintColor={palette.primary}
                       type="hierarchical"
                       weight={{ ios: 'semibold', android: medium }}
                       style={styles.captionSymbol}
                     />
+                    {categoryFilter !== 'all' ? (
+                      <View style={[styles.filterDot, { backgroundColor: palette.danger, borderColor: palette.surface }]} />
+                    ) : null}
                   </Pressable>
 
                   <View style={styles.mapControls}>
@@ -398,14 +384,15 @@ export default function MapScreen() {
                       accessibilityLabel="Kijelölt hely megjelenítése"
                       onPress={() => setSelectedEventId(selectedEvent?.id ?? null)}
                       style={({ pressed }) => [
-                        styles.mapControlButton,
+                        styles.mapButton,
+                        { backgroundColor: palette.surface },
                         pressed && styles.pressed,
                       ]}
                     >
                       <SymbolView
                         name={{ ios: 'location.fill', android: 'my_location', web: 'my_location' }}
                         size={21}
-                        tintColor={colors.primary}
+                        tintColor={palette.primary}
                         type="hierarchical"
                         weight={{ ios: 'semibold', android: medium }}
                         style={styles.captionSymbol}
@@ -416,14 +403,15 @@ export default function MapScreen() {
                       accessibilityLabel="Első hely kiválasztása"
                       onPress={() => setSelectedEventId(filteredLocationEvents[0]?.id ?? null)}
                       style={({ pressed }) => [
-                        styles.mapControlButton,
+                        styles.mapButton,
+                        { backgroundColor: palette.surface },
                         pressed && styles.pressed,
                       ]}
                     >
                       <SymbolView
                         name={{ ios: 'location.north.fill', android: 'near_me', web: 'near_me' }}
                         size={21}
-                        tintColor={colors.primary}
+                        tintColor={palette.primary}
                         type="hierarchical"
                         weight={{ ios: 'semibold', android: medium }}
                         style={styles.captionSymbol}
@@ -431,77 +419,97 @@ export default function MapScreen() {
                     </Pressable>
                   </View>
                 </View>
+
                 {selectedEvent ? (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`${selectedEvent.title} esemény részletei`}
-                    onPress={openSelectedEvent}
-                    style={({ pressed }) => [
+                  <View
+                    style={[
                       styles.selectedCard,
-                      { backgroundColor: palette.surface },
-                      pressed && styles.pressed,
+                      { backgroundColor: palette.surface, borderColor: palette.border },
                     ]}
                   >
-                    <View style={styles.selectedPlaceIcon}>
-                      <SymbolView
-                        name={{ ios: 'house.fill', android: 'home', web: 'home' }}
-                        size={29}
-                        tintColor={colors.teal}
-                        type="hierarchical"
-                        weight={{ ios: 'semibold', android: medium }}
-                        style={styles.captionSymbol}
-                      />
-                    </View>
-                    <View style={styles.selectedPlaceContent}>
-                      <View style={styles.selectedPlaceHeader}>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`${selectedEvent.title} esemény részletei`}
+                      onPress={openSelectedEvent}
+                      style={({ pressed }) => [styles.selectedMain, pressed && styles.pressed]}
+                    >
+                      <View style={[styles.selectedPlaceIcon, { backgroundColor: `${selectedColor}22` }]}>
+                        <SymbolView
+                          name={categoryIcons[selectedEvent.category] ?? categoryIcons.family}
+                          size={28}
+                          tintColor={selectedColor}
+                          type="hierarchical"
+                          weight={{ ios: 'semibold', android: medium }}
+                          style={styles.selectedSymbol}
+                        />
+                      </View>
+                      <View style={styles.selectedPlaceContent}>
+                        <View style={[styles.categoryChip, { backgroundColor: `${selectedColor}22` }]}>
+                          <Text style={[styles.categoryChipText, { color: selectedColor }]}>
+                            {categoryLabels[selectedEvent.category]}
+                          </Text>
+                        </View>
                         <Text numberOfLines={1} style={[styles.selectedTitle, { color: palette.textPrimary }]}>
                           {selectedEvent.title}
                         </Text>
-                        <SymbolView
-                          name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
-                          size={19}
-                          tintColor={colors.primary}
-                          type="hierarchical"
-                          weight={{ ios: 'semibold', android: medium }}
-                          style={styles.captionSymbol}
-                        />
+                        <View style={styles.metaRow}>
+                          <Ionicons name="location-outline" size={14} color={palette.textMuted} />
+                          <Text numberOfLines={1} style={[styles.metaText, { color: palette.textSecondary }]}>
+                            {selectedEvent.location_name}
+                          </Text>
+                        </View>
+                        <View style={styles.metaRow}>
+                          <Ionicons name="time-outline" size={14} color={palette.textMuted} />
+                          <Text style={[styles.metaText, { color: palette.textSecondary }]}>
+                            {formatWhen(selectedEvent)}
+                          </Text>
+                        </View>
                       </View>
-                      <Text style={[styles.selectedPlaceType, { color: palette.textMuted }]}>Otthon</Text>
-                      <Text numberOfLines={1} style={[styles.selectedLocation, { color: palette.textSecondary }]}>
-                        {selectedEvent.location_name}
-                      </Text>
-                    </View>
-                  </Pressable>
+                      <Ionicons name="chevron-forward" size={20} color={palette.textMuted} />
+                    </Pressable>
+
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`${selectedEvent.location_name} megnyitása a térképen`}
+                      onPress={() => void openDirections(selectedEvent)}
+                      style={({ pressed }) => [
+                        styles.directionsButton,
+                        { backgroundColor: palette.primary },
+                        pressed && styles.pressed,
+                      ]}
+                    >
+                      <Ionicons name="navigate" size={17} color="#FFFFFF" />
+                      <Text style={styles.directionsText}>Útvonaltervezés</Text>
+                    </Pressable>
+                  </View>
                 ) : null}
 
-                <View style={styles.listHidden}>
-                  {filteredLocationEvents.map((event) => (
-                    <EventLocationCard
-                      key={event.id}
-                      event={event}
-                      selected={event.id === selectedEvent?.id}
-                      onPress={() => setSelectedEventId(event.id)}
-                      onNavigate={() => void openDirections(event)}
-                    />
-                  ))}
-                </View>
+                {filteredLocationEvents.length > 1 ? (
+                  <View style={styles.otherPlaces}>
+                    <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>További helyszínek</Text>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.placeList}
+                    >
+                      {filteredLocationEvents.map((event) => (
+                        <PlaceChip
+                          key={event.id}
+                          event={event}
+                          palette={palette}
+                          selected={event.id === selectedEvent?.id}
+                          onPress={() => setSelectedEventId(event.id)}
+                        />
+                      ))}
+                    </ScrollView>
+                  </View>
+                ) : null}
               </>
             ) : (
               <View
-                style={[
-                  styles.emptyCard,
-                  {
-                    backgroundColor: palette.surface,
-                    borderColor: palette.border,
-                  },
-                ]}
+                style={[styles.emptyCard, { backgroundColor: palette.surface, borderColor: palette.border }]}
               >
-                <View
-                  style={[
-                    styles.emptyIcon,
-                    { backgroundColor: isDark ? '#17335C' : palette.primarySoft },
-                  ]}
-                >
+                <View style={[styles.emptyIcon, { backgroundColor: palette.primarySoft }]}>
                   <SymbolView
                     name={{
                       ios: 'mappin.slash',
@@ -509,13 +517,15 @@ export default function MapScreen() {
                       web: 'location_off',
                     }}
                     size={32}
-                    tintColor={colors.primaryLight}
+                    tintColor={palette.primary}
                     type="hierarchical"
                     weight={{ ios: 'semibold', android: medium }}
                     style={styles.emptySymbol}
                   />
                 </View>
-                <Text style={[styles.emptyTitle, { color: palette.textPrimary }]}>Még nincs helyszín a térképen</Text>
+                <Text style={[styles.emptyTitle, { color: palette.textPrimary }]}>
+                  Még nincs helyszín a térképen
+                </Text>
                 <Text style={[styles.emptyText, { color: palette.textMuted }]}>
                   Adj helyszínt egy közös eseményhez, és itt rögtön elérhető lesz.
                 </Text>
@@ -524,7 +534,7 @@ export default function MapScreen() {
                   onPress={createEvent}
                   style={({ pressed }) => [
                     styles.primaryButton,
-                    styles.emptyButton,
+                    { backgroundColor: palette.primary },
                     pressed && styles.pressed,
                   ]}
                 >
@@ -559,39 +569,38 @@ export default function MapScreen() {
                   style={styles.filterBackdrop}
                 />
                 <View
-                  style={[
-                    styles.filterCard,
-                    { backgroundColor: palette.surface, borderColor: palette.border },
-                  ]}
+                  style={[styles.filterCard, { backgroundColor: palette.surface, borderColor: palette.border }]}
                 >
+                  <View style={[styles.handle, { backgroundColor: palette.border }]} />
                   <Text style={[styles.filterTitle, { color: palette.textPrimary }]}>Események szűrése</Text>
-                  {[
-                    ['all', 'Minden kategória'],
-                    ...Object.keys(categoryColors).map((category) => [
-                      category,
-                      categoryLabels[category as FamilyEvent['category']],
-                    ]),
-                  ].map(([value, label]) => (
-                    <Pressable
-                      key={value}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: categoryFilter === value }}
-                      onPress={() => selectCategory(value as typeof categoryFilter)}
-                      style={({ pressed }) => [
-                        styles.filterOption,
-                        categoryFilter === value && [
-                          styles.filterOptionSelected,
-                          { backgroundColor: isDark ? '#193A77' : palette.primarySoft },
-                        ],
-                        pressed && styles.pressed,
-                      ]}
-                    >
-                      <Text style={[styles.filterOptionText, { color: palette.textSecondary }]}>{label}</Text>
-                      {categoryFilter === value ? (
-                        <Text style={styles.filterCheck}>✓</Text>
-                      ) : null}
-                    </Pressable>
-                  ))}
+                  {filterOptions.map(([value, label]) => {
+                    const selected = categoryFilter === value;
+                    const dotColor = categoryColors[value] ?? palette.primary;
+                    return (
+                      <Pressable
+                        key={value}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected }}
+                        onPress={() => selectCategory(value as typeof categoryFilter)}
+                        style={({ pressed }) => [
+                          styles.filterOption,
+                          selected && { backgroundColor: palette.primarySoft },
+                          pressed && styles.pressed,
+                        ]}
+                      >
+                        <View style={[styles.filterDotLarge, { backgroundColor: dotColor }]} />
+                        <Text
+                          style={[
+                            styles.filterOptionText,
+                            { color: selected ? palette.primary : palette.textPrimary },
+                          ]}
+                        >
+                          {label}
+                        </Text>
+                        {selected ? <Ionicons name="checkmark" size={20} color={palette.primary} /> : null}
+                      </Pressable>
+                    );
+                  })}
                 </View>
               </View>
             </Modal>
@@ -605,12 +614,7 @@ export default function MapScreen() {
                 },
               ]}
             >
-              <View
-                style={[
-                  styles.infoIcon,
-                  { backgroundColor: isDark ? '#0C4A45' : '#D8F7EF' },
-                ]}
-              >
+              <View style={[styles.infoIcon, { backgroundColor: isDark ? '#0C4A45' : '#D8F7EF' }]}>
                 <SymbolView
                   name={{
                     ios: 'lock.shield.fill',
@@ -625,7 +629,9 @@ export default function MapScreen() {
                 />
               </View>
               <View style={styles.flex}>
-                <Text style={[styles.infoTitle, { color: isDark ? '#D1FAE5' : '#18584C' }]}>Csak közös eseményhelyszínek</Text>
+                <Text style={[styles.infoTitle, { color: isDark ? '#D1FAE5' : '#18584C' }]}>
+                  Csak közös eseményhelyszínek
+                </Text>
                 <Text style={[styles.infoText, { color: isDark ? '#93C5B5' : palette.textSecondary }]}>
                   Ez a képernyő nem követi a családtagok élő helyzetét.
                 </Text>
@@ -639,7 +645,7 @@ export default function MapScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#F8FBFF' },
+  safeArea: { flex: 1 },
   backgroundGlow: {
     position: 'absolute',
     top: 88,
@@ -655,55 +661,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingTop: spacing.xs,
-    paddingBottom: spacing.sm,
   },
+  title: { fontSize: 29, fontWeight: '900', letterSpacing: -0.7 },
+  subtitle: { marginTop: 2, fontSize: 13, fontWeight: '700' },
   topAction: {
     width: 42,
     height: 42,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.round,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    ...shadows.card,
-  },
-  topActionButton: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.round,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   topActionSymbol: { width: 24, height: 24 },
-  title: {
-    color: colors.textPrimary,
-    fontSize: 29,
-    fontWeight: '900',
-    letterSpacing: -0.7,
-  },
   mapTabs: {
     flexDirection: 'row',
-    gap: spacing.sm,
     padding: 4,
     borderRadius: radius.round,
-    backgroundColor: colors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   mapTab: {
     flex: 1,
-    minHeight: 42,
+    minHeight: 40,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.round,
   },
-  mapTabActive: {
-    backgroundColor: colors.primary,
-    ...shadows.floating,
-  },
-  mapTabText: { color: colors.textSecondary, fontSize: 12, fontWeight: '800' },
-  mapTabTextActive: { color: colors.white },
+  mapTabText: { fontSize: 12, fontWeight: '800' },
   familySwitcherHidden: {
     position: 'absolute',
     width: 1,
@@ -711,132 +693,48 @@ const styles = StyleSheet.create({
     opacity: 0,
     overflow: 'hidden',
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  sectionTitle: { color: colors.textPrimary, fontSize: 17, fontWeight: '900' },
-  countBadge: {
-    minWidth: 28,
-    height: 28,
-    paddingHorizontal: spacing.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.round,
-    backgroundColor: '#17335C',
-    borderWidth: 1,
-    borderColor: '#315687',
-  },
-  countText: { color: colors.primaryLight, fontSize: 12, fontWeight: '900' },
-  loadingCard: {
+  stateCard: {
     minHeight: 150,
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.md,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: '#294469',
-    backgroundColor: '#10233E',
   },
-  loadingText: { color: colors.textMuted, fontSize: 12 },
+  loadingText: { fontSize: 12 },
   errorCard: {
     padding: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#7F2439',
-    backgroundColor: '#3B1622',
   },
-  errorText: { color: '#FDA4AF', fontSize: 12 },
+  errorText: { flex: 1, fontSize: 12 },
   mapCard: {
-    height: 490,
+    height: 420,
     overflow: 'hidden',
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: '#DDEFE7',
     ...shadows.card,
   },
-  mapGlow: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: 180,
-    opacity: 0.28,
-  },
-  mapRoad: {
-    position: 'absolute',
-    height: 8,
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    opacity: 0.6,
-  },
-  mapRoadOne: { top: 70, left: -40, width: '120%', transform: [{ rotate: '-15deg' }] },
-  mapRoadTwo: { top: 128, left: -12, width: '105%', transform: [{ rotate: '19deg' }] },
-  mapRoadThree: {
-    top: 172,
-    left: '17%',
-    width: '80%',
-    transform: [{ rotate: '-52deg' }],
-  },
-  mapRiver: {
-    position: 'absolute',
-    top: 92,
-    right: -45,
-    width: '130%',
-    height: 25,
-    borderRadius: 20,
-    borderWidth: 4,
-    borderColor: '#8AD4EE',
-    opacity: 0.82,
-    transform: [{ rotate: '27deg' }],
-  },
-  mapMarker: {
-    position: 'absolute',
-    width: 43,
-    height: 43,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 22,
-    borderWidth: 3,
-    backgroundColor: '#173B55',
-    shadowColor: '#071123',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 7,
-    elevation: 5,
-  },
-  mapMarkerSelected: {
-    transform: [{ scale: 1.18 }],
-    backgroundColor: colors.primary,
-    shadowColor: colors.primary,
-    shadowOpacity: 0.8,
-  },
-  markerSymbol: { width: 22, height: 22 },
-  mapCaption: {
-    position: 'absolute',
-    right: spacing.md,
-    bottom: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-    borderRadius: radius.round,
-    backgroundColor: 'rgba(7, 17, 35, 0.84)',
-  },
-  mapFilterButton: {
-    position: 'absolute',
-    top: spacing.md,
-    right: spacing.md,
-    width: 48,
-    height: 48,
+  mapButton: {
+    width: 46,
+    height: 46,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.round,
-    backgroundColor: colors.white,
     ...shadows.card,
+  },
+  mapFilterButton: { position: 'absolute', top: spacing.md, right: spacing.md },
+  filterDot: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 11,
+    height: 11,
+    borderRadius: 6,
+    borderWidth: 2,
   },
   mapControls: {
     position: 'absolute',
@@ -844,173 +742,65 @@ const styles = StyleSheet.create({
     bottom: spacing.md,
     gap: spacing.sm,
   },
-  mapControlButton: {
-    width: 48,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.round,
-    backgroundColor: colors.white,
-    ...shadows.card,
-  },
-  filterOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    padding: spacing.lg,
-    backgroundColor: 'rgba(7, 17, 35, 0.42)',
-  },
-  filterBackdrop: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-  },
-  filterCard: {
-    padding: spacing.md,
-    borderRadius: radius.xl,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    zIndex: 1,
-    ...shadows.card,
-  },
-  filterTitle: {
-    paddingHorizontal: spacing.sm,
-    paddingBottom: spacing.sm,
-    color: colors.textPrimary,
-    fontSize: 17,
-    fontWeight: '900',
-  },
-  filterOption: {
-    minHeight: 44,
-    paddingHorizontal: spacing.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderRadius: radius.md,
-  },
-  filterOptionSelected: { backgroundColor: '#E8F0FF' },
-  filterOptionText: { color: colors.textSecondary, fontSize: 13, fontWeight: '700' },
-  filterCheck: { color: colors.primary, fontSize: 18, fontWeight: '900' },
-  captionSymbol: { width: 19, height: 19 },
-  mapCaptionText: { color: colors.textSecondary, fontSize: 10, fontWeight: '700' },
+  captionSymbol: { width: 21, height: 21 },
   selectedCard: {
-    minHeight: 126,
     padding: spacing.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: spacing.md,
     borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: '#EEF2F8',
-    backgroundColor: colors.white,
     ...shadows.card,
   },
+  selectedMain: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   selectedPlaceIcon: {
-    width: 66,
-    height: 66,
+    width: 62,
+    height: 62,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 22,
-    backgroundColor: '#D8F7EF',
+    borderRadius: 20,
   },
+  selectedSymbol: { width: 30, height: 30 },
   selectedPlaceContent: { flex: 1, gap: 4 },
-  selectedPlaceHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
+  categoryChip: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.round,
   },
-  selectedPlaceType: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  selectedTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  selectedLabel: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  selectedDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#60A5FA' },
-  selectedLabelText: {
-    color: colors.primaryLight,
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 0.7,
-  },
-  selectedDate: {
-    color: colors.textMuted,
-    fontSize: 10,
-    fontWeight: '700',
-    textTransform: 'capitalize',
-  },
-  selectedTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '900' },
-  selectedLocation: { color: colors.textSecondary, fontSize: 12, lineHeight: 18 },
-  primaryButton: {
-    minHeight: 48,
+  categoryChipText: { fontSize: 11, fontWeight: '900' },
+  selectedTitle: { fontSize: 18, fontWeight: '900' },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  metaText: { flex: 1, fontSize: 12, fontWeight: '700' },
+  directionsButton: {
+    minHeight: 46,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.md,
-    backgroundColor: colors.primary,
+    borderRadius: radius.lg,
   },
-  primaryButtonText: { color: '#FFFFFF', fontSize: 12, fontWeight: '900' },
-  buttonSymbol: { width: 24, height: 24 },
-  list: { gap: spacing.sm },
-  listHidden: { display: 'none' },
-  locationCard: {
-    minHeight: 82,
+  directionsText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
+  otherPlaces: { gap: spacing.sm },
+  sectionTitle: { fontSize: 17, fontWeight: '900' },
+  placeList: { gap: spacing.sm },
+  placeChip: {
+    width: 178,
     padding: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: spacing.sm,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
   },
-  eventIcon: {
-    width: 46,
-    height: 46,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 16,
-  },
-  eventSymbol: { width: 25, height: 25 },
-  eventTitle: { color: colors.textPrimary, fontSize: 13, fontWeight: '900' },
-  eventLocation: {
-    marginTop: 3,
-    color: colors.textSecondary,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  eventMeta: {
-    marginTop: 3,
-    color: colors.textMuted,
-    fontSize: 10,
-    textTransform: 'capitalize',
-  },
-  navigateButton: {
-    width: 42,
-    height: 42,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.round,
-    backgroundColor: '#17335C',
-  },
+  placeDot: { width: 10, height: 10, borderRadius: 5 },
+  placeChipText: { flex: 1, gap: 2 },
+  placeChipTitle: { fontSize: 13, fontWeight: '900' },
+  placeChipMeta: { fontSize: 11, textTransform: 'capitalize' },
   emptyCard: {
     alignItems: 'center',
     padding: spacing.xl,
     gap: spacing.md,
     borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: '#294469',
-    backgroundColor: '#10233E',
   },
   emptyIcon: {
     width: 66,
@@ -1018,22 +808,54 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 22,
-    backgroundColor: '#17335C',
   },
   emptySymbol: { width: 38, height: 38 },
-  emptyTitle: {
-    color: colors.textPrimary,
-    fontSize: 16,
+  emptyTitle: { fontSize: 16, fontWeight: '900', textAlign: 'center' },
+  emptyText: { fontSize: 12, lineHeight: 18, textAlign: 'center' },
+  primaryButton: {
+    alignSelf: 'stretch',
+    minHeight: 48,
+    marginTop: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.md,
+  },
+  primaryButtonText: { color: '#FFFFFF', fontSize: 13, fontWeight: '900' },
+  buttonSymbol: { width: 24, height: 24 },
+  filterOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    padding: spacing.lg,
+    backgroundColor: 'rgba(7, 17, 35, 0.45)',
+  },
+  filterBackdrop: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
+  filterCard: {
+    padding: spacing.md,
+    borderRadius: radius.xl,
+    borderWidth: StyleSheet.hairlineWidth,
+    zIndex: 1,
+    ...shadows.card,
+  },
+  handle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, marginBottom: spacing.sm },
+  filterTitle: {
+    paddingHorizontal: spacing.sm,
+    paddingBottom: spacing.sm,
+    fontSize: 17,
     fontWeight: '900',
-    textAlign: 'center',
   },
-  emptyText: {
-    color: colors.textMuted,
-    fontSize: 12,
-    lineHeight: 18,
-    textAlign: 'center',
+  filterOption: {
+    minHeight: 46,
+    paddingHorizontal: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderRadius: radius.md,
   },
-  emptyButton: { alignSelf: 'stretch', marginTop: spacing.sm },
+  filterDotLarge: { width: 12, height: 12, borderRadius: 6 },
+  filterOptionText: { flex: 1, fontSize: 14, fontWeight: '700' },
   infoCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1041,8 +863,6 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: '#17544D',
-    backgroundColor: '#0B302F',
   },
   infoIcon: {
     width: 40,
@@ -1050,17 +870,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.md,
-    backgroundColor: '#0C4A45',
   },
   infoSymbol: { width: 24, height: 24 },
-  infoTitle: { color: '#D1FAE5', fontSize: 12, fontWeight: '900' },
-  infoText: { marginTop: 2, color: '#93C5B5', fontSize: 10, lineHeight: 15 },
+  infoTitle: { fontSize: 12, fontWeight: '900' },
+  infoText: { marginTop: 2, fontSize: 11, lineHeight: 16 },
   pressed: { opacity: 0.75, transform: [{ scale: 0.98 }] },
-  locationCardMain: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  googleMap: { flex: 1 },
 });

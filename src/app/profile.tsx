@@ -1,29 +1,25 @@
-import { colors, radius, shadows, spacing , darkColors } from '@/constants/theme';
-import { useTheme } from '@/providers/theme-provider';
-import { useAuth } from '@/providers/auth-provider';
-import { Ionicons } from '@expo/vector-icons';
 import { ScreenCloseButton } from '@/components/screen-close-button';
-import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import {
-  Alert,
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/providers/auth-provider';
+import { useTheme } from '@/providers/theme-provider';
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+type Palette = typeof colors | typeof darkColors;
 
 type DetailRowProps = {
   icon: React.ComponentProps<typeof Ionicons>['name'];
   color: string;
   label: string;
   value: string;
+  palette: Palette;
+  last?: boolean;
 };
 
 const profileTypeLabels = {
@@ -32,15 +28,20 @@ const profileTypeLabels = {
   ancestor: 'Ős',
 } as const;
 
-function DetailRow({ icon, color, label, value }: DetailRowProps) {
+function DetailRow({ icon, color, label, value, palette, last }: DetailRowProps) {
   return (
-    <View style={styles.detailRow}>
-      <View style={[styles.detailIcon, { backgroundColor: `${color}18` }]}>
-        <Ionicons name={icon} size={21} color={color} />
+    <View
+      style={[
+        styles.detailRow,
+        !last && { borderBottomColor: palette.border, borderBottomWidth: StyleSheet.hairlineWidth },
+      ]}
+    >
+      <View style={[styles.detailIcon, { backgroundColor: `${color}22` }]}>
+        <Ionicons name={icon} size={20} color={color} />
       </View>
       <View style={styles.detailContent}>
-        <Text style={styles.detailLabel}>{label}</Text>
-        <Text selectable style={styles.detailValue}>
+        <Text style={[styles.detailLabel, { color: palette.textMuted }]}>{label}</Text>
+        <Text selectable style={[styles.detailValue, { color: palette.textPrimary }]}>
           {value}
         </Text>
       </View>
@@ -55,12 +56,8 @@ export default function ProfileScreen() {
   const { profile, profileError, session, signOut } = useAuth();
   const displayName = profile?.display_name || 'Felhasználó';
   const initial = displayName.trim().charAt(0).toLocaleUpperCase('hu-HU') || '?';
-  const emailConfirmed = session?.user.email_confirmed_at
-    ? 'Megerősítve'
-    : 'Nincs megerősítve';
-  const profileType = profile
-    ? profileTypeLabels[profile.profile_type]
-    : 'Betöltés alatt';
+  const emailConfirmed = session?.user.email_confirmed_at ? 'Megerősítve' : 'Nincs megerősítve';
+  const profileType = profile ? profileTypeLabels[profile.profile_type] : 'Betöltés alatt';
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
@@ -113,8 +110,7 @@ export default function ProfileScreen() {
     try {
       const asset = result.assets[0];
       const extension = asset.fileName?.split('.').pop()?.toLowerCase() || 'jpg';
-      const contentType =
-        asset.mimeType || `image/${extension === 'jpg' ? 'jpeg' : extension}`;
+      const contentType = asset.mimeType || `image/${extension === 'jpg' ? 'jpeg' : extension}`;
       const path = `${profile.id}/avatar-${Date.now()}.${extension}`;
       const response = await fetch(asset.uri);
       const arrayBuffer = await response.arrayBuffer();
@@ -159,102 +155,130 @@ export default function ProfileScreen() {
           accessibilityRole="button"
           accessibilityLabel="Profil szerkesztése"
           onPress={() => router.push('/settings')}
-          style={({ pressed }) => [styles.headerButton, pressed && styles.pressed]}
+          style={({ pressed }) => [
+            styles.headerButton,
+            { backgroundColor: palette.surface, borderColor: palette.border },
+            pressed && styles.pressed,
+          ]}
         >
-          <Ionicons name="create-outline" size={22} color={colors.primary} />
+          <Ionicons name="create-outline" size={22} color={palette.primary} />
         </Pressable>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={[styles.identityCard, { backgroundColor: palette.surface }]}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={[styles.identityCard, { backgroundColor: palette.surface, borderColor: palette.border }]}>
           <LinearGradient
             pointerEvents="none"
-            colors={isDark ? ['#173F86', '#102B4C00'] : ['#C7D9FF', '#EEF4FF00']}
-            start={{ x: 1, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={styles.identityGlow}
-          />
+            colors={isDark ? ['#1B4FC4', '#12307A'] : ['#2F6BFF', '#1B3FD8']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.banner}
+          >
+            <View style={styles.bannerCircleLarge} />
+            <View style={styles.bannerCircleSmall} />
+          </LinearGradient>
+
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Profilkép kiválasztása"
             disabled={uploadingAvatar}
             onPress={() => void handlePickAvatar()}
-            style={({ pressed }) => [styles.avatar, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.avatar,
+              { backgroundColor: palette.primary, borderColor: palette.surface },
+              pressed && styles.pressed,
+            ]}
           >
             {avatarUri ? (
-              <Image
-                source={{
-                  uri: avatarUri,
-                }}
-                style={styles.avatarImage}
-              />
+              <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
             ) : (
               <Text style={styles.avatarText}>{initial}</Text>
             )}
-            <View style={styles.avatarBadge}>
-              <Ionicons
-                name={uploadingAvatar ? 'hourglass-outline' : 'camera'}
-                size={13}
-                color={colors.white}
-              />
+            <View style={[styles.avatarBadge, { borderColor: palette.surface, backgroundColor: palette.primary }]}>
+              <Ionicons name={uploadingAvatar ? 'hourglass-outline' : 'camera'} size={13} color="#FFFFFF" />
             </View>
           </Pressable>
-          <Text style={[styles.name, { color: palette.textPrimary }]}>{displayName}</Text>
-          <View style={[styles.rolePill, { backgroundColor: palette.primarySoft }]}>
-            <Ionicons name="people-outline" size={14} color={colors.primary} />
-            <Text style={[styles.roleText, { color: palette.textSecondary }]}>{profileType}</Text>
+
+          <View style={styles.identityBody}>
+            <Text style={[styles.name, { color: palette.textPrimary }]}>{displayName}</Text>
+            <View style={[styles.rolePill, { backgroundColor: palette.primarySoft }]}>
+              <Ionicons name="people-outline" size={14} color={palette.primary} />
+              <Text style={[styles.roleText, { color: palette.primary }]}>{profileType}</Text>
+            </View>
+            <Text style={[styles.email, { color: palette.textMuted }]}>
+              {session?.user.email ?? 'Nincs e-mail-cím'}
+            </Text>
           </View>
-          <Text style={[styles.email, { color: palette.textMuted }]}>{session?.user.email ?? 'Nincs e-mail-cím'}</Text>
         </View>
 
-        <View style={[styles.statusCard, { backgroundColor: palette.surface }]}>
-          <View style={styles.statusIcon}>
+        <View
+          style={[
+            styles.statusCard,
+            {
+              backgroundColor: isDark ? '#0B302F' : '#E9FBF6',
+              borderColor: isDark ? '#17544D' : '#CBEADF',
+            },
+          ]}
+        >
+          <View style={[styles.statusIcon, { backgroundColor: isDark ? '#0C4A45' : '#D2F6EC' }]}>
             <Ionicons name="shield-checkmark" size={22} color={colors.success} />
           </View>
           <View style={styles.statusContent}>
-            <Text style={[styles.statusTitle, { color: palette.textPrimary }]}>Fiókod védett</Text>
-            <Text style={[styles.statusText, { color: palette.textMuted }]}>A családi adataid biztonságban vannak.</Text>
+            <Text style={[styles.statusTitle, { color: isDark ? '#D1FAE5' : '#117C6C' }]}>Fiókod védett</Text>
+            <Text style={[styles.statusText, { color: isDark ? '#93C5B5' : '#3F8A7D' }]}>
+              A családi adataid biztonságban vannak.
+            </Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.success} />
         </View>
 
-        <View style={[styles.card, { backgroundColor: palette.surface }]}>
+        <View style={[styles.card, { backgroundColor: palette.surface, borderColor: palette.border }]}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>Fiókadatok</Text>
-            <Ionicons name="person-circle-outline" size={22} color={colors.primary} />
+            <Ionicons name="person-circle-outline" size={22} color={palette.primary} />
           </View>
           <DetailRow
             icon="person-outline"
             color={colors.primary}
             label="Megjelenített név"
             value={displayName}
+            palette={palette}
           />
           <DetailRow
             icon="mail-outline"
             color={colors.purple}
             label="E-mail-cím"
             value={session?.user.email ?? 'Nincs megadva'}
+            palette={palette}
           />
           <DetailRow
             icon="checkmark-circle-outline"
             color={emailConfirmed === 'Megerősítve' ? colors.success : colors.warning}
             label="E-mail állapota"
             value={emailConfirmed}
+            palette={palette}
           />
           <DetailRow
             icon="ribbon-outline"
             color={colors.pink}
             label="Profiltípus"
             value={profileType}
+            palette={palette}
+            last
           />
         </View>
 
         {profileError ? (
-          <View style={styles.errorCard}>
-            <Text style={styles.errorText}>
+          <View
+            style={[
+              styles.errorCard,
+              {
+                backgroundColor: isDark ? '#3B1622' : '#FFF1F3',
+                borderColor: isDark ? '#7F2439' : '#F9C5CC',
+              },
+            ]}
+          >
+            <Ionicons name="alert-circle-outline" size={20} color={isDark ? '#FDA4AF' : '#C64052'} />
+            <Text style={[styles.errorText, { color: isDark ? '#FDA4AF' : '#C64052' }]}>
               A profiladatok betöltése sikertelen: {profileError}
             </Text>
           </View>
@@ -263,10 +287,17 @@ export default function ProfileScreen() {
         <Pressable
           accessibilityRole="button"
           onPress={() => void handleSignOut()}
-          style={({ pressed }) => [styles.signOutButton, pressed && styles.pressed]}
+          style={({ pressed }) => [
+            styles.signOutButton,
+            {
+              borderColor: isDark ? '#7F2439' : '#FFD7DE',
+              backgroundColor: isDark ? '#3B1622' : '#FFF0F3',
+            },
+            pressed && styles.pressed,
+          ]}
         >
-          <Ionicons name="log-out-outline" size={21} color={colors.danger} />
-          <Text style={styles.signOutText}>Kijelentkezés</Text>
+          <Ionicons name="log-out-outline" size={21} color={isDark ? '#FDA4AF' : '#C33D52'} />
+          <Text style={[styles.signOutText, { color: isDark ? '#FDA4AF' : '#C33D52' }]}>Kijelentkezés</Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>
@@ -274,7 +305,7 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
+  safeArea: { flex: 1 },
   header: {
     height: 60,
     paddingHorizontal: spacing.lg,
@@ -288,86 +319,84 @@ const styles = StyleSheet.create({
     borderRadius: radius.round,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
-    ...shadows.card,
+    borderWidth: StyleSheet.hairlineWidth,
   },
-  headerTitle: { color: colors.textPrimary, fontSize: 21, fontWeight: '900' },
+  headerTitle: { fontSize: 21, fontWeight: '900' },
   content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md },
   identityCard: {
-    minHeight: 250,
-    alignItems: 'center',
-    justifyContent: 'center',
     overflow: 'hidden',
-    borderRadius: radius.lg,
+    alignItems: 'center',
+    borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: '#EEF4FF',
     ...shadows.card,
   },
-  identityGlow: {
+  banner: { width: '100%', height: 104, overflow: 'hidden' },
+  bannerCircleLarge: {
     position: 'absolute',
-    top: 0,
-    right: 0,
-    width: '76%',
-    height: 190,
-    opacity: 0.7,
+    top: -50,
+    right: -30,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  bannerCircleSmall: {
+    position: 'absolute',
+    bottom: -30,
+    left: 40,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
   avatar: {
-    width: 104,
-    height: 104,
-    borderRadius: 52,
+    width: 108,
+    height: 108,
+    marginTop: -54,
+    borderRadius: 54,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#D6B38D',
-    borderWidth: 4,
-    borderColor: colors.white,
+    borderWidth: 5,
     ...shadows.card,
   },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 52,
-  },
+  avatarImage: { width: '100%', height: '100%', borderRadius: 54 },
   avatarBadge: {
     position: 'absolute',
     right: -2,
     bottom: 2,
-    width: 25,
-    height: 25,
+    width: 28,
+    height: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 13,
-    backgroundColor: colors.success,
+    borderRadius: 14,
     borderWidth: 3,
-    borderColor: colors.white,
   },
-  avatarText: { color: '#3B2415', fontSize: 39, fontWeight: '900' },
-  name: {
-    marginTop: spacing.sm,
-    color: colors.textPrimary,
-    fontSize: 26,
-    fontWeight: '900',
+  avatarText: { color: '#FFFFFF', fontSize: 40, fontWeight: '900' },
+  identityBody: {
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xl,
+    paddingHorizontal: spacing.lg,
   },
+  name: { fontSize: 26, fontWeight: '900', letterSpacing: -0.5, textAlign: 'center' },
   rolePill: {
-    marginTop: spacing.xs,
     paddingHorizontal: spacing.md,
     paddingVertical: 6,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
     borderRadius: radius.round,
-    backgroundColor: colors.white,
   },
-  roleText: { color: colors.primary, fontSize: 11, fontWeight: '900' },
-  email: { marginTop: spacing.sm, color: colors.textMuted, fontSize: 13 },
+  roleText: { fontSize: 12, fontWeight: '900' },
+  email: { marginTop: 2, fontSize: 13 },
   statusCard: {
-    minHeight: 76,
     padding: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     borderRadius: radius.lg,
-    backgroundColor: '#E9FBF6',
+    borderWidth: 1,
   },
   statusIcon: {
     width: 44,
@@ -375,42 +404,48 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 22,
-    backgroundColor: '#D2F6EC',
   },
   statusContent: { flex: 1, gap: 3 },
-  statusTitle: { color: '#117C6C', fontSize: 13, fontWeight: '900' },
-  statusText: { color: '#4B9E90', fontSize: 11, fontWeight: '700' },
+  statusTitle: { fontSize: 14, fontWeight: '900' },
+  statusText: { fontSize: 12, fontWeight: '700' },
   card: {
     padding: spacing.lg,
-    gap: spacing.sm,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    borderWidth: 1,
     ...shadows.card,
   },
   sectionHeader: {
+    marginBottom: spacing.xs,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  sectionTitle: { color: colors.textPrimary, fontSize: 17, fontWeight: '900' },
+  sectionTitle: { fontSize: 17, fontWeight: '900' },
   detailRow: {
-    minHeight: 64,
+    minHeight: 66,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
   },
   detailIcon: {
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   detailContent: { flex: 1, gap: 3 },
-  detailLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
-  detailValue: { color: colors.textSecondary, fontSize: 14, fontWeight: '700' },
-  errorCard: { padding: spacing.md, borderRadius: radius.md, backgroundColor: '#3B1622' },
-  errorText: { color: '#FDA4AF', fontSize: 12, lineHeight: 18 },
+  detailLabel: { fontSize: 11, fontWeight: '700' },
+  detailValue: { fontSize: 15, fontWeight: '700' },
+  errorCard: {
+    padding: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+  },
+  errorText: { flex: 1, fontSize: 12, lineHeight: 18 },
   signOutButton: {
     minHeight: 52,
     flexDirection: 'row',
@@ -419,9 +454,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: '#FFD7DE',
-    backgroundColor: '#FFF0F3',
   },
-  signOutText: { color: '#C33D52', fontSize: 14, fontWeight: '900' },
+  signOutText: { fontSize: 14, fontWeight: '900' },
   pressed: { opacity: 0.7 },
 });

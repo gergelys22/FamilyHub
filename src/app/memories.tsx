@@ -1,20 +1,22 @@
 import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
-import { useTheme } from '@/providers/theme-provider';
 import { useMemories } from '@/hooks/use-memories';
-import { useAuth } from '@/providers/auth-provider';
 import { supabase } from '@/lib/supabase';
-import { getMyFamilies } from '@/services/families';
-import { getFamilyMembers, type FamilyMember } from '@/services/families';
+import { useAuth } from '@/providers/auth-provider';
+import { useTheme } from '@/providers/theme-provider';
+import { getFamilyMembers, getMyFamilies, type FamilyMember } from '@/services/families';
 import { createMemory } from '@/services/family-content';
-import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -23,9 +25,11 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 type MemoryView = 'all' | 'photos' | 'videos' | 'events';
 type Memory = ReturnType<typeof useMemories>['memories'][number];
+type Palette = typeof colors | typeof darkColors;
 
 /* ------------------------------------------------------------------ */
 /* Tabváltó                                                            */
@@ -53,12 +57,11 @@ function MemoryTabs({
         const isActive = key === active;
         const content = (
           <>
-            <Ionicons
-              name={icon}
-              size={20}
-              color={isActive ? palette.white : palette.textSecondary}
-            />
-            <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
+            <Ionicons name={icon} size={18} color={isActive ? '#FFFFFF' : palette.textSecondary} />
+            <Text
+              numberOfLines={1}
+              style={[styles.tabText, { color: isActive ? '#FFFFFF' : palette.textSecondary }]}
+            >
               {label}
             </Text>
           </>
@@ -77,12 +80,12 @@ function MemoryTabs({
                 colors={['#2F6BFF', '#1B3FD8']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={styles.tab}
+                style={[styles.tab, shadows.floating]}
               >
                 {content}
               </LinearGradient>
             ) : (
-              <View style={[styles.tab, { backgroundColor: palette.surfaceElevated }]}>{content}</View>
+              <View style={styles.tab}>{content}</View>
             )}
           </Pressable>
         );
@@ -100,6 +103,21 @@ function MemoryCard({ item, featured = false }: { item: Memory; featured?: boole
   const { isDark } = useTheme();
   const palette = isDark ? darkColors : colors;
 
+  const image = item.photo ? (
+    <Image source={{ uri: item.photo }} style={[styles.memoryImage, featured && styles.featuredImage]} />
+  ) : (
+    <View
+      style={[
+        styles.memoryImage,
+        featured && styles.featuredImage,
+        styles.photoPlaceholder,
+        { backgroundColor: palette.surfaceMuted },
+      ]}
+    >
+      <Ionicons name="image-outline" size={featured ? 44 : 32} color={palette.textMuted} />
+    </View>
+  );
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -112,42 +130,69 @@ function MemoryCard({ item, featured = false }: { item: Memory; featured?: boole
       }
       style={({ pressed }) => [
         styles.memoryCard,
-        { backgroundColor: palette.background },
         featured && styles.featuredCard,
         pressed && styles.pressed,
       ]}
     >
-      <View style={styles.memoryImageWrap}>
-        {item.photo ? (
-          <Image
-            source={{ uri: item.photo }}
-            style={[styles.memoryImage, featured && styles.featuredCardImage]}
-          />
-        ) : (
-          <View
-            style={[
-              styles.memoryImage,
-              featured && styles.featuredCardImage,
-              styles.photoPlaceholder,
-            ]}
+      <View style={[styles.memoryImageWrap, { backgroundColor: palette.surfaceMuted }]}>
+        {image}
+        {featured ? (
+          <LinearGradient
+            pointerEvents="none"
+            colors={['rgba(0,0,0,0)', 'rgba(8,16,32,0.78)']}
+            style={styles.featuredOverlay}
           >
-            <Ionicons name="image-outline" size={32} color={colors.textSecondary} />
-          </View>
-        )}
+            <View style={styles.featuredText}>
+              <Text numberOfLines={2} style={styles.featuredTitle}>
+                {item.title}
+              </Text>
+              <Text style={styles.featuredMeta}>{item.when}</Text>
+            </View>
+            <Ionicons name="heart" size={22} color="#FF6B8B" />
+          </LinearGradient>
+        ) : null}
         {item.extraPhotos > 0 && (
           <View style={styles.photoBadge}>
+            <Ionicons name="images-outline" size={12} color="#FFFFFF" />
             <Text style={styles.photoBadgeText}>+{item.extraPhotos}</Text>
           </View>
         )}
       </View>
-      <View style={styles.memoryInfo}>
-        <View style={styles.titleRow}>
-          <Text style={[styles.cardTitle, { color: palette.textPrimary }]} numberOfLines={1}>{item.title}</Text>
-          <Text style={styles.memoryHeart}>♥</Text>
+
+      {!featured ? (
+        <View style={styles.memoryInfo}>
+          <View style={styles.titleRow}>
+            <Text style={[styles.cardTitle, { color: palette.textPrimary }]} numberOfLines={1}>
+              {item.title}
+            </Text>
+            <Ionicons name="heart" size={15} color={palette.danger} />
+          </View>
+          <Text style={[styles.metaText, { color: palette.textMuted }]}>{item.when}</Text>
         </View>
-        <Text style={[styles.metaText, { color: palette.textMuted }]}>{item.when}</Text>
-      </View>
+      ) : null}
     </Pressable>
+  );
+}
+
+function EmptyState({
+  icon,
+  title,
+  text,
+  palette,
+}: {
+  icon: IconName;
+  title: string;
+  text?: string;
+  palette: Palette;
+}) {
+  return (
+    <View style={[styles.empty, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+      <View style={[styles.emptyIcon, { backgroundColor: palette.primarySoft }]}>
+        <Ionicons name={icon} size={28} color={palette.primary} />
+      </View>
+      <Text style={[styles.emptyTitle, { color: palette.textPrimary }]}>{title}</Text>
+      {text ? <Text style={[styles.emptyText, { color: palette.textMuted }]}>{text}</Text> : null}
+    </View>
   );
 }
 
@@ -160,20 +205,41 @@ function TimelineView() {
     <View>
       {memories.length > 0 && <MemoryCard item={memories[0]} featured />}
       <View style={styles.memoryGrid}>
-        {memories.slice(1).map((m) => <MemoryCard key={m.id} item={m} />)}
+        {memories.slice(1).map((m) => (
+          <MemoryCard key={m.id} item={m} />
+        ))}
       </View>
 
+      {loading && memories.length === 0 ? (
+        <ActivityIndicator color={palette.primary} size="large" style={styles.loader} />
+      ) : null}
+
       {!loading && !error && memories.length === 0 && (
-        <Text style={[styles.metaText, { color: palette.textMuted }]}>Még nincs emlék. Add hozzá az elsőt!</Text>
+        <EmptyState
+          icon="images-outline"
+          title="Még nincs emlék"
+          text="Add hozzá az elsőt a + gombbal!"
+          palette={palette}
+        />
       )}
-      {!!error && <Text style={[styles.metaText, { color: palette.textMuted }]}>Hiba történt: {error}</Text>}
+      {!!error && (
+        <EmptyState icon="alert-circle-outline" title="Hiba történt" text={String(error)} palette={palette} />
+      )}
 
       {hasMore && memories.length > 0 && (
-        <Pressable style={styles.loadMore} onPress={loadMore} disabled={loading}>
-          <Text style={[styles.metaText, { color: palette.textMuted }]}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.loadMore,
+            { backgroundColor: palette.surfaceElevated },
+            pressed && styles.pressed,
+          ]}
+          onPress={loadMore}
+          disabled={loading}
+        >
+          <Text style={[styles.loadMoreText, { color: palette.textSecondary }]}>
             {loading ? 'Betöltés…' : 'További emlékek betöltése'}
           </Text>
-          <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
+          <Ionicons name="chevron-down" size={16} color={palette.textSecondary} />
         </Pressable>
       )}
     </View>
@@ -184,9 +250,11 @@ function TimelineView() {
 /* Egyelőre üres nézetek                                               */
 /* ------------------------------------------------------------------ */
 
-const EmptyMemoryView = ({ label }: { label: string }) => (
-  <Text style={styles.metaText}>{label}</Text>
-);
+function EmptyMemoryView({ label }: { label: string }) {
+  const { isDark } = useTheme();
+  const palette = isDark ? darkColors : colors;
+  return <EmptyState icon="videocam-outline" title={label} text="Ez a rész hamarosan elérhető." palette={palette} />;
+}
 
 /* ------------------------------------------------------------------ */
 /* Váltó + tartalom                                                    */
@@ -219,9 +287,8 @@ export default function MemoriesScreen() {
   const [visible, setVisible] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [memoryDate, setMemoryDate] = useState(new Date().toISOString().slice(0, 10));
+  const [memoryDate, setMemoryDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [location, setLocation] = useState('');
-  const [photo, setPhoto] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [photos, setPhotos] = useState<ImagePicker.ImagePickerAsset[]>([]);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
@@ -241,7 +308,6 @@ export default function MemoriesScreen() {
     });
     if (!result.canceled) {
       setPhotos(result.assets);
-      setPhoto(result.assets[0] ?? null);
     }
   }
 
@@ -257,9 +323,9 @@ export default function MemoriesScreen() {
   }
 
   function toggleParticipant(profileId: string) {
-    setSelectedParticipants((current) => current.includes(profileId)
-      ? current.filter((id) => id !== profileId)
-      : [...current, profileId]);
+    setSelectedParticipants((current) =>
+      current.includes(profileId) ? current.filter((id) => id !== profileId) : [...current, profileId],
+    );
   }
 
   async function saveMemory() {
@@ -304,7 +370,6 @@ export default function MemoriesScreen() {
       setTitle('');
       setDescription('');
       setLocation('');
-      setPhoto(null);
       setPhotos([]);
       setSelectedParticipants([]);
     } catch (error) {
@@ -317,6 +382,8 @@ export default function MemoriesScreen() {
     }
   }
 
+  const inputStyle = [styles.modalInput, { backgroundColor: palette.surfaceElevated, color: palette.textPrimary }];
+
   return (
     <View style={[styles.root, { backgroundColor: palette.background }]}>
       <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]}>
@@ -328,18 +395,24 @@ export default function MemoriesScreen() {
           style={styles.backgroundGlow}
         />
 
-        <ScrollView
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-        >
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.pageHeader}>
-            <Text style={[styles.title, { color: palette.textPrimary }]}>Emlékek</Text>
+            <View>
+              <Text style={[styles.title, { color: palette.textPrimary }]}>Emlékek</Text>
+              <Text style={[styles.subtitle, { color: palette.textSecondary }]}>
+                A család közös pillanatai
+              </Text>
+            </View>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Emlékek műveletei"
               accessibilityState={{ expanded: menuVisible }}
               onPress={() => setMenuVisible(true)}
-              style={({ pressed }) => [styles.moreButton, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.moreButton,
+                { backgroundColor: palette.surface, borderColor: palette.border },
+                pressed && styles.pressed,
+              ]}
             >
               <Ionicons name="ellipsis-horizontal" size={22} color={palette.primary} />
             </Pressable>
@@ -347,14 +420,16 @@ export default function MemoriesScreen() {
 
           <MemoryScreenOptions refreshToken={refreshToken} />
         </ScrollView>
+
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Új emlék hozzáadása"
           onPress={() => void openCreateModal()}
-          style={({ pressed }) => [styles.floatingAdd, pressed && styles.pressed]}
+          style={({ pressed }) => [styles.floatingAdd, { backgroundColor: palette.primary }, pressed && styles.pressed]}
         >
-          <Ionicons name="add" size={31} color={colors.white} />
+          <Ionicons name="add" size={31} color="#FFFFFF" />
         </Pressable>
+
         <Modal
           visible={menuVisible}
           transparent
@@ -368,7 +443,7 @@ export default function MemoriesScreen() {
               onPress={() => setMenuVisible(false)}
               style={styles.menuBackdrop}
             />
-            <View style={[styles.menuCard, { backgroundColor: palette.surface }]}>
+            <View style={[styles.menuCard, { backgroundColor: palette.surface, borderColor: palette.border }]}>
               <Text style={[styles.menuTitle, { color: palette.textPrimary }]}>Emlékek műveletei</Text>
               <Pressable
                 accessibilityRole="button"
@@ -376,9 +451,9 @@ export default function MemoriesScreen() {
                   setRefreshToken((current) => current + 1);
                   setMenuVisible(false);
                 }}
-                style={({ pressed }) => [styles.menuItem, pressed && styles.pressed]}
+                style={({ pressed }) => [styles.menuItem, pressed && { backgroundColor: palette.surfaceMuted }]}
               >
-                <Ionicons name="refresh-outline" size={21} color={colors.primary} />
+                <Ionicons name="refresh-outline" size={21} color={palette.primary} />
                 <Text style={[styles.menuItemText, { color: palette.textPrimary }]}>Emlékek frissítése</Text>
               </Pressable>
               <Pressable
@@ -387,46 +462,161 @@ export default function MemoriesScreen() {
                   setMenuVisible(false);
                   void openCreateModal();
                 }}
-                style={({ pressed }) => [styles.menuItem, pressed && styles.pressed]}
+                style={({ pressed }) => [styles.menuItem, pressed && { backgroundColor: palette.surfaceMuted }]}
               >
-                <Ionicons name="add-circle-outline" size={21} color={colors.primary} />
+                <Ionicons name="add-circle-outline" size={21} color={palette.primary} />
                 <Text style={[styles.menuItemText, { color: palette.textPrimary }]}>Új emlék hozzáadása</Text>
               </Pressable>
               <Pressable
                 accessibilityRole="button"
                 onPress={() => setMenuVisible(false)}
-                style={({ pressed }) => [styles.menuCancel, pressed && styles.pressed]}
+                style={({ pressed }) => [
+                  styles.menuCancel,
+                  { borderTopColor: palette.border },
+                  pressed && styles.pressed,
+                ]}
               >
                 <Text style={[styles.menuCancelText, { color: palette.textMuted }]}>Mégse</Text>
               </Pressable>
             </View>
           </View>
         </Modal>
+
         <Modal visible={visible} transparent animationType="slide" onRequestClose={() => setVisible(false)}>
-          <View style={styles.modalOverlay}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.modalOverlay}
+          >
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Ablak bezárása"
+              onPress={() => setVisible(false)}
+              style={styles.menuBackdrop}
+            />
             <View style={[styles.modal, { backgroundColor: palette.surface }]}>
-              <Text style={[styles.modalTitle, { color: palette.textPrimary }]}>Új emlék</Text>
-              <TextInput value={title} onChangeText={setTitle} placeholder="Emlék címe" placeholderTextColor={palette.textMuted} style={[styles.modalInput, { backgroundColor: palette.surfaceElevated, color: palette.textPrimary }]} />
-              <TextInput value={description} onChangeText={setDescription} placeholder="Leírás (opcionális)" placeholderTextColor={palette.textMuted} style={[styles.modalInput, styles.descriptionInput, { backgroundColor: palette.surfaceElevated, color: palette.textPrimary }]} multiline />
-              <TextInput value={memoryDate} onChangeText={setMemoryDate} placeholder="2026-10-11" placeholderTextColor={palette.textMuted} style={[styles.modalInput, { backgroundColor: palette.surfaceElevated, color: palette.textPrimary }]} />
-              <TextInput value={location} onChangeText={setLocation} placeholder="Helyszín (opcionális)" placeholderTextColor={palette.textMuted} style={[styles.modalInput, { backgroundColor: palette.surfaceElevated, color: palette.textPrimary }]} />
-              <Pressable onPress={() => void choosePhoto()} style={styles.photoButton}>
-                <Ionicons name={photo ? 'checkmark-circle' : 'image-outline'} size={20} color={colors.primary} />
-                <Text style={styles.photoButtonText}>{photos.length ? `${photos.length} fotó kiválasztva` : 'Fotók kiválasztása (opcionális)'}</Text>
-              </Pressable>
-              <Text style={[styles.participantLabel, { color: palette.textPrimary }]}>Kik voltak jelen?</Text>
-              <View style={styles.participantList}>
-                {familyMembers.map((member) => {
-                  const selected = selectedParticipants.includes(member.profile_id);
-                  return <Pressable key={member.profile_id} onPress={() => toggleParticipant(member.profile_id)} style={[styles.participantChip, selected && styles.participantChipSelected]}><Ionicons name={selected ? 'checkmark-circle' : 'ellipse-outline'} size={18} color={selected ? colors.white : colors.textMuted} /><Text style={[styles.participantText, selected && styles.participantTextSelected]}>{member.nickname?.trim() || member.display_name}</Text></Pressable>;
-                })}
-              </View>
-              <View style={styles.modalActions}>
-                <Pressable onPress={() => setVisible(false)} style={styles.cancelButton}><Text>Mégse</Text></Pressable>
-                <Pressable disabled={busy} onPress={() => void saveMemory()} style={styles.saveButton}><Text style={styles.saveButtonText}>{busy ? 'Mentés…' : 'Mentés'}</Text></Pressable>
-              </View>
+              <View style={[styles.handle, { backgroundColor: palette.border }]} />
+              <ScrollView
+                contentContainerStyle={styles.modalContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
+                <Text style={[styles.modalTitle, { color: palette.textPrimary }]}>Új emlék</Text>
+
+                <TextInput
+                  value={title}
+                  onChangeText={setTitle}
+                  placeholder="Emlék címe"
+                  placeholderTextColor={palette.textMuted}
+                  style={inputStyle}
+                />
+                <TextInput
+                  value={description}
+                  onChangeText={setDescription}
+                  placeholder="Leírás (opcionális)"
+                  placeholderTextColor={palette.textMuted}
+                  style={[inputStyle, styles.descriptionInput]}
+                  multiline
+                />
+                <View style={styles.inputRow}>
+                  <TextInput
+                    value={memoryDate}
+                    onChangeText={setMemoryDate}
+                    placeholder="ÉÉÉÉ-HH-NN"
+                    placeholderTextColor={palette.textMuted}
+                    style={[inputStyle, styles.flex]}
+                  />
+                  <TextInput
+                    value={location}
+                    onChangeText={setLocation}
+                    placeholder="Helyszín"
+                    placeholderTextColor={palette.textMuted}
+                    style={[inputStyle, styles.flex]}
+                  />
+                </View>
+
+                <Pressable
+                  onPress={() => void choosePhoto()}
+                  style={({ pressed }) => [
+                    styles.photoButton,
+                    { backgroundColor: palette.primarySoft },
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Ionicons
+                    name={photos.length ? 'checkmark-circle' : 'image-outline'}
+                    size={20}
+                    color={palette.primary}
+                  />
+                  <Text style={[styles.photoButtonText, { color: palette.primary }]}>
+                    {photos.length ? `${photos.length} fotó kiválasztva` : 'Fotók kiválasztása (opcionális)'}
+                  </Text>
+                </Pressable>
+
+                {photos.length > 0 ? (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.thumbs}>
+                    {photos.map((asset) => (
+                      <Image key={asset.uri} source={{ uri: asset.uri }} style={styles.thumb} />
+                    ))}
+                  </ScrollView>
+                ) : null}
+
+                {familyMembers.length > 0 ? (
+                  <>
+                    <Text style={[styles.participantLabel, { color: palette.textPrimary }]}>Kik voltak jelen?</Text>
+                    <View style={styles.participantList}>
+                      {familyMembers.map((member) => {
+                        const selected = selectedParticipants.includes(member.profile_id);
+                        return (
+                          <Pressable
+                            key={member.profile_id}
+                            accessibilityRole="checkbox"
+                            accessibilityState={{ checked: selected }}
+                            onPress={() => toggleParticipant(member.profile_id)}
+                            style={[
+                              styles.participantChip,
+                              { backgroundColor: selected ? palette.primary : palette.surfaceElevated },
+                            ]}
+                          >
+                            <Ionicons
+                              name={selected ? 'checkmark-circle' : 'ellipse-outline'}
+                              size={18}
+                              color={selected ? '#FFFFFF' : palette.textMuted}
+                            />
+                            <Text
+                              style={[
+                                styles.participantText,
+                                { color: selected ? '#FFFFFF' : palette.textPrimary },
+                              ]}
+                            >
+                              {member.nickname?.trim() || member.display_name}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </>
+                ) : null}
+
+                <View style={styles.modalActions}>
+                  <Pressable onPress={() => setVisible(false)} style={styles.cancelButton}>
+                    <Text style={[styles.cancelText, { color: palette.textSecondary }]}>Mégse</Text>
+                  </Pressable>
+                  <Pressable
+                    disabled={busy}
+                    onPress={() => void saveMemory()}
+                    style={({ pressed }) => [
+                      styles.saveButton,
+                      { backgroundColor: palette.primary },
+                      busy && styles.disabled,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text style={styles.saveButtonText}>{busy ? 'Mentés…' : 'Mentés'}</Text>
+                  </Pressable>
+                </View>
+              </ScrollView>
             </View>
-          </View>
+          </KeyboardAvoidingView>
         </Modal>
       </SafeAreaView>
     </View>
@@ -438,13 +628,9 @@ export default function MemoriesScreen() {
 /* ------------------------------------------------------------------ */
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  safeArea: {
-    flex: 1,
-  },
+  root: { flex: 1 },
+  safeArea: { flex: 1 },
+  flex: { flex: 1 },
   content: { flexGrow: 1, paddingHorizontal: spacing.lg, paddingBottom: 112 },
   backgroundGlow: {
     position: 'absolute',
@@ -460,42 +646,135 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingTop: spacing.sm,
   },
+  title: { fontSize: 30, fontWeight: '900', letterSpacing: -0.8 },
+  subtitle: { marginTop: 2, fontSize: 13, fontWeight: '700' },
   moreButton: {
     width: 42,
     height: 42,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.round,
-    backgroundColor: colors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: StyleSheet.hairlineWidth,
   },
+  options: { width: '100%', marginTop: spacing.lg, gap: spacing.lg },
+
+  tabs: { flexDirection: 'row', padding: 4, borderRadius: radius.round },
+  tabWrap: { flex: 1 },
+  tab: {
+    minHeight: 42,
+    paddingHorizontal: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    borderRadius: radius.round,
+  },
+  tabText: { fontSize: 12, fontWeight: '800' },
+
+  memoryCard: { width: '48.5%', marginBottom: spacing.lg },
+  featuredCard: { width: '100%', marginBottom: spacing.lg },
+  memoryImageWrap: {
+    overflow: 'hidden',
+    borderRadius: radius.lg,
+    ...shadows.card,
+  },
+  memoryImage: { width: '100%', height: 156 },
+  featuredImage: { height: 236 },
+  photoPlaceholder: { alignItems: 'center', justifyContent: 'center' },
+  featuredOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: spacing.md,
+    paddingTop: 48,
+    paddingBottom: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: spacing.sm,
+  },
+  featuredText: { flex: 1, gap: 2 },
+  featuredTitle: { color: '#FFFFFF', fontSize: 20, fontWeight: '900', letterSpacing: -0.3 },
+  featuredMeta: { color: 'rgba(255,255,255,0.82)', fontSize: 12, fontWeight: '700' },
+  photoBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: radius.round,
+    backgroundColor: 'rgba(23, 43, 77, 0.76)',
+  },
+  photoBadgeText: { color: '#FFFFFF', fontSize: 11, fontWeight: '800' },
+  memoryGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  memoryInfo: { paddingHorizontal: spacing.xs, paddingTop: spacing.sm, gap: 2 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.xs },
+  cardTitle: { flex: 1, fontSize: 15, fontWeight: '800' },
+  metaText: { fontSize: 12, fontWeight: '600' },
+
+  loader: { paddingVertical: 60 },
+  empty: {
+    paddingVertical: 40,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+  },
+  emptyIcon: {
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 28,
+  },
+  emptyTitle: { fontSize: 16, fontWeight: '800', textAlign: 'center' },
+  emptyText: { fontSize: 12, lineHeight: 18, textAlign: 'center' },
+  loadMore: {
+    minHeight: 46,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: spacing.xs,
+    borderRadius: radius.lg,
+  },
+  loadMoreText: { fontSize: 13, fontWeight: '700' },
+
+  floatingAdd: {
+    position: 'absolute',
+    right: spacing.lg,
+    bottom: 92,
+    width: 58,
+    height: 58,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 29,
+    ...shadows.floating,
+  },
+
   menuOverlay: {
     flex: 1,
     alignItems: 'flex-end',
     paddingTop: 58,
     paddingHorizontal: spacing.lg,
-    backgroundColor: 'rgba(7, 17, 35, 0.22)',
+    backgroundColor: 'rgba(7, 17, 35, 0.35)',
   },
-  menuBackdrop: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-  },
+  menuBackdrop: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
   menuCard: {
-    width: 250,
+    width: 260,
     padding: spacing.sm,
     borderRadius: radius.lg,
-    backgroundColor: colors.surface,
-    ...shadows.card,
+    borderWidth: StyleSheet.hairlineWidth,
     zIndex: 1,
+    ...shadows.card,
   },
   menuTitle: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    color: colors.textPrimary,
     fontSize: 15,
     fontWeight: '900',
   },
@@ -507,222 +786,42 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: radius.md,
   },
-  menuItemText: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    fontWeight: '700',
-  },
+  menuItemText: { fontSize: 14, fontWeight: '700' },
   menuCancel: {
     minHeight: 42,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: spacing.xs,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
-  menuCancelText: {
-    color: colors.textMuted,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  title: {
-    color: colors.textPrimary,
-    fontSize: 30,
-    fontWeight: '900',
-    letterSpacing: -0.8,
-  },
-  options: {
-    width: '100%',
-    marginTop: spacing.md,
-    gap: spacing.md,
-  },
-  tabs: {
-    flexDirection: 'row',
-    padding: 4,
-    borderRadius: radius.round,
-    backgroundColor: colors.surfaceElevated,
-  },
-  tabWrap: {
-    flex: 1,
-  },
-  tab: {
-    minHeight: 44,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    borderRadius: radius.round,
-  },
-  tabText: {
-    color: colors.textSecondary,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  tabTextActive: {
-    color: colors.white,
-  },
-  memoryCard: {
-    width: '48.5%',
-    marginBottom: spacing.lg,
-  },
-  featuredCard: {
-    width: '100%',
-    marginBottom: spacing.md,
-  },
-  memoryImageWrap: {
-    overflow: 'hidden',
-    borderRadius: radius.md,
-    backgroundColor: colors.surfaceMuted,
-    ...shadows.card,
-  },
-  memoryImage: {
-    width: '100%',
-    height: 148,
-    backgroundColor: colors.surfaceMuted,
-  },
-  featuredCardImage: {
-    height: 226,
-  },
-  memoryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  memoryInfo: {
-    paddingHorizontal: spacing.sm,
-    paddingTop: spacing.sm,
-    gap: 3,
-  },
-  memoryHeart: {
-    color: colors.danger,
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  photoPlaceholder: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  photoBadge: {
-    position: 'absolute',
-    right: 6,
-    bottom: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: radius.round,
-    backgroundColor: 'rgba(23, 43, 77, 0.76)',
-  },
-  photoBadgeText: {
-    color: colors.white,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  titleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: spacing.xs,
-  },
-  cardTitle: {
-    flex: 1,
-    color: colors.textPrimary,
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  meta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  metaText: {
-    color: colors.textSecondary,
-    fontSize: 12,
-  },
-  avatars: {
-    flexDirection: 'row',
-    marginTop: 4,
-  },
-  avatar: {
-    width: 28,
-    height: 28,
-    borderWidth: 2,
-    borderColor: colors.white,
-    borderRadius: radius.round,
-    backgroundColor: colors.surfaceMuted,
-  },
-  avatarOverlap: {
-    marginLeft: -8,
-  },
-  avatarMore: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primarySoft,
-  },
-  tagRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 4,
-  },
-  tag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: radius.round,
-    borderWidth: 1,
-  },
-  tagText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  loadMore: {
-    minHeight: 44,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    marginTop: spacing.xs,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surfaceElevated,
-  },
-  floatingAdd: {
-    position: 'absolute',
-    right: spacing.lg,
-    bottom: 92,
-    width: 58,
-    height: 58,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 29,
-    backgroundColor: colors.primary,
-    ...shadows.floating,
-  },
+  menuCancelText: { fontSize: 13, fontWeight: '800' },
+
   modalOverlay: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(23, 43, 77, 0.42)',
+    backgroundColor: 'rgba(23, 43, 77, 0.5)',
   },
   modal: {
     maxHeight: '90%',
-    padding: spacing.xl,
-    gap: spacing.md,
+    paddingTop: spacing.sm,
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
-    backgroundColor: colors.surface,
   },
-  modalTitle: { color: colors.textPrimary, fontSize: 22, fontWeight: '900' },
+  handle: {
+    alignSelf: 'center',
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+  },
+  modalContent: { padding: spacing.xl, paddingTop: spacing.md, gap: spacing.md },
+  modalTitle: { fontSize: 22, fontWeight: '900' },
   modalInput: {
     minHeight: 48,
     paddingHorizontal: spacing.md,
     borderRadius: radius.lg,
-    backgroundColor: colors.background,
-    color: colors.textPrimary,
   },
-  descriptionInput: {
-    minHeight: 92,
-    paddingTop: spacing.md,
-    textAlignVertical: 'top',
-  },
+  descriptionInput: { minHeight: 92, paddingTop: spacing.md, textAlignVertical: 'top' },
+  inputRow: { flexDirection: 'row', gap: spacing.sm },
   photoButton: {
     minHeight: 48,
     paddingHorizontal: spacing.md,
@@ -730,31 +829,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     borderRadius: radius.lg,
-    backgroundColor: colors.primarySoft,
   },
-  photoButtonText: { flex: 1, color: colors.primary, fontWeight: '700' },
-  participantLabel: { color: colors.textPrimary, fontSize: 14, fontWeight: '900' },
-  participantList: { gap: spacing.xs, maxHeight: 140 },
+  photoButtonText: { flex: 1, fontWeight: '700' },
+  thumbs: { gap: spacing.sm },
+  thumb: { width: 64, height: 64, borderRadius: radius.md },
+  participantLabel: { fontSize: 14, fontWeight: '900' },
+  participantList: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   participantChip: {
-    minHeight: 42,
+    minHeight: 40,
     paddingHorizontal: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    borderRadius: radius.md,
-    backgroundColor: colors.background,
+    gap: spacing.xs,
+    borderRadius: radius.round,
   },
-  participantChipSelected: { backgroundColor: colors.primary },
-  participantText: { color: colors.textPrimary, fontWeight: '700' },
-  participantTextSelected: { color: colors.white },
-  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm },
+  participantText: { fontWeight: '700' },
+  modalActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
   cancelButton: { padding: spacing.md },
+  cancelText: { fontWeight: '700' },
   saveButton: {
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
     borderRadius: radius.lg,
-    backgroundColor: colors.primary,
   },
-  saveButtonText: { color: colors.white, fontWeight: '900' },
-  pressed: { opacity: 0.75, transform: [{ scale: 0.96 }] },
+  saveButtonText: { color: '#FFFFFF', fontWeight: '900' },
+  disabled: { opacity: 0.6 },
+  pressed: { opacity: 0.75, transform: [{ scale: 0.97 }] },
 });
