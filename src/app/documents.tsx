@@ -152,14 +152,37 @@ export default function DocumentsScreen() {
     }
   }
 
+
+
   async function open(item: FamilyDocument) {
-    const { data, error } = await supabase.storage.from('family-documents').createSignedUrl(item.storage_path, 300);
+    const storage = supabase.storage.from('family-documents');
+  
+    const folder = item.storage_path.split('/')[0];
+    const fileName = item.storage_path.split('/').slice(1).join('/');
+  
+    const { data: files, error: listError } = await storage.list(folder);
+  
+    console.log('STORAGE LIST:', files);
+    console.log('LIST ERROR:', listError);
+    console.log('SEARCH FILE:', fileName);
+  
+    const { data, error } = await storage.createSignedUrl(
+      item.storage_path,
+      300
+    );
+  
+    console.log('SIGNED URL:', data);
+    console.log('SIGNED URL ERROR:', error);
+  
     if (error || !data?.signedUrl) {
-      Alert.alert('Megnyitás sikertelen', error?.message ?? 'A fájl nem érhető el.');
+      Alert.alert('Hiba', error?.message ?? 'A fájl nem érhető el.');
       return;
     }
+  
     await Linking.openURL(data.signedUrl);
   }
+
+
 
   function remove(item: FamilyDocument) {
     Alert.alert('Dokumentum törlése', `Törlöd: ${item.name}?`, [
