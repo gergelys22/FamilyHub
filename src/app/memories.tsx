@@ -1,9 +1,12 @@
+import { FamilyHeader } from '@/components/family-header';
 import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
 import { useMemories } from '@/hooks/use-memories';
+import { useNotifications } from '@/hooks/use-notifications';
+import { useUnreadMessages } from '@/hooks/use-unread-messages';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/auth-provider';
 import { useTheme } from '@/providers/theme-provider';
-import { getFamilyMembers, getMyFamilies, type FamilyMember } from '@/services/families';
+import { Family, getFamilyMembers, getMyFamilies, type FamilyMember } from '@/services/families';
 import { createMemory } from '@/services/family-content';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -281,6 +284,7 @@ export function MemoryScreenOptions({ refreshToken }: { refreshToken: number }) 
 export default function MemoriesScreen() {
   const { profile } = useAuth();
   const { isDark } = useTheme();
+  const router = useRouter();
   const palette = isDark ? darkColors : colors;
   const [refreshToken, setRefreshToken] = useState(0);
   const [menuVisible, setMenuVisible] = useState(false);
@@ -293,6 +297,11 @@ export default function MemoriesScreen() {
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const { unreadCount } = useNotifications();
+  const [activeFamily, setActiveFamily] = useState<Family | null>(null);
+  const displayName = profile?.display_name?.trim() || 'Felhasználó';
+  const userInitial = displayName.charAt(0).toLocaleUpperCase('hu-HU') || '?';
+  const unreadMessageCount = useUnreadMessages(activeFamily?.id, profile?.id);
 
   async function choosePhoto() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -387,6 +396,14 @@ export default function MemoriesScreen() {
   return (
     <View style={[styles.root, { backgroundColor: palette.background }]}>
       <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]}>
+        <FamilyHeader
+          userInitial={userInitial}
+          unreadNotificationCount={unreadCount}
+          unreadMessageCount={unreadMessageCount}
+          onNotificationsPress={() => router.push('/notifications')}
+          onMessagesPress={() => router.push('/messages')}
+          onProfilePress={() => router.push('/profile')}
+          />
         <LinearGradient
           pointerEvents="none"
           colors={isDark ? ['#12335A', '#071A3300'] : ['#E7F0FF', '#F6F9FF00']}

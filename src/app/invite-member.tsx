@@ -1,4 +1,7 @@
-import { useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -10,38 +13,43 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { colors, darkColors, radius, spacing } from '@/constants/theme';
-import { useTheme } from '@/providers/theme-provider';
-import { createFamilyInvite, InviteCreatedError, InviteRole } from '@/services/family-invites';
 import { ScreenCloseButton } from '@/components/screen-close-button';
+import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
+import { useTheme } from '@/providers/theme-provider';
+import { getMyFamilies } from '@/services/families';
+import { createFamilyInvite, InviteCreatedError, InviteRole } from '@/services/family-invites';
+
+type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
 const roleOptions: {
   value: InviteRole;
   title: string;
   description: string;
-  icon: string;
+  icon: IconName;
+  color: string;
 }[] = [
   {
     value: 'adult',
     title: 'Felnőtt',
     description: 'Események és közös tartalmak kezelése',
-    icon: '●',
+    icon: 'person',
+    color: colors.primary,
   },
   {
     value: 'dependent',
     title: 'Gyermek',
     description: 'Korlátozott, gondviselő által kezelt profil',
-    icon: '★',
+    icon: 'happy',
+    color: colors.warning,
   },
   {
     value: 'viewer',
     title: 'Megtekintő',
     description: 'Csak a megosztott információk elérése',
-    icon: '◉',
+    icon: 'eye',
+    color: colors.teal,
   },
 ];
 
@@ -50,9 +58,27 @@ export default function InviteMemberScreen() {
   const { isDark } = useTheme();
   const palette = isDark ? darkColors : colors;
   const params = useLocalSearchParams<{ familyId?: string; familyName?: string }>();
-  const familyId = typeof params.familyId === 'string' ? params.familyId : '';
-  const familyName =
-    typeof params.familyName === 'string' ? params.familyName : 'Családi kör';
+  const paramFamilyId = typeof params.familyId === 'string' ? params.familyId : '';
+  const paramFamilyName = typeof params.familyName === 'string' ? params.familyName : '';
+  const [fallbackFamily, setFallbackFamily] = useState<{ id: string; name: string } | null>(null);
+
+  // Ha a képernyőt paraméterek nélkül nyitják (pl. a "Több" menüből), az első családi kört használjuk.
+  useEffect(() => {
+    if (paramFamilyId) return;
+    let active = true;
+    void getMyFamilies()
+      .then((families) => {
+        const first = families[0];
+        if (active && first) setFallbackFamily({ id: first.id, name: first.name });
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [paramFamilyId]);
+
+  const familyId = paramFamilyId || fallbackFamily?.id || '';
+  const familyName = paramFamilyName || fallbackFamily?.name || 'Családi kör';
 
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<InviteRole>('adult');
@@ -79,9 +105,7 @@ export default function InviteMemberScreen() {
         setSuccess(true);
         return;
       }
-      setErrorMessage(
-        error instanceof Error ? error.message : 'A meghívás létrehozása sikertelen.',
-      );
+      setErrorMessage(error instanceof Error ? error.message : 'A meghívás létrehozása sikertelen.');
     } finally {
       setSubmitting(false);
     }
@@ -97,10 +121,7 @@ export default function InviteMemberScreen() {
 
   if (success) {
     return (
-      <SafeAreaView
-        style={[styles.safeArea, { backgroundColor: palette.background }]}
-        edges={['top', 'bottom']}
-      >
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top', 'bottom']}>
         <View style={styles.successScreen}>
           <View
             style={[
@@ -111,8 +132,8 @@ export default function InviteMemberScreen() {
               },
             ]}
           >
-            <View style={styles.successIcon}>
-              <Text style={styles.successCheck}>✓</Text>
+            <View style={[styles.successIcon, { backgroundColor: emailSent ? colors.success : colors.warning }]}>
+              <Ionicons name={emailSent ? 'checkmark' : 'mail-unread'} size={36} color="#FFFFFF" />
             </View>
           </View>
           <Text style={[styles.successTitle, { color: palette.textPrimary }]}>Meghívás rögzítve</Text>
@@ -126,11 +147,11 @@ export default function InviteMemberScreen() {
               styles.infoBox,
               {
                 backgroundColor: isDark ? '#10233F' : palette.primarySoft,
-                borderColor: isDark ? '#2A456C' : palette.borderStrong,
+                borderColor: isDark ? '#2A456C' : palette.border,
               },
             ]}
           >
-            <Text style={styles.infoIcon}>i</Text>
+            <Ionicons name="information-circle" size={20} color={palette.primary} />
             <Text style={[styles.infoText, { color: palette.textSecondary }]}>
               {emailSent
                 ? 'A meghívás értesítésként és e-mailben is elküldésre kerül.'
@@ -140,15 +161,18 @@ export default function InviteMemberScreen() {
           <Pressable
             accessibilityRole="button"
             onPress={reset}
-            style={styles.primaryButton}
+            style={({ pressed }) => [
+              styles.primaryButton,
+              { backgroundColor: palette.primary },
+              pressed && styles.primaryButtonPressed,
+            ]}
           >
-            <Text style={styles.primaryButtonText}>További családtag meghívása</Text>
+            <View style={styles.buttonContent}>
+              <Ionicons name="person-add" size={18} color="#FFFFFF" />
+              <Text style={styles.primaryButtonText}>További családtag meghívása</Text>
+            </View>
           </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.replace('/')}
-            style={styles.textButton}
-          >
+          <Pressable accessibilityRole="button" onPress={() => router.replace('/')} style={styles.textButton}>
             <Text style={[styles.textButtonText, { color: palette.primary }]}>Vissza a főoldalra</Text>
           </Pressable>
         </View>
@@ -157,21 +181,11 @@ export default function InviteMemberScreen() {
   }
 
   return (
-    <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: palette.background }]}
-      edges={['top', 'bottom']}
-    >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.keyboardView}
-      >
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboardView}>
         <LinearGradient
           pointerEvents="none"
-            colors={
-              isDark
-                ? ['#5530B8', '#5530B800']
-                : [palette.primarySoft, '#FFFFFF00']
-            }
+          colors={isDark ? ['#5530B8', '#5530B800'] : [palette.primarySoft, '#FFFFFF00']}
           start={{ x: 1, y: 0 }}
           end={{ x: 0, y: 1 }}
           style={styles.glow}
@@ -195,10 +209,10 @@ export default function InviteMemberScreen() {
           <View style={styles.hero}>
             <View style={styles.avatarStack}>
               <View style={[styles.avatar, styles.avatarBack, { borderColor: palette.background }]}>
-                <Text style={styles.avatarText}>⌂</Text>
+                <Ionicons name="people" size={26} color="#FFFFFF" />
               </View>
               <View style={[styles.avatar, styles.avatarFront, { borderColor: palette.background }]}>
-                <Text style={styles.avatarText}>+</Text>
+                <Ionicons name="person-add" size={24} color="#FFFFFF" />
               </View>
             </View>
             <Text style={[styles.title, { color: palette.textPrimary }]}>Kit szeretnél meghívni?</Text>
@@ -208,23 +222,20 @@ export default function InviteMemberScreen() {
             </Text>
           </View>
 
-          <View
-            style={[
-              styles.formCard,
-              { backgroundColor: palette.surface, borderColor: palette.border },
-            ]}
-          >
+          <View style={[styles.formCard, { backgroundColor: palette.surface, borderColor: palette.border }]}>
             <Text style={[styles.label, { color: palette.textSecondary }]}>E-mail-cím</Text>
             <View
               style={[
                 styles.inputShell,
                 {
                   backgroundColor: palette.surfaceElevated,
-                  borderColor: errorMessage ? palette.danger : palette.borderStrong,
+                  borderColor: errorMessage ? palette.danger : palette.border,
                 },
               ]}
             >
-              <Text style={styles.mailIcon}>@</Text>
+              <View style={styles.mailIcon}>
+                <Ionicons name="mail-outline" size={20} color={palette.primary} />
+              </View>
               <TextInput
                 accessibilityLabel="Meghívott e-mail-címe"
                 autoCapitalize="none"
@@ -238,9 +249,9 @@ export default function InviteMemberScreen() {
                 }}
                 onSubmitEditing={() => void submit()}
                 placeholder="csaladtag@email.hu"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={palette.textMuted}
                 returnKeyType="done"
-                selectionColor={colors.primaryLight}
+                selectionColor={palette.primary}
                 style={[styles.input, { color: palette.textPrimary }]}
                 value={email}
               />
@@ -257,58 +268,37 @@ export default function InviteMemberScreen() {
                     disabled={submitting}
                     key={option.value}
                     onPress={() => setRole(option.value)}
-                    style={[
+                    style={({ pressed }) => [
                       styles.roleCard,
                       {
-                        backgroundColor: selected
-                          ? (isDark ? '#11284A' : palette.primarySoft)
-                          : palette.surfaceElevated,
-                        borderColor: selected ? palette.primary : palette.border,
+                        backgroundColor: selected ? `${option.color}1A` : palette.surfaceElevated,
+                        borderColor: selected ? option.color : palette.border,
                       },
+                      pressed && styles.pressed,
                     ]}
                   >
                     <View
                       style={[
                         styles.roleIcon,
-                        {
-                          backgroundColor: selected
-                            ? (isDark ? '#1C4A83' : palette.primary)
-                            : palette.surface,
-                        },
+                        { backgroundColor: selected ? option.color : `${option.color}22` },
                       ]}
                     >
-                      <Text
-                        style={[
-                          styles.roleIconText,
-                          { color: selected ? (isDark ? palette.primaryLight : palette.white) : palette.textMuted },
-                        ]}
-                      >
-                        {option.icon}
-                      </Text>
+                      <Ionicons name={option.icon} size={19} color={selected ? '#FFFFFF' : option.color} />
                     </View>
                     <View style={styles.flex}>
-                      <Text
-                        style={[
-                          styles.roleTitle,
-                          { color: selected ? palette.primaryDark : palette.textSecondary },
-                        ]}
-                      >
-                        {option.title}
-                      </Text>
-                      <Text style={[styles.roleDescription, { color: palette.textMuted }]}>
-                        {option.description}
-                      </Text>
+                      <Text style={[styles.roleTitle, { color: palette.textPrimary }]}>{option.title}</Text>
+                      <Text style={[styles.roleDescription, { color: palette.textMuted }]}>{option.description}</Text>
                     </View>
                     <View
                       style={[
                         styles.radio,
                         {
-                          borderColor: selected ? palette.primary : palette.borderStrong,
-                          backgroundColor: selected ? palette.primary : 'transparent',
+                          borderColor: selected ? option.color : palette.borderStrong,
+                          backgroundColor: selected ? option.color : 'transparent',
                         },
                       ]}
                     >
-                      {selected ? <View style={styles.radioDot} /> : null}
+                      {selected ? <Ionicons name="checkmark" size={13} color="#FFFFFF" /> : null}
                     </View>
                   </Pressable>
                 );
@@ -326,16 +316,14 @@ export default function InviteMemberScreen() {
                   },
                 ]}
               >
-                <Text style={styles.errorMark}>!</Text>
-                <Text style={[styles.errorText, { color: isDark ? '#FDA4AF' : '#A52A3A' }]}>
-                  {errorMessage}
-                </Text>
+                <Ionicons name="alert-circle" size={20} color={palette.danger} />
+                <Text style={[styles.errorText, { color: isDark ? '#FDA4AF' : '#A52A3A' }]}>{errorMessage}</Text>
               </View>
             ) : null}
           </View>
 
           <View style={styles.privacyRow}>
-            <Text style={styles.privacyIcon}>◆</Text>
+            <Ionicons name="lock-closed" size={14} color={colors.purple} style={styles.privacyIcon} />
             <Text style={[styles.privacyText, { color: palette.textMuted }]}>
               A meghívott csak az engedélyezett családi adatokat érheti majd el.
             </Text>
@@ -357,11 +345,9 @@ export default function InviteMemberScreen() {
             onPress={() => void submit()}
             style={({ pressed }) => [
               styles.primaryButton,
-              !canSubmit && {
-                backgroundColor: isDark ? '#263753' : palette.surfaceMuted,
-              },
-              pressed && canSubmit && styles.primaryButtonPressed,
+              { backgroundColor: canSubmit ? palette.primary : isDark ? '#263753' : palette.surfaceMuted },
               !canSubmit && styles.primaryButtonDisabled,
+              pressed && canSubmit && styles.primaryButtonPressed,
             ]}
           >
             {submitting ? (
@@ -371,8 +357,10 @@ export default function InviteMemberScreen() {
               </View>
             ) : (
               <View style={styles.buttonContent}>
-                <Text style={styles.primaryButtonText}>Meghívás létrehozása</Text>
-                <Text style={styles.buttonArrow}>→</Text>
+                <Ionicons name="paper-plane" size={18} color={canSubmit ? '#FFFFFF' : palette.textMuted} />
+                <Text style={[styles.primaryButtonText, !canSubmit && { color: palette.textMuted }]}>
+                  Meghívás létrehozása
+                </Text>
               </View>
             )}
           </Pressable>
@@ -383,7 +371,7 @@ export default function InviteMemberScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
+  safeArea: { flex: 1 },
   keyboardView: { flex: 1 },
   glow: {
     position: 'absolute',
@@ -400,23 +388,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  closeButton: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.round,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  closeText: {
-    marginTop: -2,
-    color: colors.textSecondary,
-    fontSize: 26,
-    fontWeight: '300',
-  },
-  headerTitle: { color: colors.textSecondary, fontSize: 14, fontWeight: '800' },
+  headerTitle: { fontSize: 14, fontWeight: '800' },
   headerSpacer: { width: 40 },
   content: {
     paddingHorizontal: spacing.lg,
@@ -425,21 +397,21 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   hero: { alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md },
-  avatarStack: { width: 92, height: 68, marginBottom: spacing.sm },
+  avatarStack: { width: 96, height: 72, marginBottom: spacing.sm },
   avatar: {
     position: 'absolute',
-    width: 58,
-    height: 58,
+    width: 60,
+    height: 60,
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: colors.background,
+    ...shadows.card,
   },
   avatarBack: {
     left: 2,
     top: 1,
-    backgroundColor: '#173B6D',
+    backgroundColor: '#2F6BFF',
     transform: [{ rotate: '-7deg' }],
   },
   avatarFront: {
@@ -448,100 +420,61 @@ const styles = StyleSheet.create({
     backgroundColor: colors.purple,
     transform: [{ rotate: '7deg' }],
   },
-  avatarText: { color: '#FFFFFF', fontSize: 27, fontWeight: '900' },
-  title: {
-    color: colors.textPrimary,
-    fontSize: 26,
-    lineHeight: 32,
-    fontWeight: '900',
-    textAlign: 'center',
-  },
-  subtitle: {
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 19,
-    textAlign: 'center',
-  },
-  familyName: { color: colors.primaryLight, fontWeight: '800' },
+  title: { fontSize: 26, lineHeight: 32, fontWeight: '900', letterSpacing: -0.5, textAlign: 'center' },
+  subtitle: { fontSize: 13, lineHeight: 19, textAlign: 'center' },
+  familyName: { fontWeight: '800' },
   formCard: {
     padding: spacing.lg,
     gap: spacing.sm,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: colors.border,
+    ...shadows.card,
   },
-  label: { color: colors.textSecondary, fontSize: 13, fontWeight: '800' },
+  label: { fontSize: 13, fontWeight: '800' },
   roleLabel: { marginTop: spacing.md },
   inputShell: {
     minHeight: 56,
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: radius.md,
-    backgroundColor: colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
   },
-  inputShellError: { borderColor: colors.danger },
-  mailIcon: {
-    width: 44,
-    color: colors.primaryLight,
-    fontSize: 18,
-    fontWeight: '900',
-    textAlign: 'center',
-  },
+  mailIcon: { width: 46, alignItems: 'center', justifyContent: 'center' },
   input: {
     flex: 1,
     minHeight: 56,
     paddingRight: spacing.md,
-    color: colors.textPrimary,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
   },
   roleList: { gap: spacing.sm },
   roleCard: {
-    minHeight: 64,
+    minHeight: 68,
     padding: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     borderRadius: radius.md,
-    backgroundColor: '#0D192D',
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: 1.5,
   },
-  roleCardSelected: { backgroundColor: '#11284A', borderColor: colors.primary },
   roleIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surfaceElevated,
   },
-  roleIconSelected: { backgroundColor: '#1C4A83' },
-  roleIconText: { color: colors.textMuted, fontSize: 14, fontWeight: '900' },
-  roleIconTextSelected: { color: colors.primaryLight },
-  roleTitle: { color: colors.textSecondary, fontSize: 13, fontWeight: '800' },
-  roleTitleSelected: { color: colors.textPrimary },
-  roleDescription: {
-    marginTop: 2,
-    color: colors.textMuted,
-    fontSize: 10,
-    lineHeight: 14,
-  },
+  roleTitle: { fontSize: 14, fontWeight: '900' },
+  roleDescription: { marginTop: 2, fontSize: 11, lineHeight: 15 },
   flex: { flex: 1 },
   radio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
+    borderWidth: 1.5,
   },
-  radioSelected: { borderColor: colors.primary, backgroundColor: colors.primary },
-  radioDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#FFFFFF' },
   errorBox: {
     marginTop: spacing.sm,
     padding: spacing.md,
@@ -549,37 +482,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     borderRadius: radius.md,
-    backgroundColor: '#3B1622',
     borderWidth: 1,
-    borderColor: '#7F2439',
   },
-  errorMark: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    color: '#FFFFFF',
-    backgroundColor: colors.danger,
-    textAlign: 'center',
-    lineHeight: 20,
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  errorText: { flex: 1, color: '#FDA4AF', fontSize: 12, lineHeight: 17 },
+  errorText: { flex: 1, fontSize: 12, lineHeight: 17 },
   privacyRow: {
     paddingHorizontal: spacing.sm,
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
   },
-  privacyIcon: { marginTop: 2, color: colors.purple, fontSize: 11 },
-  privacyText: { flex: 1, color: colors.textMuted, fontSize: 11, lineHeight: 17 },
+  privacyIcon: { marginTop: 2 },
+  privacyText: { flex: 1, fontSize: 12, lineHeight: 17 },
   footer: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
-    backgroundColor: '#071123F2',
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   primaryButton: {
     minHeight: 56,
@@ -587,31 +505,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.lg,
-    backgroundColor: colors.primary,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 14,
-    elevation: 6,
+    ...shadows.floating,
   },
-  primaryButtonPressed: { opacity: 0.82, transform: [{ scale: 0.99 }] },
-  primaryButtonDisabled: {
-    backgroundColor: '#263753',
-    shadowOpacity: 0,
-    elevation: 0,
-    opacity: 0.68,
-  },
-  primaryButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
+  primaryButtonPressed: { opacity: 0.85, transform: [{ scale: 0.99 }] },
+  primaryButtonDisabled: { shadowOpacity: 0, elevation: 0 },
+  primaryButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '900' },
   buttonContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
   },
-  buttonArrow: { color: '#FFFFFF', fontSize: 20 },
   textButton: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  textButtonText: { color: colors.primaryLight, fontSize: 13, fontWeight: '800' },
-  pressed: { opacity: 0.7 },
+  textButtonText: { fontSize: 14, fontWeight: '800' },
+  pressed: { opacity: 0.75 },
   successScreen: {
     flex: 1,
     justifyContent: 'center',
@@ -620,37 +527,22 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   successHalo: {
-    width: 104,
-    height: 104,
-    borderRadius: 52,
+    width: 112,
+    height: 112,
+    borderRadius: 56,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0B3B3533',
     borderWidth: 1,
-    borderColor: '#176B5F',
   },
   successIcon: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.success,
   },
-  successCheck: { color: '#FFFFFF', fontSize: 34, fontWeight: '900' },
-  successTitle: {
-    color: colors.textPrimary,
-    fontSize: 25,
-    fontWeight: '900',
-    textAlign: 'center',
-  },
-  successDescription: {
-    maxWidth: 330,
-    color: colors.textMuted,
-    fontSize: 14,
-    lineHeight: 21,
-    textAlign: 'center',
-  },
+  successTitle: { fontSize: 26, fontWeight: '900', letterSpacing: -0.5, textAlign: 'center' },
+  successDescription: { maxWidth: 330, fontSize: 14, lineHeight: 21, textAlign: 'center' },
   infoBox: {
     maxWidth: 350,
     padding: spacing.md,
@@ -658,20 +550,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: spacing.sm,
     borderRadius: radius.md,
-    backgroundColor: '#10233F',
     borderWidth: 1,
-    borderColor: '#2A456C',
   },
-  infoIcon: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    color: '#FFFFFF',
-    backgroundColor: colors.primary,
-    textAlign: 'center',
-    lineHeight: 20,
-    fontSize: 11,
-    fontWeight: '900',
-  },
-  infoText: { flex: 1, color: colors.textMuted, fontSize: 11, lineHeight: 17 },
+  infoText: { flex: 1, fontSize: 12, lineHeight: 17 },
 });
