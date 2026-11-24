@@ -1,6 +1,8 @@
+import { PresenceDot } from '@/components/presence-dot';
 import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
 import { useChatConversations } from '@/hooks/use-chat';
 import { useAuth } from '@/providers/auth-provider';
+import { usePresence } from '@/providers/presence-provider';
 import { useTheme } from '@/providers/theme-provider';
 import { describeChatMessage, findOrCreateDirectConversation, findOrCreateFamilyGroup } from '@/services/chat';
 import { getFamilyMembers, getMyFamilies, type FamilyMember } from '@/services/families';
@@ -28,6 +30,8 @@ type Conversation = {
   color: string;
   textColor: string;
   group: boolean;
+  memberId: string | null;
+  online: boolean;
 };
 
 function ConversationRow({
@@ -46,6 +50,7 @@ function ConversationRow({
       onPress={onPress}
       style={({ pressed }) => [styles.row, { backgroundColor: palette.surface }, pressed && styles.pressed]}
     >
+      <View style={styles.avatarWrapper}>
       <View
         style={[
           styles.avatar,
@@ -61,6 +66,15 @@ function ConversationRow({
           </Text>
         )}
       </View>
+      
+      {!conversation.group && conversation.memberId ? (
+        <PresenceDot
+          visible={conversation.online}
+          size={14}
+          style={styles.onlineDot}
+        />
+      ) : null}
+    </View>
       <View style={styles.rowContent}>
         <View style={styles.rowTop}>
           <Text style={[styles.name, { color: palette.textPrimary }]}>{conversation.name}</Text>
@@ -79,6 +93,7 @@ export default function MessagesScreen() {
   const { isDark } = useTheme();
   const palette = isDark ? darkColors : colors;
   const { profile } = useAuth();
+  const { isProfileOnline } = usePresence();
   const [familyId, setFamilyId] = useState<string | null>(null);
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [composeVisible, setComposeVisible] = useState(false);
@@ -148,24 +163,26 @@ export default function MessagesScreen() {
       ? conversation.title || 'Családi csoport'
       : firstMember?.display_name || 'Beszélgetés';
     return {
-      id: conversation.id,
-      name,
-      preview: conversation.lastMessage
-        ? describeChatMessage(conversation.lastMessage) || 'Még nincs üzenet'
-        : 'Még nincs üzenet',
-      time: conversation.lastMessage
-        ? new Date(conversation.lastMessage.created_at).toLocaleTimeString('hu-HU', {
-            hour: '2-digit',
-            minute: '2-digit',
-          })
-        : '',
-      initial: conversation.is_group
-        ? '♥'
-        : (firstMember?.display_name?.charAt(0) || '?').toUpperCase(),
-      color: conversation.is_group ? '#BCDDF0' : '#D6B38D',
-      textColor: conversation.is_group ? '#2C6E9E' : '#5F351D',
-      group: conversation.is_group,
-    };
+    id: conversation.id,
+    name,
+    preview: conversation.lastMessage
+      ? describeChatMessage(conversation.lastMessage) || 'Még nincs üzenet'
+      : 'Még nincs üzenet',
+    time: conversation.lastMessage
+      ? new Date(conversation.lastMessage.created_at).toLocaleTimeString('hu-HU', {
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : '',
+    initial: conversation.is_group
+      ? '♥'
+      : (firstMember?.display_name?.charAt(0) || '?').toUpperCase(),
+    color: conversation.is_group ? '#BCDDF0' : '#D6B38D',
+    textColor: conversation.is_group ? '#2C6E9E' : '#5F351D',
+    group: conversation.is_group,
+    memberId: conversation.is_group ? null : firstMember?.id ?? null,
+    online: !conversation.is_group && isProfileOnline(firstMember?.id),
+  };
   });
   const query = search.trim().toLocaleLowerCase('hu-HU');
   const filteredConversations = query
@@ -432,6 +449,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+    avatarWrapper: {
+    width: 64,
+    height: 64,
+    position: 'relative',
+  },
+
+  onlineDot: {
+    right: -2,
+    bottom: -2,
+    borderWidth: 2,
+    borderColor: colors.surface,
   },
   pickAvatar: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center', borderRadius: 21 },
   pickInitial: { fontSize: 16, fontWeight: '900' },

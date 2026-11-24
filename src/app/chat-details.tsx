@@ -1,9 +1,11 @@
 import { ChatAttachmentView } from '@/components/chat-attachment';
+import { PresenceDot } from '@/components/presence-dot';
 import { ScreenCloseButton } from '@/components/screen-close-button';
 import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
 import { useChatMessages } from '@/hooks/use-chat';
 import { useAuth } from '@/providers/auth-provider';
 import { useCall } from '@/providers/call-provider';
+import { usePresence } from '@/providers/presence-provider';
 import { useTheme } from '@/providers/theme-provider';
 import {
   CHAT_ATTACHMENT_MAX_BYTES,
@@ -55,6 +57,7 @@ export default function ChatDetailsScreen() {
   const { isDark } = useTheme();
   const palette = isDark ? darkColors : colors;
   const { profile } = useAuth();
+  const { isProfileOnline } = usePresence();
   const { placeCall } = useCall();
   const { conversationId } = useLocalSearchParams<{ conversationId?: string }>();
   const [conversation, setConversation] = useState<ChatConversation | null>(null);
@@ -226,8 +229,22 @@ export default function ChatDetailsScreen() {
             }
             style={styles.identity}
           >
-            <View style={styles.headerAvatar}>
-              <Ionicons name={isGroup ? 'people' : 'person'} size={22} color={colors.primary} />
+            <View style={styles.headerAvatarWrapper}>
+              <View style={styles.headerAvatar}>
+                <Ionicons
+                  name={isGroup ? 'people' : 'person'}
+                  size={22}
+                  color={colors.primary}
+                />
+              </View>
+
+              {!isGroup ? (
+                <PresenceDot
+                  visible={isProfileOnline(other?.id)}
+                  size={12}
+                  style={styles.headerOnlineDot}
+                />
+              ) : null}
             </View>
             <View>
               <Text style={styles.headerTitle}>{title}</Text>
@@ -310,8 +327,18 @@ export default function ChatDetailsScreen() {
                   }
                   style={styles.participant}
                 >
-                  <View style={styles.smallAvatar}>
-                    <Text style={styles.smallAvatarText}>{member.display_name.charAt(0).toUpperCase()}</Text>
+                  <View style={styles.smallAvatarWrapper}>
+                    <View style={styles.smallAvatar}>
+                      <Text style={styles.smallAvatarText}>
+                        {member.display_name.charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+
+                    <PresenceDot
+                      visible={isProfileOnline(member.id)}
+                      size={11}
+                      style={styles.participantOnlineDot}
+                    />
                   </View>
                   <Text style={styles.participantName}>{member.display_name}</Text>
                   <Ionicons name="chevron-forward" size={18} color={palette.textMuted} />
@@ -454,6 +481,31 @@ const styles = StyleSheet.create({
   recordingInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
   recordingDot: { width: 10, height: 10, borderRadius: 5 },
   recordingTime: { fontSize: 16, fontWeight: '800' },
+  headerAvatarWrapper: {
+  width: 42,
+  height: 42,
+  position: 'relative',
+},
+
+  headerOnlineDot: {
+    right: -2,
+    bottom: -2,
+    borderWidth: 2,
+    borderColor: colors.surface,
+  },
+  
+  smallAvatarWrapper: {
+    width: 38,
+    height: 38,
+    position: 'relative',
+  },
+  
+  participantOnlineDot: {
+    right: -2,
+    bottom: -2,
+    borderWidth: 2,
+    borderColor: colors.surface,
+  },
   menuOverlay: { flex: 1, justifyContent: 'flex-end' },
   menu: { padding: spacing.xl, gap: spacing.sm, borderTopWidth: 1, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl },
   menuTitle: { marginBottom: spacing.xs, fontSize: 18, fontWeight: '900' },
