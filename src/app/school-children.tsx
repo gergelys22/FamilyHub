@@ -1,3 +1,4 @@
+import { IcalImportCard } from '@/components/school-ical-import';
 import { ScreenCloseButton } from '@/components/screen-close-button';
 import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
@@ -571,6 +572,17 @@ export default function SchoolChildren() {
                   <Ionicons name="add" size={20} color="#FFFFFF" />
                 </Pressable>
               </View>
+
+              {type === 'timetable' && familyId && selectedChild ? (
+                <IcalImportCard
+                  familyId={familyId}
+                  childProfileId={selectedChild.profile_id}
+                  childName={selectedChild.nickname || selectedChild.display_name}
+                  palette={palette}
+                  accent={meta.color}
+                  onChanged={() => void reload()}
+                />
+              ) : null}
 
               {type === 'timetable' && typeItems.length > 0 ? (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
