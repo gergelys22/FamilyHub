@@ -126,6 +126,17 @@ export default function MoreScreen() {
           />
         </Section>
 
+        <Section title="Közösségi tér" palette={palette}>
+          <MenuItem
+            icon="heart-outline"
+            label="Kedvencek"
+            accent="#F43F5E"
+            onPress={() => router.push('/favorites' as never)}
+            palette={palette}
+            last
+          />
+        </Section>
+
         <Section title="Szervezés" palette={palette}>
           <MenuItem
             icon="checkbox-outline"

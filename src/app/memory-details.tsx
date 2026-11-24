@@ -1,4 +1,5 @@
 import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
+import { useFavorites } from '@/hooks/use-favorites';
 import { useMemories } from '@/hooks/use-memories';
 import { useTheme } from '@/providers/theme-provider';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,7 +29,8 @@ export default function MemoryDetailsScreen() {
   const { memories, loading, hasMore, error, loadMore } = useMemories();
   const memory = useMemo(() => memories.find((item) => item.id === id), [id, memories]);
   const photos = memory?.photos ?? [];
-  const [favorite, setFavorite] = useState(false);
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const favorite = id ? isFavorite('memory', id) : false;
   const [selectedPhoto, setSelectedPhoto] = useState<number | null>(null);
 
   useEffect(() => {
@@ -86,7 +88,7 @@ export default function MemoryDetailsScreen() {
                     accessibilityLabel={favorite ? 'Eltávolítás a kedvencekből' : 'Kedvencnek jelölés'}
                     accessibilityState={{ selected: favorite }}
                     hitSlop={8}
-                    onPress={() => setFavorite((current) => !current)}
+                    onPress={() => (id ? void toggleFavorite('memory', id) : undefined)}
                     style={({ pressed }) => pressed && styles.pressed}
                   >
                     <Ionicons
@@ -203,7 +205,7 @@ export default function MemoryDetailsScreen() {
                   </Pressable>
                   <Pressable
                     accessibilityRole="button"
-                    onPress={() => setFavorite((current) => !current)}
+                    onPress={() => (id ? void toggleFavorite('memory', id) : undefined)}
                     style={({ pressed }) => [
                       styles.action,
                       { backgroundColor: palette.surfaceMuted },

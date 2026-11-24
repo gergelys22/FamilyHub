@@ -38,11 +38,11 @@ const tabs: TableDefinition[] = [
   },
   {
     name: 'memories',
-    title: 'Emlékek',
+    title: 'Közösségi tér',
     icon: {
-      ios: 'photo.on.rectangle.angled',
-      android: 'photo_library',
-      web: 'photo_library',
+      ios: 'person.2.fill',
+      android: 'people',
+      web: 'people',
     },
   },
   {
@@ -271,6 +271,24 @@ function AppNavigator() {
             options={{
               href: null,
               title: 'Családtag profilja',
+              tabBarStyle: { display: 'none' },
+            }}
+          />
+
+          <Tabs.Screen
+            name="live"
+            options={{
+              href: null,
+              title: 'Élő közvetítés',
+              tabBarStyle: { display: 'none' },
+            }}
+          />
+
+          <Tabs.Screen
+            name="favorites"
+            options={{            
+              href: null,
+              title: 'Kedvencek',
               tabBarStyle: { display: 'none' },
             }}
           />
