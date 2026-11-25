@@ -524,11 +524,43 @@ export default function MapScreen() {
                   />
                 </View>
                 <Text style={[styles.emptyTitle, { color: palette.textPrimary }]}>
-                  Még nincs helyszín a térképen
+                  {categoryFilter !== 'all' ? 'Nincs találat a szűrőre' : 'Még nincs helyszín a térképen'}
                 </Text>
                 <Text style={[styles.emptyText, { color: palette.textMuted }]}>
-                  Adj helyszínt egy közös eseményhez, és itt rögtön elérhető lesz.
+                  {categoryFilter !== 'all'
+                    ? `A(z) „${categoryLabels[categoryFilter]}" kategóriában nincs helyszínes esemény. Módosítsd vagy töröld a szűrőt.`
+                    : 'Adj helyszínt egy közös eseményhez, és itt rögtön elérhető lesz.'}
                 </Text>
+                {categoryFilter !== 'all' ? (
+                  <View style={styles.emptyFilterActions}>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Események szűrése"
+                      onPress={() => setFilterVisible(true)}
+                      style={({ pressed }) => [
+                        styles.emptyFilterButton,
+                        { borderColor: palette.primary },
+                        pressed && styles.pressed,
+                      ]}
+                    >
+                      <Ionicons name="filter-outline" size={18} color={palette.primary} />
+                      <Text style={[styles.emptyFilterText, { color: palette.primary }]}>Szűrő módosítása</Text>
+                    </Pressable>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Szűrő törlése"
+                      onPress={() => selectCategory('all')}
+                      style={({ pressed }) => [
+                        styles.emptyFilterButton,
+                        { backgroundColor: palette.primary, borderColor: palette.primary },
+                        pressed && styles.pressed,
+                      ]}
+                    >
+                      <Ionicons name="close-circle-outline" size={18} color="#FFFFFF" />
+                      <Text style={[styles.emptyFilterText, { color: '#FFFFFF' }]}>Szűrő törlése</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
                 <Pressable
                   accessibilityRole="button"
                   onPress={createEvent}
@@ -825,6 +857,19 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: { color: '#FFFFFF', fontSize: 13, fontWeight: '900' },
   buttonSymbol: { width: 24, height: 24 },
+  emptyFilterActions: { alignSelf: 'stretch', flexDirection: 'row', gap: spacing.sm },
+  emptyFilterButton: {
+    flex: 1,
+    minHeight: 44,
+    paddingHorizontal: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+  },
+  emptyFilterText: { fontSize: 13, fontWeight: '900' },
   filterOverlay: {
     flex: 1,
     justifyContent: 'flex-end',

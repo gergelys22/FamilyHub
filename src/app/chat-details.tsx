@@ -1,3 +1,4 @@
+import { ActionSheet, ConfirmDialog, type SheetAction } from '@/components/action-sheet';
 import { ChatAttachmentView } from '@/components/chat-attachment';
 import { ScreenCloseButton } from '@/components/screen-close-button';
 import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
@@ -63,6 +64,8 @@ export default function ChatDetailsScreen() {
   const [sending, setSending] = useState(false);
   const [attachMenuVisible, setAttachMenuVisible] = useState(false);
   const [editing, setEditing] = useState<ChatMessage | null>(null);
+  const [actionMessage, setActionMessage] = useState<ChatMessage | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ChatMessage | null>(null);
   const { messages, loading, error, send, sendAttachment, edit, remove } = useChatMessages(
     conversationId ?? null,
     profile?.id ?? null,
@@ -229,29 +232,31 @@ export default function ChatDetailsScreen() {
     setDraft('');
   }
 
-  function confirmDelete(message: ChatMessage) {
-    Alert.alert('Üzenet törlése', 'Az üzenet mindenki számára törlődik a beszélgetésből.', [
-      { text: 'Mégse', style: 'cancel' },
-      {
-        text: 'Törlés',
-        style: 'destructive',
-        onPress: () => {
-          if (editing?.id === message.id) cancelEdit();
-          void remove(message).catch((caught) => Alert.alert('Törlés sikertelen', messageOf(caught, 'Próbáld újra.')));
-        },
-      },
-    ]);
+  function performDelete(message: ChatMessage) {
+    if (editing?.id === message.id) cancelEdit();
+    void remove(message).catch((caught) => Alert.alert('Törlés sikertelen', messageOf(caught, 'Próbáld újra.')));
   }
 
   // Csak a saját üzenetekhez: szerkesztés (ha van szövege) és törlés.
   function openMessageActions(message: ChatMessage) {
-    const actions = [
-      ...(message.body.length > 0 ? [{ text: 'Szerkesztés', onPress: () => startEdit(message) }] : []),
-      { text: 'Törlés', style: 'destructive' as const, onPress: () => confirmDelete(message) },
-      { text: 'Mégse', style: 'cancel' as const },
-    ];
-    Alert.alert('Üzenet', undefined, actions);
+    setActionMessage(message);
   }
+
+  const messageActions: SheetAction[] = actionMessage
+    ? [
+        ...(actionMessage.body.length > 0
+          ? [{ key: 'edit', label: 'Szerkesztés', icon: 'pencil-outline' as const, onPress: () => startEdit(actionMessage) }]
+          : []),
+        {
+          key: 'delete',
+          label: 'Törlés mindenkinek',
+          icon: 'trash-outline' as const,
+          destructive: true,
+          // iOS-en egy másik Modal csak az előző eltűnése után nyitható
+          onPress: () => setTimeout(() => setDeleteTarget(actionMessage), 250),
+        },
+      ]
+    : [];
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top', 'bottom']}>
@@ -465,6 +470,28 @@ export default function ChatDetailsScreen() {
           </View>
         )}
       </KeyboardAvoidingView>
+
+      <ActionSheet
+        visible={actionMessage !== null}
+        title="Üzenet"
+        subtitle={actionMessage?.body || (actionMessage?.attachments.length ? 'Csatolmány' : undefined)}
+        actions={messageActions}
+        onClose={() => setActionMessage(null)}
+        palette={palette}
+      />
+
+      <ConfirmDialog
+        visible={deleteTarget !== null}
+        title="Üzenet törlése"
+        message="Az üzenet mindenki számára törlődik a beszélgetésből, a csatolmányokkal együtt."
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => {
+          const target = deleteTarget;
+          setDeleteTarget(null);
+          if (target) performDelete(target);
+        }}
+        palette={palette}
+      />
 
       <Modal
         visible={attachMenuVisible}
