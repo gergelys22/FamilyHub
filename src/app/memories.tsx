@@ -11,6 +11,7 @@ import { useTheme } from '@/providers/theme-provider';
 import { getFamilyMembers, getMyFamilies, type FamilyMember } from '@/services/families';
 import { createMemory } from '@/services/family-content';
 import type { FavoriteType } from '@/services/favorites';
+import { deleteMemory, updateMemory } from '@/services/memory-manage';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -144,24 +145,139 @@ function SectionTabs({ active, onChange, palette }: { active: Section; onChange:
 /* Emlékek                                                             */
 /* ------------------------------------------------------------------ */
 
+function MemoryEditModal({
+  memoryId,
+  palette,
+  onClose,
+  onSaved,
+}: {
+  memoryId: string;
+  palette: Palette;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [loaded, setLoaded] = useState(false);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [memoryDate, setMemoryDate] = useState('');
+  const [location, setLocation] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    void supabase
+      .from('memories')
+      .select('title, description, memory_date, location_name')
+      .eq('id', memoryId)
+      .single()
+      .then(({ data, error }) => {
+        if (!active) return;
+        if (error || !data) {
+          Alert.alert('Betöltés sikertelen', error?.message ?? 'Az emlék nem található.');
+          onClose();
+          return;
+        }
+        setTitle(data.title ?? '');
+        setDescription(data.description ?? '');
+        setMemoryDate(data.memory_date ?? '');
+        setLocation(data.location_name ?? '');
+        setLoaded(true);
+      });
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [memoryId]);
+
+  async function save() {
+    if (!title.trim()) {
+      Alert.alert('Hiányzó adat', 'Add meg az emlék címét.');
+      return;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(memoryDate)) {
+      Alert.alert('Hibás dátum', 'A dátum formátuma: ÉÉÉÉ-HH-NN.');
+      return;
+    }
+    setBusy(true);
+    try {
+      await updateMemory(memoryId, { title, description, memoryDate, locationName: location });
+      onSaved();
+      onClose();
+    } catch (error) {
+      Alert.alert('Mentés sikertelen', error instanceof Error ? error.message : 'Próbáld újra.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Sheet visible onClose={onClose} title="Emlék szerkesztése" icon="images">
+      {loaded ? (
+        <>
+          <FormInput value={title} onChangeText={setTitle} placeholder="Emlék címe" />
+          <FormInput value={description} onChangeText={setDescription} placeholder="Leírás (opcionális)" multiline />
+          <View style={styles.inputRow}>
+            <FormInput value={memoryDate} onChangeText={setMemoryDate} placeholder="ÉÉÉÉ-HH-NN" style={styles.flex} />
+            <FormInput value={location} onChangeText={setLocation} placeholder="Helyszín" style={styles.flex} />
+          </View>
+          <PrimaryButton label="Módosítások mentése" icon="checkmark" busy={busy} onPress={() => void save()} />
+        </>
+      ) : (
+        <ActivityIndicator color={palette.primary} />
+      )}
+    </Sheet>
+  );
+}
 
 function MemoryCard({
   item,
   featured = false,
   favorites,
   palette,
+  onChanged,
 }: {
   item: Memory;
   featured?: boolean;
   favorites: FavoriteApi;
   palette: Palette;
+  onChanged: () => void;
 }) {
   const router = useRouter();
-  const favorite = favorites.isFavorite('memory', item.id);
+  const [editing, setEditing] = useState(false);
 
-  const openMemory = () => {
-    router.push({ pathname: '/memory-details', params: { id: item.id } });
-  };
+  function confirmDelete() {
+    Alert.alert('Emlék törlése', `Törlöd ezt az emléket: ${item.title}? A fotói is törlődnek.`, [
+      { text: 'Mégse', style: 'cancel' },
+      {
+        text: 'Törlés',
+        style: 'destructive',
+        onPress: () =>
+          void deleteMemory(item.id)
+            .then(onChanged)
+            .catch((error) => Alert.alert('Törlés sikertelen', error instanceof Error ? error.message : 'Próbáld újra.')),
+      },
+    ]);
+  }
+
+  function openActions() {
+    Alert.alert(item.title, undefined, [
+      { text: 'Szerkesztés', onPress: () => setEditing(true) },
+      { text: 'Törlés', style: 'destructive', onPress: confirmDelete },
+      { text: 'Mégse', style: 'cancel' },
+    ]);
+  }
+
+  const menu = (onImage: boolean) => (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Emlék műveletei"
+      hitSlop={8}
+      onPress={openActions}
+    >
+      <Ionicons name="ellipsis-horizontal" size={onImage ? 22 : 18} color={onImage ? '#FFFFFF' : palette.textMuted} />
+    </Pressable>
+  );
+  const favorite = favorites.isFavorite('memory', item.id);
 
   const heart = (size: number, onImage: boolean) => (
     <Pressable
@@ -174,20 +290,13 @@ function MemoryCard({
       <Ionicons
         name={favorite ? 'heart' : 'heart-outline'}
         size={size}
-        color={
-          favorite
-            ? (onImage ? '#FF6B8B' : palette.danger)
-            : (onImage ? '#FFFFFF' : palette.textMuted)
-        }
+        color={favorite ? (onImage ? '#FF6B8B' : palette.danger) : onImage ? '#FFFFFF' : palette.textMuted}
       />
     </Pressable>
   );
 
   const image = item.photo ? (
-    <Image
-      source={{ uri: item.photo }}
-      style={[styles.memoryImage, featured && styles.featuredImage]}
-    />
+    <Image source={{ uri: item.photo }} style={[styles.memoryImage, featured && styles.featuredImage]} />
   ) : (
     <View
       style={[
@@ -197,85 +306,85 @@ function MemoryCard({
         { backgroundColor: palette.surfaceMuted },
       ]}
     >
-      <Ionicons
-        name="image-outline"
-        size={featured ? 44 : 32}
-        color={palette.textMuted}
-      />
+      <Ionicons name="image-outline" size={featured ? 44 : 32} color={palette.textMuted} />
     </View>
   );
 
+  // A gombok a fő Pressable testvérei (nem a gyerekei): weben a <button> nem tartalmazhat másik <button>-t.
   return (
     <View style={[styles.memoryCard, featured && styles.featuredCard]}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`${item.title} emlék részleteinek megnyitása`}
-        onPress={openMemory}
-        style={({ pressed }) => pressed && styles.pressed}
-      >
-        <View style={[styles.memoryImageWrap, { backgroundColor: palette.surfaceMuted }]}>
-          {image}
-
-          {featured ? (
-            <LinearGradient
-              pointerEvents="none"
-              colors={['rgba(0,0,0,0)', 'rgba(8,16,32,0.78)']}
-              style={styles.featuredOverlay}
-            >
-              <View style={styles.featuredText}>
-                <Text numberOfLines={2} style={styles.featuredTitle}>
-                  {item.title}
-                </Text>
-                <Text style={styles.featuredMeta}>{item.when}</Text>
-              </View>
-            </LinearGradient>
-          ) : null}
-
-          {item.extraPhotos > 0 && (
-            <View style={styles.photoBadge}>
-              <Ionicons name="images-outline" size={12} color="#FFFFFF" />
-              <Text style={styles.photoBadgeText}>+{item.extraPhotos}</Text>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${item.title} emlék részleteinek megnyitása`}
+      onPress={() => router.push({ pathname: '/memory-details', params: { id: item.id } })}
+      onLongPress={openActions}
+      style={({ pressed }) => [pressed && styles.pressed]}
+    >
+      <View style={[styles.memoryImageWrap, { backgroundColor: palette.surfaceMuted }]}>
+        {image}
+        {featured ? (
+          <LinearGradient
+            pointerEvents="box-none"
+            colors={['rgba(0,0,0,0)', 'rgba(8,16,32,0.78)']}
+            style={styles.featuredOverlay}
+          >
+            <View style={styles.featuredText} pointerEvents="none">
+              <Text numberOfLines={2} style={styles.featuredTitle}>
+                {item.title}
+              </Text>
+              <Text style={styles.featuredMeta}>{item.when}</Text>
             </View>
-          )}
-        </View>
+          </LinearGradient>
+        ) : null}
+        {item.extraPhotos > 0 && (
+          <View style={styles.photoBadge}>
+            <Ionicons name="images-outline" size={12} color="#FFFFFF" />
+            <Text style={styles.photoBadgeText}>+{item.extraPhotos}</Text>
+          </View>
+        )}
+      </View>
 
-        {!featured ? (
-          <View style={styles.memoryInfo}>
-            <Text
-              style={[styles.cardTitle, { color: palette.textPrimary }]}
-              numberOfLines={1}
-            >
+      {!featured ? (
+        <View style={styles.memoryInfo}>
+          <View style={styles.titleRow}>
+            <Text style={[styles.cardTitle, { color: palette.textPrimary }]} numberOfLines={1}>
               {item.title}
             </Text>
-            <Text style={[styles.metaText, { color: palette.textMuted }]}>
-              {item.when}
-            </Text>
           </View>
-        ) : null}
-      </Pressable>
-
-      <View
-        style={[
-          styles.memoryFavorite,
-          featured && styles.featuredFavorite,
-        ]}
-      >
-        {heart(featured ? 24 : 18, featured)}
-      </View>
+          <Text style={[styles.metaText, { color: palette.textMuted }]}>{item.when}</Text>
+        </View>
+      ) : null}
+    </Pressable>
+    <View style={[styles.cardActions, { top: featured ? 196 : 116 }]}>
+      {menu(true)}
+      {heart(20, true)}
+    </View>
+    {editing ? (
+      <MemoryEditModal memoryId={item.id} palette={palette} onClose={() => setEditing(false)} onSaved={onChanged} />
+    ) : null}
     </View>
   );
 }
 
-
-function TimelineView({ favorites, palette, onCompose }: { favorites: FavoriteApi; palette: Palette; onCompose: () => void }) {
+function TimelineView({
+  favorites,
+  palette,
+  onCompose,
+  onChanged,
+}: {
+  favorites: FavoriteApi;
+  palette: Palette;
+  onCompose: () => void;
+  onChanged: () => void;
+}) {
   const { memories, loading, hasMore, error, loadMore } = useMemories();
 
   return (
     <View>
-      {memories.length > 0 && <MemoryCard item={memories[0]} featured favorites={favorites} palette={palette} />}
+      {memories.length > 0 && <MemoryCard item={memories[0]} featured favorites={favorites} palette={palette} onChanged={onChanged} />}
       <View style={styles.memoryGrid}>
         {memories.slice(1).map((memory) => (
-          <MemoryCard key={memory.id} item={memory} favorites={favorites} palette={palette} />
+          <MemoryCard key={memory.id} item={memory} favorites={favorites} palette={palette} onChanged={onChanged} />
         ))}
       </View>
 
@@ -318,11 +427,13 @@ export function MemoryScreenOptions({
   favorites,
   palette,
   onCompose,
+  onChanged,
 }: {
   refreshToken: number;
   favorites: FavoriteApi;
   palette: Palette;
   onCompose: () => void;
+  onChanged: () => void;
 }) {
   const [active, setActive] = useState<MemoryView>('all');
 
@@ -354,7 +465,7 @@ export function MemoryScreenOptions({
       {active === 'videos' ? (
         <EmptyBlock icon="videocam-outline" title="Még nincs videó" text="A videós emlékek hamarosan elérhetők." />
       ) : (
-        <TimelineView key={`${active}-${refreshToken}`} favorites={favorites} palette={palette} onCompose={onCompose} />
+        <TimelineView key={`${active}-${refreshToken}`} favorites={favorites} palette={palette} onCompose={onCompose} onChanged={onChanged} />
       )}
     </View>
   );
@@ -614,6 +725,7 @@ export default function CommunitySpaceScreen() {
                 favorites={favorites}
                 palette={palette}
                 onCompose={() => setComposer('memories')}
+                onChanged={refresh}
               />
             ) : null}
             {section === 'feed' ? (
@@ -798,7 +910,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: spacing.sm,
   },
-  featuredText: { flex: 1, gap: 2 },
+  featuredText: { flex: 1, gap: 2, paddingRight: 96 },
   featuredTitle: { color: '#FFFFFF', fontSize: 20, fontWeight: '900', letterSpacing: -0.3 },
   featuredMeta: { color: 'rgba(255,255,255,0.82)', fontSize: 12, fontWeight: '700' },
   photoBadge: {
@@ -816,6 +928,17 @@ const styles = StyleSheet.create({
   photoBadgeText: { color: '#FFFFFF', fontSize: 11, fontWeight: '800' },
   memoryGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   memoryInfo: { paddingHorizontal: spacing.xs, paddingTop: spacing.sm, gap: 2 },
+  cardActions: {
+    position: 'absolute',
+    right: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    borderRadius: radius.round,
+    backgroundColor: 'rgba(8,16,32,0.45)',
+  },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.xs },
   cardTitle: { flex: 1, fontSize: 15, fontWeight: '800' },
   metaText: { fontSize: 12, fontWeight: '600' },
@@ -892,26 +1015,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     borderRadius: radius.lg,
-  },
-  memoryFavorite: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    zIndex: 5,
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 0,
-    borderRadius: radius.round,
-    backgroundColor: 'rgba(255,255,255,0.92)',
-  },
-
-  featuredFavorite: {
-    top: 'auto',
-    right: 14,
-    bottom: 14,
-    backgroundColor: 'rgba(0,0,0,0.25)',
   },
   photoButtonText: { flex: 1, fontWeight: '800' },
   thumbs: { gap: spacing.sm },

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/lib/supabase';
 
 export const CHAT_ATTACHMENT_MAX_BYTES = 25 * 1024 * 1024;
@@ -39,6 +38,7 @@ export type ChatMessage = {
   sender_profile_id: string;
   body: string;
   created_at: string;
+  edited_at: string | null;
   sender: ChatProfile;
   attachments: ChatAttachment[];
 };
@@ -59,23 +59,11 @@ type MessageRow = ChatMessage;
 
 const ATTACHMENT_FIELDS =
   'id, message_id, kind, storage_path, file_name, mime_type, size_bytes, duration_ms';
-
 const SENDER_FIELDS =
   'sender:profiles!chat_messages_sender_profile_id_fkey ( id, display_name, avatar_path, profile_type )';
+const MESSAGE_SELECT = `id, conversation_id, sender_profile_id, body, created_at, edited_at, ${SENDER_FIELDS}, attachments:chat_message_attachments ( ${ATTACHMENT_FIELDS} )`;
 
-const MESSAGE_SELECT = `
-  id,
-  conversation_id,
-  sender_profile_id,
-  body,
-  created_at,
-  ${SENDER_FIELDS},
-  attachments:chat_message_attachments ( ${ATTACHMENT_FIELDS} )
-`;
-
-export function kindFromMimeType(
-  mimeType?: string | null,
-): ChatAttachmentKind {
+export function kindFromMimeType(mimeType?: string | null): ChatAttachmentKind {
   if (mimeType?.startsWith('image/')) return 'image';
   if (mimeType?.startsWith('video/')) return 'video';
   if (mimeType?.startsWith('audio/')) return 'audio';
@@ -83,15 +71,10 @@ export function kindFromMimeType(
 }
 
 /** Rövid szöveg a beszélgetéslistához: az üzenet vagy a csatolmány típusa. */
-export function describeChatMessage(
-  message: Pick<ChatMessage, 'body' | 'attachments'>,
-) {
+export function describeChatMessage(message: Pick<ChatMessage, 'body' | 'attachments'>) {
   if (message.body) return message.body;
-
   const first = message.attachments[0] as ChatAttachment | undefined;
-
   if (!first) return '';
-
   switch (first.kind) {
     case 'image':
       return 'Fotó';
@@ -111,20 +94,15 @@ export async function getChatConversations(familyId: string) {
     .eq('family_id', familyId)
     .order('updated_at', { ascending: false })
     .returns<ConversationRow[]>();
-
   if (error) throw error;
   if (!conversations?.length) return [];
 
   const ids = conversations.map((conversation) => conversation.id);
-
   const { data: members, error: membersError } = await supabase
     .from('chat_conversation_members')
-    .select(
-      'conversation_id, profile:profiles ( id, display_name, avatar_path, profile_type )',
-    )
+    .select('conversation_id, profile:profiles ( id, display_name, avatar_path, profile_type )')
     .in('conversation_id', ids)
     .returns<MemberRow[]>();
-
   if (membersError) throw membersError;
 
   const { data: lastMessages, error: messagesError } = await supabase
@@ -134,7 +112,6 @@ export async function getChatConversations(familyId: string) {
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .returns<MessageRow[]>();
-
   if (messagesError) throw messagesError;
 
   return conversations.map((conversation) => ({
@@ -143,9 +120,7 @@ export async function getChatConversations(familyId: string) {
       .filter((member) => member.conversation_id === conversation.id)
       .map((member) => member.profile),
     lastMessage:
-      (lastMessages ?? []).find(
-        (message) => message.conversation_id === conversation.id,
-      ) ?? null,
+      (lastMessages ?? []).find((message) => message.conversation_id === conversation.id) ?? null,
   }));
 }
 
@@ -155,16 +130,9 @@ export async function getChatConversation(conversationId: string) {
     .select('id, family_id, title, is_group, updated_at')
     .eq('id', conversationId)
     .single<ConversationRow>();
-
   if (error) throw error;
-
   const conversations = await getChatConversations(data.family_id);
-
-  return (
-    conversations.find(
-      (conversation) => conversation.id === conversationId,
-    ) ?? null
-  );
+  return conversations.find((conversation) => conversation.id === conversationId) ?? null;
 }
 
 export async function getChatMessages(conversationId: string) {
@@ -175,69 +143,31 @@ export async function getChatMessages(conversationId: string) {
     .is('deleted_at', null)
     .order('created_at', { ascending: true })
     .returns<MessageRow[]>();
-
   if (error) throw error;
-
   return data ?? [];
 }
 
-/**
- * Belső üzenetbeszúró függvény.
- *
- * Normál üzenetnél kötelező a szöveg.
- * Csatolmány esetén az üres szöveg is engedélyezett.
- */
-async function insertChatMessage(
-  conversationId: string,
-  senderProfileId: string,
-  body: string,
-  allowEmpty = false,
-) {
-  const trimmedBody = body.trim();
-
-  if (!allowEmpty && !trimmedBody) {
-    throw new Error('Az üzenet nem lehet üres.');
-  }
-
-  if (trimmedBody.length > 4000) {
-    throw new Error('Az üzenet legfeljebb 4000 karakter lehet.');
-  }
-
-  const { data, error } = await supabase
-    .from('chat_messages')
-    .insert({
-      conversation_id: conversationId,
-      sender_profile_id: senderProfileId,
-      body: trimmedBody,
-    })
-    .select(MESSAGE_SELECT)
-    .single<MessageRow>();
-
-  if (error) throw error;
-
-  return data;
-}
-
-/** Normál szöveges üzenet küldése. */
 export async function sendChatMessage(
   conversationId: string,
   senderProfileId: string,
   body: string,
 ) {
-  return insertChatMessage(
-    conversationId,
-    senderProfileId,
-    body,
-    false,
-  );
+  const { data, error } = await supabase
+    .from('chat_messages')
+    .insert({
+      conversation_id: conversationId,
+      sender_profile_id: senderProfileId,
+      body: body.trim(),
+    })
+    .select(MESSAGE_SELECT)
+    .single<MessageRow>();
+  if (error) throw error;
+  return data;
 }
 
 /**
- * Feltölt egy fájlt a privát tárolóba, majd létrehoz egy üzenetet
- * és a hozzá tartozó csatolmány-sort.
- *
- * Üres felirat esetén is működik.
- * Ha bármelyik lépés hibázik, a már létrehozott részeket visszavonja.
+ * Feltölt egy fájlt a privát tárolóba, majd létrehoz egy üzenetet és a hozzá tartozó
+ * csatolmány-sort. Ha bármelyik lépés hibázik, a már létrehozott részeket visszavonja.
  */
 export async function sendChatAttachment(
   conversationId: string,
@@ -245,45 +175,28 @@ export async function sendChatAttachment(
   file: ChatAttachmentInput,
   caption = '',
 ) {
-  const fileBody = await (await fetch(file.uri)).arrayBuffer();
-  const size = fileBody.byteLength;
-
-  if (size <= 0) {
-    throw new Error('A fájl üres.');
-  }
-
+  const body = await (await fetch(file.uri)).arrayBuffer();
+  const size = body.byteLength;
+  if (size <= 0) throw new Error('A fájl üres.');
   if (size > CHAT_ATTACHMENT_MAX_BYTES) {
     throw new Error('A fájl mérete legfeljebb 25 MB lehet.');
   }
 
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-
   const path = `${conversationId}/${senderProfileId}/${Date.now()}-${safeName}`;
 
   const { error: uploadError } = await supabase.storage
     .from(ATTACHMENT_BUCKET)
-    .upload(path, fileBody, {
+    .upload(path, body, {
       contentType: file.mimeType ?? 'application/octet-stream',
       upsert: false,
     });
-
-  if (uploadError) {
-    throw new Error(uploadError.message);
-  }
+  if (uploadError) throw new Error(uploadError.message);
 
   let messageId: string | null = null;
-
   try {
-    // Csatolmány esetén az üres body is megengedett.
-    const message = await insertChatMessage(
-      conversationId,
-      senderProfileId,
-      caption,
-      true,
-    );
-
+    const message = await sendChatMessage(conversationId, senderProfileId, caption);
     messageId = message.id;
-
     const { data: attachment, error } = await supabase
       .from('chat_message_attachments')
       .insert({
@@ -299,57 +212,31 @@ export async function sendChatAttachment(
       })
       .select(ATTACHMENT_FIELDS)
       .single<ChatAttachment>();
-
     if (error) throw error;
-
-    return {
-      ...message,
-      attachments: [attachment],
-    };
+    return { ...message, attachments: [attachment] };
   } catch (caught) {
-    // Sikertelen küldés esetén eltávolítjuk a már feltöltött fájlt.
     await supabase.storage.from(ATTACHMENT_BUCKET).remove([path]);
-
-    // Ha az üzenet már létrejött, töröltként jelöljük.
     if (messageId) {
       await supabase
         .from('chat_messages')
-        .update({
-          deleted_at: new Date().toISOString(),
-        })
+        .update({ deleted_at: new Date().toISOString() })
         .eq('id', messageId);
     }
-
     throw caught;
   }
 }
 
-const urlCache = new Map<
-  string,
-  { url: string; expiresAt: number }
->();
+const urlCache = new Map<string, { url: string; expiresAt: number }>();
 
 /** Aláírt, 1 órás URL a csatolmányhoz; 50 percig gyorsítótárazva. */
 export async function getChatAttachmentUrl(storagePath: string) {
   const cached = urlCache.get(storagePath);
-
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.url;
-  }
-
+  if (cached && cached.expiresAt > Date.now()) return cached.url;
   const { data, error } = await supabase.storage
     .from(ATTACHMENT_BUCKET)
     .createSignedUrl(storagePath, 3600);
-
-  if (error || !data?.signedUrl) {
-    throw new Error(error?.message ?? 'A fájl nem érhető el.');
-  }
-
-  urlCache.set(storagePath, {
-    url: data.signedUrl,
-    expiresAt: Date.now() + 50 * 60 * 1000,
-  });
-
+  if (error || !data?.signedUrl) throw new Error(error?.message ?? 'A fájl nem érhető el.');
+  urlCache.set(storagePath, { url: data.signedUrl, expiresAt: Date.now() + 50 * 60 * 1000 });
   return data.signedUrl;
 }
 
@@ -370,24 +257,13 @@ async function createConversation(
     })
     .select('id')
     .single<{ id: string }>();
-
   if (error) throw error;
 
-  const uniqueProfileIds = [
-    ...new Set([createdByProfileId, ...profileIds]),
-  ];
-
+  const uniqueProfileIds = [...new Set([createdByProfileId, ...profileIds])];
   const { error: membersError } = await supabase
     .from('chat_conversation_members')
-    .insert(
-      uniqueProfileIds.map((profileId) => ({
-        conversation_id: data.id,
-        profile_id: profileId,
-      })),
-    );
-
+    .insert(uniqueProfileIds.map((profileId) => ({ conversation_id: data.id, profile_id: profileId })));
   if (membersError) throw membersError;
-
   return data.id;
 }
 
@@ -398,7 +274,6 @@ export async function findOrCreateDirectConversation(
   otherProfileId: string,
 ) {
   const conversations = await getChatConversations(familyId);
-
   const existing = conversations.find(
     (conversation) =>
       !conversation.is_group &&
@@ -406,16 +281,8 @@ export async function findOrCreateDirectConversation(
       conversation.members.some((member) => member.id === myProfileId) &&
       conversation.members.some((member) => member.id === otherProfileId),
   );
-
   if (existing) return existing.id;
-
-  return createConversation(
-    familyId,
-    myProfileId,
-    false,
-    null,
-    [otherProfileId],
-  );
+  return createConversation(familyId, myProfileId, false, null, [otherProfileId]);
 }
 
 /** Megkeresi a családi csoportos beszélgetést, vagy létrehozza az összes taggal. */
@@ -425,20 +292,47 @@ export async function findOrCreateFamilyGroup(
   profileIds: string[],
 ) {
   const conversations = await getChatConversations(familyId);
-
   const existing = conversations.find(
     (conversation) =>
-      conversation.is_group &&
-      conversation.members.some((member) => member.id === myProfileId),
+      conversation.is_group && conversation.members.some((member) => member.id === myProfileId),
   );
-
   if (existing) return existing.id;
+  return createConversation(familyId, myProfileId, true, 'Családi csoport', profileIds);
+}
 
-  return createConversation(
-    familyId,
-    myProfileId,
-    true,
-    'Családi csoport',
-    profileIds,
-  );
+/** Saját üzenet szövegének módosítása (a RLS csak a feladónak engedi). */
+export async function editChatMessage(messageId: string, body: string) {
+  const text = body.trim();
+  if (!text) throw new Error('Az üzenet nem lehet üres.');
+  const { data, error } = await supabase
+    .from('chat_messages')
+    .update({ body: text, edited_at: new Date().toISOString() })
+    .eq('id', messageId)
+    .is('deleted_at', null)
+    .select('id, body, edited_at');
+  if (error) throw error;
+  if (!data?.length) throw new Error('Az üzenet nem módosítható.');
+  return data[0] as { id: string; body: string; edited_at: string };
+}
+
+/**
+ * Saját üzenet törlése mindenkinek (puha törlés: deleted_at). A csatolmányok fájljait és soraik törlését
+ * megpróbáljuk, de ha ez nem sikerül, az üzenet akkor is eltűnik a beszélgetésből.
+ */
+export async function deleteChatMessage(message: Pick<ChatMessage, 'id' | 'attachments'>) {
+  const { data, error } = await supabase
+    .from('chat_messages')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', message.id)
+    .is('deleted_at', null)
+    .select('id');
+  if (error) throw error;
+  if (!data?.length) throw new Error('Az üzenet nem törölhető.');
+
+  if (message.attachments.length > 0) {
+    const paths = message.attachments.map((attachment) => attachment.storage_path);
+    await supabase.storage.from(ATTACHMENT_BUCKET).remove(paths);
+    await supabase.from('chat_message_attachments').delete().eq('message_id', message.id);
+    paths.forEach((path) => urlCache.delete(path));
+  }
 }

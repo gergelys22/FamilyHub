@@ -20,6 +20,8 @@ import {
   getCommunityPosts,
   getPostComments,
   setPostReaction,
+  updateCommunityPost,
+  updatePostComment,
   type CommunityComment,
   type CommunityPost,
 } from '@/services/community';
@@ -62,6 +64,8 @@ function CommentsSheet({
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [version, setVersion] = useState(0);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
   const postId = post?.id ?? null;
 
   useEffect(() => {
@@ -94,6 +98,18 @@ function CommentsSheet({
       Alert.alert('A hozzászólás nem küldhető el', caught instanceof Error ? caught.message : 'Próbáld újra.');
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function saveEdit(comment: CommunityComment) {
+    if (!editText.trim()) return;
+    try {
+      if (editText.trim() !== comment.body) await updatePostComment(comment.id, editText);
+      setEditingId(null);
+      setVersion((current) => current + 1);
+      onChanged();
+    } catch (caught) {
+      Alert.alert('A módosítás sikertelen', caught instanceof Error ? caught.message : 'Próbáld újra.');
     }
   }
 
@@ -130,10 +146,40 @@ function CommentsSheet({
           <View style={[feedStyles.commentBubble, { backgroundColor: palette.surfaceElevated }]}>
             <View style={feedStyles.commentHeader}>
               <Text style={[feedStyles.commentName, { color: palette.textPrimary }]}>{comment.author_name}</Text>
-              <Text style={[feedStyles.commentTime, { color: palette.textMuted }]}>{timeAgo(comment.created_at)}</Text>
+              <Text style={[feedStyles.commentTime, { color: palette.textMuted }]}>
+                {timeAgo(comment.created_at)}
+                {comment.edited_at ? ' · szerkesztve' : ''}
+              </Text>
             </View>
-            <Text style={[feedStyles.commentText, { color: palette.textPrimary }]}>{comment.body}</Text>
+            {editingId === comment.id ? (
+              <View style={feedStyles.commentEdit}>
+                <FormInput value={editText} onChangeText={setEditText} multiline maxLength={1000} />
+                <View style={feedStyles.commentEditActions}>
+                  <Pressable onPress={() => setEditingId(null)} hitSlop={8}>
+                    <Text style={[feedStyles.commentText, { color: palette.textMuted }]}>Mégse</Text>
+                  </Pressable>
+                  <Pressable onPress={() => void saveEdit(comment)} hitSlop={8}>
+                    <Text style={[feedStyles.commentText, { color: palette.primary, fontWeight: '900' }]}>Mentés</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : (
+              <Text style={[feedStyles.commentText, { color: palette.textPrimary }]}>{comment.body}</Text>
+            )}
           </View>
+          {comment.author_profile_id === profile?.id && editingId !== comment.id ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Hozzászólás szerkesztése"
+              hitSlop={8}
+              onPress={() => {
+                setEditingId(comment.id);
+                setEditText(comment.body);
+              }}
+            >
+              <Ionicons name="pencil-outline" size={16} color={palette.textMuted} />
+            </Pressable>
+          ) : null}
           {comment.author_profile_id === profile?.id ? (
             <Pressable
               accessibilityRole="button"
@@ -268,6 +314,93 @@ export function NewPostModal({
   );
 }
 
+export function EditPostModal({
+  post,
+  onClose,
+  onSaved,
+}: {
+  post: CommunityPost;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { palette } = usePalette();
+  const [body, setBody] = useState(post.body);
+  const [newImage, setNewImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [removeImage, setRemoveImage] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const previewUri = newImage?.uri ?? (removeImage ? null : post.media_url);
+
+  async function pickImage() {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Engedély szükséges', 'A fotó kiválasztásához engedélyezd a fotókönyvtár hozzáférést.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
+    if (!result.canceled) {
+      setNewImage(result.assets[0] ?? null);
+      setRemoveImage(false);
+    }
+  }
+
+  async function save() {
+    if (!body.trim() && !previewUri) {
+      Alert.alert('Üres bejegyzés', 'Írj valamit, vagy tarts meg egy fotót.');
+      return;
+    }
+    setBusy(true);
+    try {
+      await updateCommunityPost({
+        postId: post.id,
+        familyId: post.family_id,
+        body,
+        currentMediaPath: post.media_path,
+        removeImage,
+        newImage: newImage ? { uri: newImage.uri, mimeType: newImage.mimeType } : null,
+      });
+      onSaved();
+      onClose();
+    } catch (caught) {
+      Alert.alert('A módosítás sikertelen', caught instanceof Error ? caught.message : 'Próbáld újra.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Sheet visible onClose={onClose} title="Bejegyzés szerkesztése" icon="create">
+      <FormInput value={body} onChangeText={setBody} placeholder="Szöveg" multiline maxLength={2000} />
+      {previewUri ? (
+        <View style={feedStyles.previewWrap}>
+          <Image source={{ uri: previewUri }} style={feedStyles.preview} />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Fotó eltávolítása"
+            onPress={() => {
+              setNewImage(null);
+              setRemoveImage(true);
+            }}
+            style={feedStyles.previewRemove}
+          >
+            <Ionicons name="close" size={18} color="#FFFFFF" />
+          </Pressable>
+        </View>
+      ) : null}
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => void pickImage()}
+        style={({ pressed }) => [feedStyles.photoButton, { backgroundColor: palette.primarySoft }, pressed && sharedStyles.pressed]}
+      >
+        <Ionicons name="image-outline" size={20} color={palette.primary} />
+        <Text style={[feedStyles.photoButtonText, { color: palette.primary }]}>
+          {previewUri ? 'Fotó cseréje' : 'Fotó hozzáadása'}
+        </Text>
+      </Pressable>
+      <PrimaryButton label="Mentés" icon="checkmark" busy={busy} onPress={() => void save()} />
+    </Sheet>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /* Hírfolyam                                                           */
 /* ------------------------------------------------------------------ */
@@ -290,6 +423,7 @@ export function FeedTab({
   const [error, setError] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
   const [commentPost, setCommentPost] = useState<CommunityPost | null>(null);
+  const [editPost, setEditPost] = useState<CommunityPost | null>(null);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -352,12 +486,20 @@ export function FeedTab({
         text: 'Törlés',
         style: 'destructive',
         onPress: () =>
-          void deleteCommunityPost(post.id)
+          void deleteCommunityPost(post.id, post.media_path)
             .then(() => setVersion((current) => current + 1))
             .catch((caught) =>
               Alert.alert('Hiba', caught instanceof Error ? caught.message : 'A törlés sikertelen.'),
             ),
       },
+    ]);
+  }
+
+  function openPostActions(post: CommunityPost) {
+    Alert.alert('Bejegyzés', undefined, [
+      { text: 'Szerkesztés', onPress: () => setEditPost(post) },
+      { text: 'Törlés', style: 'destructive', onPress: () => removePost(post) },
+      { text: 'Mégse', style: 'cancel' },
     ]);
   }
 
@@ -407,16 +549,19 @@ export function FeedTab({
               <Avatar name={post.author_name} size={40} />
               <View style={feedStyles.flex}>
                 <Text style={[feedStyles.author, { color: palette.textPrimary }]}>{post.author_name}</Text>
-                <Text style={[feedStyles.time, { color: palette.textMuted }]}>{timeAgo(post.created_at)}</Text>
+                <Text style={[feedStyles.time, { color: palette.textMuted }]}>
+                  {timeAgo(post.created_at)}
+                  {post.edited_at ? ' · szerkesztve' : ''}
+                </Text>
               </View>
               {mine ? (
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel="Bejegyzés törlése"
+                  accessibilityLabel="Bejegyzés műveletei"
                   hitSlop={10}
-                  onPress={() => removePost(post)}
+                  onPress={() => openPostActions(post)}
                 >
-                  <Ionicons name="trash-outline" size={19} color={palette.textMuted} />
+                  <Ionicons name="ellipsis-horizontal" size={20} color={palette.textMuted} />
                 </Pressable>
               ) : null}
             </View>
@@ -470,6 +615,15 @@ export function FeedTab({
         );
       })}
 
+      {editPost ? (
+        <EditPostModal
+          key={editPost.id}
+          post={editPost}
+          onClose={() => setEditPost(null)}
+          onSaved={() => setVersion((current) => current + 1)}
+        />
+      ) : null}
+
       <CommentsSheet
         post={commentPost}
         onClose={() => setCommentPost(null)}
@@ -503,6 +657,8 @@ const feedStyles = StyleSheet.create({
   action: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 32 },
   actionText: { fontSize: 13, fontWeight: '800' },
   noComments: { paddingVertical: spacing.lg, fontSize: 13, textAlign: 'center' },
+  commentEdit: { gap: spacing.xs },
+  commentEditActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.lg },
   commentRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   commentBubble: { flex: 1, padding: spacing.md, gap: 3, borderRadius: radius.lg },
   commentHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

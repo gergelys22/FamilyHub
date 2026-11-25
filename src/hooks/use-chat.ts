@@ -1,5 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import {
+  deleteChatMessage,
+  editChatMessage,
   getChatConversations,
   getChatMessages,
   sendChatAttachment,
@@ -77,6 +79,8 @@ export function useChatMessages(conversationId: string | null, profileId: string
     const channel = supabase
       .channel(`chat-messages:${conversationId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `conversation_id=eq.${conversationId}` }, load)
+      // szerkesztés és (puha) törlés is UPDATE esemény
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chat_messages', filter: `conversation_id=eq.${conversationId}` }, load)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_message_attachments', filter: `conversation_id=eq.${conversationId}` }, load)
       .subscribe();
     return () => {
@@ -102,5 +106,19 @@ export function useChatMessages(conversationId: string | null, profileId: string
     upsertMessage(await sendChatAttachment(conversationId, profileId, file, caption));
   }, [conversationId, profileId, upsertMessage]);
 
-  return { messages, loading, error, refresh: load, send, sendAttachment };
+  const edit = useCallback(async (messageId: string, body: string) => {
+    const updated = await editChatMessage(messageId, body);
+    setMessages((current) =>
+      current.map((item) =>
+        item.id === messageId ? { ...item, body: updated.body, edited_at: updated.edited_at } : item,
+      ),
+    );
+  }, []);
+
+  const remove = useCallback(async (message: ChatMessage) => {
+    await deleteChatMessage(message);
+    setMessages((current) => current.filter((item) => item.id !== message.id));
+  }, []);
+
+  return { messages, loading, error, refresh: load, send, sendAttachment, edit, remove };
 }

@@ -1,31 +1,31 @@
 import {
-    EmptyBlock,
-    FormInput,
-    FormLabel,
-    PrimaryButton,
-    Sheet,
-    sharedStyles,
-    useFamilyId,
-    usePalette,
+  EmptyBlock,
+  FormInput,
+  FormLabel,
+  PrimaryButton,
+  Sheet,
+  sharedStyles,
+  useFamilyId,
+  usePalette,
 } from '@/components/community-shared';
 import { radius, shadows, spacing } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
 import type { FavoriteType } from '@/services/favorites';
-import { createRecipe, deleteRecipe, getRecipes, recipeCategories, type Recipe } from '@/services/recipes';
+import { createRecipe, deleteRecipe, getRecipes, recipeCategories, updateRecipe, type Recipe } from '@/services/recipes';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from 'react-native';
 
 type FavoriteApi = {
@@ -70,12 +70,14 @@ export function RecipeSheet({
   recipe,
   onClose,
   onDeleted,
+  onEdit,
   favorites,
   canDelete,
 }: {
   recipe: Recipe | null;
   onClose: () => void;
   onDeleted: () => void;
+  onEdit?: (recipe: Recipe) => void;
   favorites: FavoriteApi;
   canDelete: boolean;
 }) {
@@ -97,7 +99,7 @@ export function RecipeSheet({
         text: 'Törlés',
         style: 'destructive',
         onPress: () =>
-          void deleteRecipe(recipe!.id)
+          void deleteRecipe(recipe!.id, recipe!.image_path)
             .then(() => {
               onDeleted();
               onClose();
@@ -186,6 +188,20 @@ export function RecipeSheet({
             {favorite ? 'Kedvenc' : 'Kedvencnek jelölés'}
           </Text>
         </Pressable>
+        {canDelete && onEdit ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Recept szerkesztése"
+            onPress={() => onEdit(recipe)}
+            style={({ pressed }) => [
+              recipeStyles.deleteButton,
+              { borderColor: palette.border },
+              pressed && sharedStyles.pressed,
+            ]}
+          >
+            <Ionicons name="pencil-outline" size={20} color={palette.textMuted} />
+          </Pressable>
+        ) : null}
         {canDelete ? (
           <Pressable
             accessibilityRole="button"
@@ -213,23 +229,28 @@ export function NewRecipeModal({
   visible,
   onClose,
   onSaved,
+  recipe,
 }: {
   visible: boolean;
   onClose: () => void;
   onSaved: () => void;
+  /** Ha meg van adva, szerkesztő módban nyílik meg. */
+  recipe?: Recipe | null;
 }) {
   const { palette } = usePalette();
   const { profile } = useAuth();
   const { familyId } = useFamilyId();
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('foetel');
-  const [servings, setServings] = useState('4');
-  const [prep, setPrep] = useState('15');
-  const [cook, setCook] = useState('30');
-  const [ingredients, setIngredients] = useState('');
-  const [steps, setSteps] = useState('');
+  const [title, setTitle] = useState(recipe?.title ?? '');
+  const [description, setDescription] = useState(recipe?.description ?? '');
+  const [category, setCategory] = useState(recipe?.category ?? 'foetel');
+  const [servings, setServings] = useState(recipe ? String(recipe.servings) : '4');
+  const [prep, setPrep] = useState(recipe ? String(recipe.prep_minutes) : '15');
+  const [cook, setCook] = useState(recipe ? String(recipe.cook_minutes) : '30');
+  const [ingredients, setIngredients] = useState(recipe?.ingredients.join('\n') ?? '');
+  const [steps, setSteps] = useState(recipe?.steps.join('\n') ?? '');
   const [image, setImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [removeImage, setRemoveImage] = useState(false);
+  const existingImage = recipe && !removeImage ? recipe.image_url : null;
   const [busy, setBusy] = useState(false);
 
   async function pickImage() {
@@ -256,6 +277,26 @@ export function NewRecipeModal({
     }
     setBusy(true);
     try {
+      if (recipe) {
+        await updateRecipe({
+          id: recipe.id,
+          familyId,
+          title,
+          description,
+          category,
+          servings: toInt(servings, 4, 1, 100),
+          prepMinutes: toInt(prep, 0, 0, 2000),
+          cookMinutes: toInt(cook, 0, 0, 2000),
+          ingredients: ingredientList,
+          steps: stepList,
+          currentImagePath: recipe.image_path,
+          removeImage,
+          newImage: image ? { uri: image.uri, mimeType: image.mimeType } : null,
+        });
+        onSaved();
+        onClose();
+        return;
+      }
       await createRecipe({
         familyId,
         profileId: profile.id,
@@ -284,7 +325,7 @@ export function NewRecipeModal({
   }
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="Új recept" icon="restaurant">
+    <Sheet visible={visible} onClose={onClose} title={recipe ? 'Recept szerkesztése' : 'Új recept'} icon="restaurant">
       <FormInput value={title} onChangeText={setTitle} placeholder="A recept neve" maxLength={120} />
       <FormInput
         value={description}
@@ -350,13 +391,16 @@ export function NewRecipeModal({
         style={recipeStyles.tallInput}
       />
 
-      {image ? (
+      {image || existingImage ? (
         <View style={recipeStyles.previewWrap}>
-          <Image source={{ uri: image.uri }} style={recipeStyles.preview} />
+          <Image source={{ uri: image?.uri ?? existingImage ?? '' }} style={recipeStyles.preview} />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Fotó eltávolítása"
-            onPress={() => setImage(null)}
+            onPress={() => {
+              setImage(null);
+              setRemoveImage(true);
+            }}
             style={recipeStyles.previewRemove}
           >
             <Ionicons name="close" size={18} color="#FFFFFF" />
@@ -377,7 +421,7 @@ export function NewRecipeModal({
         </Pressable>
       )}
 
-      <PrimaryButton label="Recept mentése" icon="checkmark" busy={busy} onPress={() => void save()} />
+      <PrimaryButton label={recipe ? 'Módosítások mentése' : 'Recept mentése'} icon="checkmark" busy={busy} onPress={() => void save()} />
     </Sheet>
   );
 }
@@ -405,6 +449,7 @@ export function RecipesTab({
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [editRecipe, setEditRecipe] = useState<Recipe | null>(null);
 
   useEffect(() => {
     if (!familyId) return;
@@ -513,17 +558,19 @@ export function RecipesTab({
           const meta = categoryMeta(recipe.category);
           const favorite = favorites.isFavorite('recipe', recipe.id);
           return (
-            <Pressable
+            <View
               key={recipe.id}
-              accessibilityRole="button"
-              accessibilityLabel={`${recipe.title} recept megnyitása`}
-              onPress={() => setSelectedId(recipe.id)}
-              style={({ pressed }) => [
+              style={[
                 recipeStyles.card,
                 { backgroundColor: palette.surface, borderColor: palette.border },
                 shadows.card,
-                pressed && sharedStyles.pressed,
               ]}
+            >
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`${recipe.title} recept megnyitása`}
+              onPress={() => setSelectedId(recipe.id)}
+              style={({ pressed }) => [pressed && sharedStyles.pressed]}
             >
               <View style={recipeStyles.cardImageWrap}>
                 {recipe.image_url ? (
@@ -538,16 +585,6 @@ export function RecipesTab({
                     <Ionicons name={meta.icon} size={38} color={meta.color} />
                   </LinearGradient>
                 )}
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={favorite ? 'Eltávolítás a kedvencekből' : 'Kedvencnek jelölés'}
-                  accessibilityState={{ selected: favorite }}
-                  hitSlop={6}
-                  onPress={() => void favorites.toggleFavorite('recipe', recipe.id)}
-                  style={recipeStyles.heartButton}
-                >
-                  <Ionicons name={favorite ? 'heart' : 'heart-outline'} size={18} color={favorite ? '#FF6B8B' : '#FFFFFF'} />
-                </Pressable>
               </View>
               <View style={recipeStyles.cardBody}>
                 <Text style={[recipeStyles.cardTitle, { color: palette.textPrimary }]} numberOfLines={2}>
@@ -561,14 +598,39 @@ export function RecipesTab({
                 </View>
               </View>
             </Pressable>
+              <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={favorite ? 'Eltávolítás a kedvencekből' : 'Kedvencnek jelölés'}
+              accessibilityState={{ selected: favorite }}
+              hitSlop={6}
+              onPress={() => void favorites.toggleFavorite('recipe', recipe.id)}
+              style={recipeStyles.heartButton}
+                >
+              <Ionicons name={favorite ? 'heart' : 'heart-outline'} size={18} color={favorite ? '#FF6B8B' : '#FFFFFF'} />
+                </Pressable>
+            </View>
           );
         })}
       </View>
+
+      {editRecipe ? (
+        <NewRecipeModal
+          key={editRecipe.id}
+          visible
+          recipe={editRecipe}
+          onClose={() => setEditRecipe(null)}
+          onSaved={() => setVersion((current) => current + 1)}
+        />
+      ) : null}
 
       <RecipeSheet
         recipe={selected}
         onClose={() => setSelectedId(null)}
         onDeleted={() => setVersion((current) => current + 1)}
+        onEdit={(item) => {
+          setSelectedId(null);
+          setEditRecipe(item);
+        }}
         favorites={favorites}
         canDelete={selected?.author_profile_id === profile?.id}
       />

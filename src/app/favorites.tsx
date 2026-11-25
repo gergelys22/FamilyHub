@@ -163,7 +163,7 @@ export default function FavoritesScreen() {
             icon="heart-outline"
             title="Még nincs kedvenc"
             text="Koppints a szívre egy emléken vagy receptnél, a könyvjelzőre egy bejegyzésnél, és itt megtalálod."
-            action={{ label: 'Irány a Közösségi tér', onPress: () => router.push('/memories' as never) }}
+            action={{ label: 'Irány a Közösségi tér', onPress: () => router.push('/social' as never) }}
           />
         ) : null}
 
@@ -171,17 +171,15 @@ export default function FavoritesScreen() {
           <>
             <Text style={[styles.section, { color: palette.textMuted }]}>Emlékek</Text>
             {favoriteMemories.map((memory) => (
-              <Pressable
+              <View
                 key={memory.id}
+                style={[styles.row, { backgroundColor: palette.surface, borderColor: palette.border }, shadows.card]}
+              >
+              <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={`${memory.title} emlék megnyitása`}
                 onPress={() => router.push({ pathname: '/memory-details', params: { id: memory.id } })}
-                style={({ pressed }) => [
-                  styles.row,
-                  { backgroundColor: palette.surface, borderColor: palette.border },
-                  shadows.card,
-                  pressed && sharedStyles.pressed,
-                ]}
+                style={({ pressed }) => [styles.rowMain, pressed && sharedStyles.pressed]}
               >
                 {memory.photo ? (
                   <Image source={{ uri: memory.photo }} style={styles.thumb} />
@@ -196,6 +194,7 @@ export default function FavoritesScreen() {
                   </Text>
                   <Text style={[styles.rowMeta, { color: palette.textMuted }]}>{memory.when}</Text>
                 </View>
+              </Pressable>
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="Eltávolítás a kedvencekből"
@@ -204,7 +203,7 @@ export default function FavoritesScreen() {
                 >
                   <Ionicons name="heart" size={22} color={palette.danger} />
                 </Pressable>
-              </Pressable>
+              </View>
             ))}
           </>
         ) : null}
@@ -217,17 +216,15 @@ export default function FavoritesScreen() {
                 recipeCategories.find((item) => item.key === recipe.category) ??
                 recipeCategories[recipeCategories.length - 1];
               return (
-                <Pressable
+                <View
                   key={recipe.id}
+                  style={[styles.row, { backgroundColor: palette.surface, borderColor: palette.border }, shadows.card]}
+                >
+                <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={`${recipe.title} recept megnyitása`}
                   onPress={() => setSelectedRecipeId(recipe.id)}
-                  style={({ pressed }) => [
-                    styles.row,
-                    { backgroundColor: palette.surface, borderColor: palette.border },
-                    shadows.card,
-                    pressed && sharedStyles.pressed,
-                  ]}
+                  style={({ pressed }) => [styles.rowMain, pressed && sharedStyles.pressed]}
                 >
                   {recipe.image_url ? (
                     <Image source={{ uri: recipe.image_url }} style={styles.thumb} />
@@ -244,6 +241,7 @@ export default function FavoritesScreen() {
                       {meta.label} · {recipe.prep_minutes + recipe.cook_minutes} perc · {recipe.servings} adag
                     </Text>
                   </View>
+                </Pressable>
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel="Eltávolítás a kedvencekből"
@@ -252,7 +250,7 @@ export default function FavoritesScreen() {
                   >
                     <Ionicons name="heart" size={22} color={palette.danger} />
                   </Pressable>
-                </Pressable>
+                </View>
               );
             })}
           </>
@@ -362,6 +360,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: radius.lg,
   },
+  rowMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   thumb: { width: 60, height: 60, borderRadius: radius.md },
   thumbPlaceholder: { alignItems: 'center', justifyContent: 'center' },
   rowTitle: { fontSize: 15, fontWeight: '900' },

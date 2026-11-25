@@ -45,20 +45,22 @@
   "devDependencies": {
     "@expo/ngrok": "^4.1.3",
     "@types/react": "~19.2.10",
+    "cross-env": "^10.1.0",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~57.0.2",
     "prettier": "^3.9.9",
     "typescript": "~6.0.3"
   },
   "scripts": {
-    "start": "expo start",
+    "start": "cross-env NODE_OPTIONS=--max-old-space-size=4096 expo start --dev-client",
+    "start:clean": "cross-env NODE_OPTIONS=--max-old-space-size=6144 expo start --dev-client -c",
+    "android": "cross-env NODE_OPTIONS=--max-old-space-size=6144 expo start --android --dev-client",
+    "ios": "cross-env NODE_OPTIONS=--max-old-space-size=6144 expo start --ios --dev-client",
+    "web": "cross-env NODE_OPTIONS=--max-old-space-size=6144 expo start --web",
     "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web",
     "lint": "expo lint",
-    "format": "prettier --write src supabase/functions scripts eslint.config.js app.json eas.json package.json tsconfig.json",
-    "format:check": "prettier --check src supabase/functions scripts eslint.config.js app.json eas.json package.json tsconfig.json"
+    "format": "...változatlan...",
+    "format:check": "...változatlan..."
   },
   "private": true
 }

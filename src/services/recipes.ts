@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { signMediaPaths, uploadCommunityImage } from '@/services/community';
+import { COMMUNITY_BUCKET, signMediaPaths, uploadCommunityImage } from '@/services/community';
 
 export const recipeCategories = [
   { key: 'foetel', label: 'Főétel', icon: 'restaurant-outline' as const, color: '#F59E0B' },
@@ -109,7 +109,55 @@ export async function createRecipe(input: {
   if (error) throw error;
 }
 
-export async function deleteRecipe(id: string) {
+export async function deleteRecipe(id: string, imagePath?: string | null) {
   const { error } = await supabase.from('recipes').delete().eq('id', id);
   if (error) throw error;
+  if (imagePath) await supabase.storage.from(COMMUNITY_BUCKET).remove([imagePath]);
+}
+
+export async function updateRecipe(input: {
+  id: string;
+  familyId: string;
+  title: string;
+  description: string;
+  category: string;
+  servings: number;
+  prepMinutes: number;
+  cookMinutes: number;
+  ingredients: string[];
+  steps: string[];
+  currentImagePath: string | null;
+  removeImage?: boolean;
+  newImage?: { uri: string; mimeType?: string | null } | null;
+}) {
+  let imagePath = input.currentImagePath;
+  let uploaded: string | null = null;
+  if (input.newImage) {
+    uploaded = await uploadCommunityImage(input.familyId, input.newImage.uri, input.newImage.mimeType);
+    imagePath = uploaded;
+  } else if (input.removeImage) {
+    imagePath = null;
+  }
+  const { error } = await supabase
+    .from('recipes')
+    .update({
+      title: input.title.trim(),
+      description: input.description.trim(),
+      category: input.category,
+      servings: input.servings,
+      prep_minutes: input.prepMinutes,
+      cook_minutes: input.cookMinutes,
+      ingredients: input.ingredients,
+      steps: input.steps,
+      image_path: imagePath,
+      edited_at: new Date().toISOString(),
+    })
+    .eq('id', input.id);
+  if (error) {
+    if (uploaded) await supabase.storage.from(COMMUNITY_BUCKET).remove([uploaded]);
+    throw error;
+  }
+  if (input.currentImagePath && input.currentImagePath !== imagePath) {
+    await supabase.storage.from(COMMUNITY_BUCKET).remove([input.currentImagePath]);
+  }
 }

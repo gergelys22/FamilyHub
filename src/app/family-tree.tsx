@@ -1,9 +1,11 @@
 import { PresenceDot } from '@/components/presence-dot';
 import { ScreenCloseButton } from '@/components/screen-close-button';
 import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
+import { useAuth } from '@/providers/auth-provider';
 import { usePresence } from '@/providers/presence-provider';
 import { useTheme } from '@/providers/theme-provider';
 import { getFamilyMembers, getMyFamilies, type FamilyMember } from '@/services/families';
+import { confirmAction, notify, removeFamilyMember } from '@/services/family-remove';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -52,18 +54,22 @@ function toPerson(member: FamilyMember, index: number, now: Date): Person {
 function PersonCard({
   person,
   onPress,
+  onRemove,
   palette,
 }: {
   person: Person;
   onPress: () => void;
+  /** Ha meg van adva, szerkesztő módban látszik az eltávolító gomb. */
+  onRemove?: () => void;
   palette: Palette;
 }) {
   const { isProfileOnline } = usePresence();
   return (
+    <View style={styles.personCard}>
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${person.name} profiljának megnyitása`}
-      style={({ pressed }) => [styles.personCard, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.personPress, pressed && styles.pressed]}
       onPress={onPress}
     >
       <View style={[styles.personAvatar, { backgroundColor: person.color, borderColor: palette.surface }]}>
@@ -81,6 +87,18 @@ function PersonCard({
         {person.year}
       </Text>
     </Pressable>
+    {onRemove ? (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${person.name} eltávolítása a családból`}
+        hitSlop={8}
+        onPress={onRemove}
+        style={[styles.removeBadge, { backgroundColor: palette.danger, borderColor: palette.surface }]}
+      >
+        <Ionicons name="remove" size={16} color="#FFFFFF" />
+      </Pressable>
+    ) : null}
+    </View>
   );
 }
 
@@ -88,6 +106,9 @@ export default function FamilyTreeScreen() {
   const router = useRouter();
   const { isDark } = useTheme();
   const palette = isDark ? darkColors : colors;
+  const { profile } = useAuth();
+  const [familyId, setFamilyId] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState(false);
   const [now] = useState(() => new Date());
   const [people, setPeople] = useState<Person[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -97,7 +118,10 @@ export default function FamilyTreeScreen() {
   useEffect(() => {
     let active = true;
     void getMyFamilies()
-      .then((families) => (families[0] ? getFamilyMembers(families[0].id) : []))
+      .then((families) => {
+        if (active) setFamilyId(families[0]?.id ?? null);
+        return families[0] ? getFamilyMembers(families[0].id) : [];
+      })
       .then((members) => {
         if (active) setPeople(members.map((member, index) => toPerson(member, index, now)));
       })
@@ -116,6 +140,22 @@ export default function FamilyTreeScreen() {
     router.push({ pathname: '/family-member-profile', params: { memberId: person.id } });
   }
 
+  async function removePerson(person: Person) {
+    if (!familyId) return;
+    const confirmed = await confirmAction({
+      title: 'Családtag eltávolítása',
+      message: `Eltávolítod ${person.name} nevű családtagot a családi körből? Elveszíti a hozzáférést a közös tartalmakhoz.`,
+      confirmLabel: 'Eltávolítás',
+    });
+    if (!confirmed) return;
+    try {
+      await removeFamilyMember(familyId, person.id);
+      setPeople((current) => current.filter((item) => item.id !== person.id));
+    } catch (caught) {
+      notify('Az eltávolítás nem sikerült', caught instanceof Error ? caught.message : 'Próbáld újra később.');
+    }
+  }
+
   const groups = (['adult', 'child', 'unknown'] as const)
     .map((group) => ({ group, members: people.filter((person) => person.group === group) }))
     .filter((entry) => entry.members.length > 0);
@@ -125,7 +165,18 @@ export default function FamilyTreeScreen() {
       <View style={[styles.header, { backgroundColor: palette.background }]}>
         <ScreenCloseButton />
         <Text style={[styles.title, { color: palette.textPrimary }]}>Családfa</Text>
-        <View style={styles.headerSpacer} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={editMode ? 'Szerkesztés befejezése' : 'Családtagok szerkesztése'}
+          onPress={() => setEditMode((current) => !current)}
+          style={styles.headerSpacer}
+        >
+          <Ionicons
+            name={editMode ? 'checkmark-circle' : 'create-outline'}
+            size={26}
+            color={editMode ? palette.success : palette.primary}
+          />
+        </Pressable>
       </View>
 
       <View style={[styles.tabs, { backgroundColor: palette.surfaceElevated }]} accessibilityRole="tablist">
@@ -223,6 +274,7 @@ export default function FamilyTreeScreen() {
                           key={person.id}
                           person={person}
                           onPress={() => openPerson(person)}
+                          onRemove={editMode && person.id !== profile?.id ? () => void removePerson(person) : undefined}
                           palette={palette}
                         />
                       ))}
@@ -260,7 +312,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  headerSpacer: { width: 42 },
+  headerSpacer: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 27, fontWeight: '900', letterSpacing: -0.5 },
   tabs: {
     marginHorizontal: spacing.lg,
@@ -311,6 +363,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.sm,
     paddingHorizontal: 4,
+  },
+  personPress: { alignItems: 'center' },
+  removeBadge: {
+    position: 'absolute',
+    top: 4,
+    right: '22%',
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    borderWidth: 2,
   },
   personAvatar: {
     width: 62,

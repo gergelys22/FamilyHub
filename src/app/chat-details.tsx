@@ -1,11 +1,9 @@
 import { ChatAttachmentView } from '@/components/chat-attachment';
-import { PresenceDot } from '@/components/presence-dot';
 import { ScreenCloseButton } from '@/components/screen-close-button';
 import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
 import { useChatMessages } from '@/hooks/use-chat';
 import { useAuth } from '@/providers/auth-provider';
 import { useCall } from '@/providers/call-provider';
-import { usePresence } from '@/providers/presence-provider';
 import { useTheme } from '@/providers/theme-provider';
 import {
   CHAT_ATTACHMENT_MAX_BYTES,
@@ -13,6 +11,7 @@ import {
   kindFromMimeType,
   type ChatAttachmentInput,
   type ChatConversation,
+  type ChatMessage,
 } from '@/services/chat';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -57,14 +56,14 @@ export default function ChatDetailsScreen() {
   const { isDark } = useTheme();
   const palette = isDark ? darkColors : colors;
   const { profile } = useAuth();
-  const { isProfileOnline } = usePresence();
   const { placeCall } = useCall();
   const { conversationId } = useLocalSearchParams<{ conversationId?: string }>();
   const [conversation, setConversation] = useState<ChatConversation | null>(null);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [attachMenuVisible, setAttachMenuVisible] = useState(false);
-  const { messages, loading, error, send, sendAttachment } = useChatMessages(
+  const [editing, setEditing] = useState<ChatMessage | null>(null);
+  const { messages, loading, error, send, sendAttachment, edit, remove } = useChatMessages(
     conversationId ?? null,
     profile?.id ?? null,
   );
@@ -91,10 +90,15 @@ export default function ChatDetailsScreen() {
     if (!text || sending) return;
     setSending(true);
     try {
-      await send(text);
+      if (editing) {
+        if (text !== editing.body) await edit(editing.id, text);
+        setEditing(null);
+      } else {
+        await send(text);
+      }
       setDraft('');
     } catch (caught) {
-      Alert.alert('Küldés sikertelen', messageOf(caught, 'Próbáld újra.'));
+      Alert.alert(editing ? 'Módosítás sikertelen' : 'Küldés sikertelen', messageOf(caught, 'Próbáld újra.'));
     } finally {
       setSending(false);
     }
@@ -215,6 +219,40 @@ export default function ChatDetailsScreen() {
 
   const hasDraft = draft.trim().length > 0;
 
+  function startEdit(message: ChatMessage) {
+    setEditing(message);
+    setDraft(message.body);
+  }
+
+  function cancelEdit() {
+    setEditing(null);
+    setDraft('');
+  }
+
+  function confirmDelete(message: ChatMessage) {
+    Alert.alert('Üzenet törlése', 'Az üzenet mindenki számára törlődik a beszélgetésből.', [
+      { text: 'Mégse', style: 'cancel' },
+      {
+        text: 'Törlés',
+        style: 'destructive',
+        onPress: () => {
+          if (editing?.id === message.id) cancelEdit();
+          void remove(message).catch((caught) => Alert.alert('Törlés sikertelen', messageOf(caught, 'Próbáld újra.')));
+        },
+      },
+    ]);
+  }
+
+  // Csak a saját üzenetekhez: szerkesztés (ha van szövege) és törlés.
+  function openMessageActions(message: ChatMessage) {
+    const actions = [
+      ...(message.body.length > 0 ? [{ text: 'Szerkesztés', onPress: () => startEdit(message) }] : []),
+      { text: 'Törlés', style: 'destructive' as const, onPress: () => confirmDelete(message) },
+      { text: 'Mégse', style: 'cancel' as const },
+    ];
+    Alert.alert('Üzenet', undefined, actions);
+  }
+
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top', 'bottom']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboard}>
@@ -229,22 +267,8 @@ export default function ChatDetailsScreen() {
             }
             style={styles.identity}
           >
-            <View style={styles.headerAvatarWrapper}>
-              <View style={styles.headerAvatar}>
-                <Ionicons
-                  name={isGroup ? 'people' : 'person'}
-                  size={22}
-                  color={colors.primary}
-                />
-              </View>
-
-              {!isGroup ? (
-                <PresenceDot
-                  visible={isProfileOnline(other?.id)}
-                  size={12}
-                  style={styles.headerOnlineDot}
-                />
-              ) : null}
+            <View style={styles.headerAvatar}>
+              <Ionicons name={isGroup ? 'people' : 'person'} size={22} color={colors.primary} />
             </View>
             <View>
               <Text style={styles.headerTitle}>{title}</Text>
@@ -303,16 +327,34 @@ export default function ChatDetailsScreen() {
                   <ChatAttachmentView key={attachment.id} attachment={attachment} mine={mine} palette={palette} />
                 ))}
                 {hasBody ? (
-                  <View style={[styles.bubble, mine ? styles.myBubble : [styles.theirBubble, { backgroundColor: palette.surface }]]}>
+                  <Pressable
+                    accessibilityHint={mine ? 'Tartsd nyomva a szerkesztéshez vagy törléshez' : undefined}
+                    delayLongPress={350}
+                    disabled={!mine}
+                    onLongPress={() => openMessageActions(message)}
+                    style={[styles.bubble, mine ? styles.myBubble : [styles.theirBubble, { backgroundColor: palette.surface }], editing?.id === message.id && styles.editingBubble]}
+                  >
                     <Text style={[styles.messageText, { color: mine ? palette.white : palette.textPrimary }]}>{message.body}</Text>
-                  </View>
+                  </Pressable>
                 ) : null}
-                <Text style={styles.time}>
-                  {new Date(message.created_at).toLocaleTimeString('hu-HU', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </Text>
+                <View style={styles.timeRow}>
+                  <Text style={styles.time}>
+                    {new Date(message.created_at).toLocaleTimeString('hu-HU', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                    {message.edited_at ? ' · szerkesztve' : ''}
+                  </Text>
+                  {mine ? (
+                    <Pressable
+                      accessibilityLabel="Üzenet műveletei"
+                      hitSlop={10}
+                      onPress={() => openMessageActions(message)}
+                    >
+                      <Ionicons name="ellipsis-horizontal" size={16} color={palette.textMuted} />
+                    </Pressable>
+                  ) : null}
+                </View>
               </View>
             );
           })}
@@ -327,18 +369,8 @@ export default function ChatDetailsScreen() {
                   }
                   style={styles.participant}
                 >
-                  <View style={styles.smallAvatarWrapper}>
-                    <View style={styles.smallAvatar}>
-                      <Text style={styles.smallAvatarText}>
-                        {member.display_name.charAt(0).toUpperCase()}
-                      </Text>
-                    </View>
-
-                    <PresenceDot
-                      visible={isProfileOnline(member.id)}
-                      size={11}
-                      style={styles.participantOnlineDot}
-                    />
+                  <View style={styles.smallAvatar}>
+                    <Text style={styles.smallAvatarText}>{member.display_name.charAt(0).toUpperCase()}</Text>
                   </View>
                   <Text style={styles.participantName}>{member.display_name}</Text>
                   <Ionicons name="chevron-forward" size={18} color={palette.textMuted} />
@@ -372,15 +404,32 @@ export default function ChatDetailsScreen() {
             </Pressable>
           </View>
         ) : (
+          <View>
+          {editing ? (
+            <View style={[styles.editBanner, { backgroundColor: palette.primarySoft, borderTopColor: palette.border }]}>
+              <Ionicons name="pencil" size={16} color={palette.primary} />
+              <View style={styles.editBannerText}>
+                <Text style={[styles.editTitle, { color: palette.primary }]}>Üzenet szerkesztése</Text>
+                <Text style={[styles.editPreview, { color: palette.textSecondary }]} numberOfLines={1}>
+                  {editing.body}
+                </Text>
+              </View>
+              <Pressable accessibilityLabel="Szerkesztés elvetése" hitSlop={10} onPress={cancelEdit}>
+                <Ionicons name="close" size={20} color={palette.textMuted} />
+              </Pressable>
+            </View>
+          ) : null}
           <View style={[styles.composer, { backgroundColor: palette.surface, borderTopColor: palette.border }]}>
-            <Pressable
-              accessibilityLabel="Csatolmány hozzáadása"
-              disabled={sending}
-              onPress={() => setAttachMenuVisible(true)}
-              style={[styles.iconButton, sending && styles.disabled]}
-            >
-              <Ionicons name="attach" size={26} color={palette.primary} />
-            </Pressable>
+            {editing ? null : (
+              <Pressable
+                accessibilityLabel="Csatolmány hozzáadása"
+                disabled={sending}
+                onPress={() => setAttachMenuVisible(true)}
+                style={[styles.iconButton, sending && styles.disabled]}
+              >
+                <Ionicons name="attach" size={26} color={palette.primary} />
+              </Pressable>
+            )}
             <TextInput
               accessibilityLabel="Üzenet szövege"
               value={draft}
@@ -396,14 +445,23 @@ export default function ChatDetailsScreen() {
                 <ActivityIndicator color={colors.white} />
               </View>
             ) : hasDraft ? (
-              <Pressable accessibilityLabel="Üzenet küldése" onPress={() => void handleSend()} style={styles.send}>
-                <Ionicons name="send" size={18} color={colors.white} />
+              <Pressable
+                accessibilityLabel={editing ? 'Módosítás mentése' : 'Üzenet küldése'}
+                onPress={() => void handleSend()}
+                style={styles.send}
+              >
+                <Ionicons name={editing ? 'checkmark' : 'send'} size={18} color={colors.white} />
+              </Pressable>
+            ) : editing ? (
+              <Pressable accessibilityLabel="Szerkesztés elvetése" onPress={cancelEdit} style={styles.send}>
+                <Ionicons name="close" size={20} color={colors.white} />
               </Pressable>
             ) : (
               <Pressable accessibilityLabel="Hangüzenet felvétele" onPress={() => void startRecording()} style={styles.send}>
                 <Ionicons name="mic" size={20} color={colors.white} />
               </Pressable>
             )}
+          </View>
           </View>
         )}
       </KeyboardAvoidingView>
@@ -467,7 +525,13 @@ const styles = StyleSheet.create({
   myBubble: { backgroundColor: colors.primary, borderBottomRightRadius: 5 },
   messageText: { color: colors.textPrimary, fontSize: 14, lineHeight: 20 },
   myText: { color: colors.white },
-  time: { marginTop: 3, color: colors.textMuted, fontSize: 10 },
+  timeRow: { marginTop: 3, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  editingBubble: { opacity: 0.6 },
+  editBanner: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderTopWidth: 1 },
+  editBannerText: { flex: 1 },
+  editTitle: { fontSize: 12, fontWeight: '900' },
+  editPreview: { fontSize: 12 },
+  time: { color: colors.textMuted, fontSize: 10 },
   participantsTitle: { marginTop: spacing.lg, color: colors.textPrimary, fontSize: 16, fontWeight: '900' },
   participant: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   smallAvatar: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', borderRadius: 19, backgroundColor: colors.primarySoft },
@@ -481,31 +545,6 @@ const styles = StyleSheet.create({
   recordingInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
   recordingDot: { width: 10, height: 10, borderRadius: 5 },
   recordingTime: { fontSize: 16, fontWeight: '800' },
-  headerAvatarWrapper: {
-  width: 42,
-  height: 42,
-  position: 'relative',
-},
-
-  headerOnlineDot: {
-    right: -2,
-    bottom: -2,
-    borderWidth: 2,
-    borderColor: colors.surface,
-  },
-  
-  smallAvatarWrapper: {
-    width: 38,
-    height: 38,
-    position: 'relative',
-  },
-  
-  participantOnlineDot: {
-    right: -2,
-    bottom: -2,
-    borderWidth: 2,
-    borderColor: colors.surface,
-  },
   menuOverlay: { flex: 1, justifyContent: 'flex-end' },
   menu: { padding: spacing.xl, gap: spacing.sm, borderTopWidth: 1, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl },
   menuTitle: { marginBottom: spacing.xs, fontSize: 18, fontWeight: '900' },

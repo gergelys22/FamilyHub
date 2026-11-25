@@ -9,6 +9,7 @@ export type CommunityPost = {
   body: string;
   media_path: string | null;
   created_at: string;
+  edited_at: string | null;
   author_name: string;
   media_url: string | null;
   reaction_count: number;
@@ -22,6 +23,7 @@ export type CommunityComment = {
   author_profile_id: string;
   body: string;
   created_at: string;
+  edited_at: string | null;
   author_name: string;
 };
 
@@ -32,6 +34,7 @@ type PostRow = {
   body: string;
   media_path: string | null;
   created_at: string;
+  edited_at?: string | null;
   author: { display_name: string } | { display_name: string }[] | null;
 };
 
@@ -67,7 +70,7 @@ export async function uploadCommunityImage(familyId: string, uri: string, mimeTy
 export async function getCommunityPosts(familyId: string, myProfileId: string | null) {
   const { data, error } = await supabase
     .from('community_posts')
-    .select('id, family_id, author_profile_id, body, media_path, created_at, author:profiles!author_profile_id(display_name)')
+    .select('id, family_id, author_profile_id, body, media_path, created_at, edited_at, author:profiles!author_profile_id(display_name)')
     .eq('family_id', familyId)
     .order('created_at', { ascending: false })
     .limit(60);
@@ -102,6 +105,7 @@ export async function getCommunityPosts(familyId: string, myProfileId: string | 
     body: row.body,
     media_path: row.media_path,
     created_at: row.created_at,
+    edited_at: row.edited_at ?? null,
     author_name: authorName(row.author),
     media_url: row.media_path ? (urls.get(row.media_path) ?? null) : null,
     reaction_count: reactionCount.get(row.id) ?? 0,
@@ -114,7 +118,7 @@ export async function getCommunityPostsByIds(ids: string[], myProfileId: string 
   if (ids.length === 0) return [] as CommunityPost[];
   const { data, error } = await supabase
     .from('community_posts')
-    .select('id, family_id, author_profile_id, body, media_path, created_at, author:profiles!author_profile_id(display_name)')
+    .select('id, family_id, author_profile_id, body, media_path, created_at, edited_at, author:profiles!author_profile_id(display_name)')
     .in('id', ids)
     .order('created_at', { ascending: false });
   if (error) throw error;
@@ -132,6 +136,7 @@ export async function getCommunityPostsByIds(ids: string[], myProfileId: string 
     body: row.body,
     media_path: row.media_path,
     created_at: row.created_at,
+    edited_at: row.edited_at ?? null,
     author_name: authorName(row.author),
     media_url: row.media_path ? (urls.get(row.media_path) ?? null) : null,
     reaction_count: (reactions ?? []).filter((item) => item.post_id === row.id).length,
@@ -158,9 +163,10 @@ export async function createCommunityPost(input: {
   if (error) throw error;
 }
 
-export async function deleteCommunityPost(postId: string) {
+export async function deleteCommunityPost(postId: string, mediaPath?: string | null) {
   const { error } = await supabase.from('community_posts').delete().eq('id', postId);
   if (error) throw error;
+  if (mediaPath) await supabase.storage.from(COMMUNITY_BUCKET).remove([mediaPath]);
 }
 
 export async function setPostReaction(postId: string, profileId: string, liked: boolean) {
@@ -182,7 +188,7 @@ export async function setPostReaction(postId: string, profileId: string, liked: 
 export async function getPostComments(postId: string) {
   const { data, error } = await supabase
     .from('community_comments')
-    .select('id, post_id, author_profile_id, body, created_at, author:profiles!author_profile_id(display_name)')
+    .select('id, post_id, author_profile_id, body, created_at, edited_at, author:profiles!author_profile_id(display_name)')
     .eq('post_id', postId)
     .order('created_at', { ascending: true });
   if (error) throw error;
@@ -193,6 +199,7 @@ export async function getPostComments(postId: string) {
       author_profile_id: row.author_profile_id,
       body: row.body,
       created_at: row.created_at,
+      edited_at: row.edited_at ?? null,
       author_name: authorName(row.author),
     }),
   );
@@ -207,5 +214,43 @@ export async function addPostComment(postId: string, profileId: string, body: st
 
 export async function deletePostComment(commentId: string) {
   const { error } = await supabase.from('community_comments').delete().eq('id', commentId);
+  if (error) throw error;
+}
+
+/** Bejegyzés szerkesztése: szöveg, és opcionálisan a fotó cseréje vagy eltávolítása. */
+export async function updateCommunityPost(input: {
+  postId: string;
+  familyId: string;
+  body: string;
+  currentMediaPath: string | null;
+  removeImage?: boolean;
+  newImage?: { uri: string; mimeType?: string | null } | null;
+}) {
+  let mediaPath = input.currentMediaPath;
+  let uploaded: string | null = null;
+  if (input.newImage) {
+    uploaded = await uploadCommunityImage(input.familyId, input.newImage.uri, input.newImage.mimeType);
+    mediaPath = uploaded;
+  } else if (input.removeImage) {
+    mediaPath = null;
+  }
+  const { error } = await supabase
+    .from('community_posts')
+    .update({ body: input.body.trim(), media_path: mediaPath, edited_at: new Date().toISOString() })
+    .eq('id', input.postId);
+  if (error) {
+    if (uploaded) await supabase.storage.from(COMMUNITY_BUCKET).remove([uploaded]);
+    throw error;
+  }
+  if (input.currentMediaPath && input.currentMediaPath !== mediaPath) {
+    await supabase.storage.from(COMMUNITY_BUCKET).remove([input.currentMediaPath]); // a régi fotó törlése (best effort)
+  }
+}
+
+export async function updatePostComment(commentId: string, body: string) {
+  const { error } = await supabase
+    .from('community_comments')
+    .update({ body: body.trim(), edited_at: new Date().toISOString() })
+    .eq('id', commentId);
   if (error) throw error;
 }
