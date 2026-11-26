@@ -1,3 +1,4 @@
+import { ActionSheet, ConfirmDialog, type SheetAction } from '@/components/action-sheet';
 import {
   Avatar,
   EmptyBlock,
@@ -31,7 +32,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Pressable,
   StyleSheet,
@@ -66,6 +66,12 @@ function CommentsSheet({
   const [version, setVersion] = useState(0);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
+  const [deleteComment, setDeleteComment] = useState<CommunityComment | null>(null);
+  const [notice, setNotice] = useState<{ title: string; message: string } | null>(null);
+
+  function notify(title: string, message: string) {
+    setNotice({ title, message });
+  }
   const postId = post?.id ?? null;
 
   useEffect(() => {
@@ -95,7 +101,7 @@ function CommentsSheet({
       setVersion((current) => current + 1);
       onChanged();
     } catch (caught) {
-      Alert.alert('A hozzászólás nem küldhető el', caught instanceof Error ? caught.message : 'Próbáld újra.');
+      notify('A hozzászólás nem küldhető el', caught instanceof Error ? caught.message : 'Próbáld újra.');
     } finally {
       setBusy(false);
     }
@@ -109,27 +115,21 @@ function CommentsSheet({
       setVersion((current) => current + 1);
       onChanged();
     } catch (caught) {
-      Alert.alert('A módosítás sikertelen', caught instanceof Error ? caught.message : 'Próbáld újra.');
+      notify('A módosítás sikertelen', caught instanceof Error ? caught.message : 'Próbáld újra.');
     }
   }
 
-  function remove(comment: CommunityComment) {
-    Alert.alert('Hozzászólás törlése', 'Biztosan törlöd?', [
-      { text: 'Mégse', style: 'cancel' },
-      {
-        text: 'Törlés',
-        style: 'destructive',
-        onPress: () =>
-          void deletePostComment(comment.id)
-            .then(() => {
-              setVersion((current) => current + 1);
-              onChanged();
-            })
-            .catch((caught) =>
-              Alert.alert('Hiba', caught instanceof Error ? caught.message : 'A törlés sikertelen.'),
-            ),
-      },
-    ]);
+  async function confirmDeleteComment() {
+    const comment = deleteComment;
+    if (!comment) return;
+    setDeleteComment(null);
+    try {
+      await deletePostComment(comment.id);
+      setVersion((current) => current + 1);
+      onChanged();
+    } catch (caught) {
+      notify('Hiba', caught instanceof Error ? caught.message : 'A törlés sikertelen.');
+    }
   }
 
   return (
@@ -185,7 +185,7 @@ function CommentsSheet({
               accessibilityRole="button"
               accessibilityLabel="Hozzászólás törlése"
               hitSlop={8}
-              onPress={() => remove(comment)}
+              onPress={() => setDeleteComment(comment)}
             >
               <Ionicons name="trash-outline" size={16} color={palette.textMuted} />
             </Pressable>
@@ -215,6 +215,26 @@ function CommentsSheet({
           <Ionicons name="send" size={18} color="#FFFFFF" />
         </Pressable>
       </View>
+
+      <ConfirmDialog
+        visible={deleteComment !== null}
+        title="Hozzászólás törlése"
+        message="Biztosan törlöd?"
+        onConfirm={() => void confirmDeleteComment()}
+        onCancel={() => setDeleteComment(null)}
+        palette={palette}
+      />
+      <ConfirmDialog
+        visible={notice !== null}
+        title={notice?.title ?? ''}
+        message={notice?.message ?? ''}
+        confirmLabel="Rendben"
+        destructive={false}
+        hideCancel
+        onConfirm={() => setNotice(null)}
+        onCancel={() => setNotice(null)}
+        palette={palette}
+      />
     </Sheet>
   );
 }
@@ -238,11 +258,16 @@ export function NewPostModal({
   const [body, setBody] = useState('');
   const [image, setImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<{ title: string; message: string } | null>(null);
+
+  function notify(title: string, message: string) {
+    setNotice({ title, message });
+  }
 
   async function pickImage() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Engedély szükséges', 'A fotó kiválasztásához engedélyezd a fotókönyvtár hozzáférést.');
+      notify('Engedély szükséges', 'A fotó kiválasztásához engedélyezd a fotókönyvtár hozzáférést.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
@@ -252,7 +277,7 @@ export function NewPostModal({
   async function publish() {
     if (!familyId || !profile?.id) return;
     if (!body.trim() && !image) {
-      Alert.alert('Üres bejegyzés', 'Írj valamit, vagy válassz egy fotót.');
+      notify('Üres bejegyzés', 'Írj valamit, vagy válassz egy fotót.');
       return;
     }
     setBusy(true);
@@ -268,7 +293,7 @@ export function NewPostModal({
       onSaved();
       onClose();
     } catch (caught) {
-      Alert.alert('A bejegyzés nem tehető közzé', caught instanceof Error ? caught.message : 'Próbáld újra.');
+      notify('A bejegyzés nem tehető közzé', caught instanceof Error ? caught.message : 'Próbáld újra.');
     } finally {
       setBusy(false);
     }
@@ -310,6 +335,17 @@ export function NewPostModal({
         </Pressable>
       )}
       <PrimaryButton label="Közzététel" icon="paper-plane" busy={busy} onPress={() => void publish()} />
+      <ConfirmDialog
+        visible={notice !== null}
+        title={notice?.title ?? ''}
+        message={notice?.message ?? ''}
+        confirmLabel="Rendben"
+        destructive={false}
+        hideCancel
+        onConfirm={() => setNotice(null)}
+        onCancel={() => setNotice(null)}
+        palette={palette}
+      />
     </Sheet>
   );
 }
@@ -328,12 +364,17 @@ export function EditPostModal({
   const [newImage, setNewImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [removeImage, setRemoveImage] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<{ title: string; message: string } | null>(null);
+
+  function notify(title: string, message: string) {
+    setNotice({ title, message });
+  }
   const previewUri = newImage?.uri ?? (removeImage ? null : post.media_url);
 
   async function pickImage() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Engedély szükséges', 'A fotó kiválasztásához engedélyezd a fotókönyvtár hozzáférést.');
+      notify('Engedély szükséges', 'A fotó kiválasztásához engedélyezd a fotókönyvtár hozzáférést.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
@@ -345,7 +386,7 @@ export function EditPostModal({
 
   async function save() {
     if (!body.trim() && !previewUri) {
-      Alert.alert('Üres bejegyzés', 'Írj valamit, vagy tarts meg egy fotót.');
+      notify('Üres bejegyzés', 'Írj valamit, vagy tarts meg egy fotót.');
       return;
     }
     setBusy(true);
@@ -361,7 +402,7 @@ export function EditPostModal({
       onSaved();
       onClose();
     } catch (caught) {
-      Alert.alert('A módosítás sikertelen', caught instanceof Error ? caught.message : 'Próbáld újra.');
+      notify('A módosítás sikertelen', caught instanceof Error ? caught.message : 'Próbáld újra.');
     } finally {
       setBusy(false);
     }
@@ -397,6 +438,17 @@ export function EditPostModal({
         </Text>
       </Pressable>
       <PrimaryButton label="Mentés" icon="checkmark" busy={busy} onPress={() => void save()} />
+      <ConfirmDialog
+        visible={notice !== null}
+        title={notice?.title ?? ''}
+        message={notice?.message ?? ''}
+        confirmLabel="Rendben"
+        destructive={false}
+        hideCancel
+        onConfirm={() => setNotice(null)}
+        onCancel={() => setNotice(null)}
+        palette={palette}
+      />
     </Sheet>
   );
 }
@@ -424,6 +476,13 @@ export function FeedTab({
   const [version, setVersion] = useState(0);
   const [commentPost, setCommentPost] = useState<CommunityPost | null>(null);
   const [editPost, setEditPost] = useState<CommunityPost | null>(null);
+  const [menuPost, setMenuPost] = useState<CommunityPost | null>(null);
+  const [deletePost, setDeletePost] = useState<CommunityPost | null>(null);
+  const [notice, setNotice] = useState<{ title: string; message: string } | null>(null);
+
+  function notify(title: string, message: string) {
+    setNotice({ title, message });
+  }
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -479,29 +538,43 @@ export function FeedTab({
     void setPostReaction(post.id, profileId, next).catch(() => setVersion((current) => current + 1));
   }
 
-  function removePost(post: CommunityPost) {
-    Alert.alert('Bejegyzés törlése', 'Biztosan törlöd ezt a bejegyzést?', [
-      { text: 'Mégse', style: 'cancel' },
-      {
-        text: 'Törlés',
-        style: 'destructive',
-        onPress: () =>
-          void deleteCommunityPost(post.id, post.media_path)
-            .then(() => setVersion((current) => current + 1))
-            .catch((caught) =>
-              Alert.alert('Hiba', caught instanceof Error ? caught.message : 'A törlés sikertelen.'),
-            ),
-      },
-    ]);
+  async function confirmDeletePost() {
+    const post = deletePost;
+    if (!post) return;
+    setDeletePost(null);
+    try {
+      await deleteCommunityPost(post.id, post.media_path);
+      setVersion((current) => current + 1);
+    } catch (caught) {
+      notify('Hiba', caught instanceof Error ? caught.message : 'A törlés sikertelen.');
+    }
   }
 
-  function openPostActions(post: CommunityPost) {
-    Alert.alert('Bejegyzés', undefined, [
-      { text: 'Szerkesztés', onPress: () => setEditPost(post) },
-      { text: 'Törlés', style: 'destructive', onPress: () => removePost(post) },
-      { text: 'Mégse', style: 'cancel' },
-    ]);
-  }
+  const menuActions: SheetAction[] = menuPost
+    ? [
+        {
+          key: 'edit',
+          label: 'Szerkesztés',
+          icon: 'create-outline',
+          onPress: () => {
+            const target = menuPost;
+            setMenuPost(null);
+            setTimeout(() => setEditPost(target), 250);
+          },
+        },
+        {
+          key: 'delete',
+          label: 'Törlés',
+          icon: 'trash-outline',
+          destructive: true,
+          onPress: () => {
+            const target = menuPost;
+            setMenuPost(null);
+            setTimeout(() => setDeletePost(target), 250);
+          },
+        },
+      ]
+    : [];
 
   const myName = profile?.display_name ?? 'Én';
 
@@ -559,7 +632,7 @@ export function FeedTab({
                   accessibilityRole="button"
                   accessibilityLabel="Bejegyzés műveletei"
                   hitSlop={10}
-                  onPress={() => openPostActions(post)}
+                  onPress={() => setMenuPost(post)}
                 >
                   <Ionicons name="ellipsis-horizontal" size={20} color={palette.textMuted} />
                 </Pressable>
@@ -628,6 +701,34 @@ export function FeedTab({
         post={commentPost}
         onClose={() => setCommentPost(null)}
         onChanged={() => setVersion((current) => current + 1)}
+      />
+
+      <ActionSheet
+        visible={menuPost !== null}
+        title="Bejegyzés"
+        subtitle={menuPost?.body ? menuPost.body.slice(0, 60) : undefined}
+        actions={menuActions}
+        onClose={() => setMenuPost(null)}
+        palette={palette}
+      />
+      <ConfirmDialog
+        visible={deletePost !== null}
+        title="Bejegyzés törlése"
+        message="Biztosan törlöd ezt a bejegyzést?"
+        onConfirm={() => void confirmDeletePost()}
+        onCancel={() => setDeletePost(null)}
+        palette={palette}
+      />
+      <ConfirmDialog
+        visible={notice !== null}
+        title={notice?.title ?? ''}
+        message={notice?.message ?? ''}
+        confirmLabel="Rendben"
+        destructive={false}
+        hideCancel
+        onConfirm={() => setNotice(null)}
+        onCancel={() => setNotice(null)}
+        palette={palette}
       />
     </View>
   );

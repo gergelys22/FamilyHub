@@ -1,3 +1,4 @@
+import { ActionSheet, ConfirmDialog, type SheetAction } from '@/components/action-sheet';
 import DateTimeField from '@/components/date-time-field';
 import { ScreenCloseButton } from '@/components/screen-close-button';
 import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
@@ -11,6 +12,7 @@ import {
   setFamilyTaskCompleted,
   type FamilyTask,
 } from '@/services/family-content';
+import { updateFamilyTask } from '@/services/tasks-manage';
 import { formatPickerValue, parseLocalDateTime } from '@/utils/event-date-time';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,7 +20,6 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -70,6 +71,14 @@ export default function TasksScreen() {
   const [dueDate, setDueDate] = useState('');
   const [dueTime, setDueTime] = useState('18:00');
   const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<{ title: string; message: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<FamilyTask | null>(null);
+  const [menuTarget, setMenuTarget] = useState<FamilyTask | null>(null);
+  const [editing, setEditing] = useState<FamilyTask | null>(null);
+
+  function notify(title: string, message: string) {
+    setNotice({ title, message });
+  }
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [pendingItems, setPendingItems] = useState<
     {
@@ -98,7 +107,7 @@ export default function TasksScreen() {
       try {
         setItems(await getFamilyTasks(id, type));
       } catch (error) {
-        Alert.alert('Betöltés sikertelen', error instanceof Error ? error.message : 'Próbáld újra.');
+        notify('Betöltés sikertelen', error instanceof Error ? error.message : 'Próbáld újra.');
       } finally {
         setLoading(false);
       }
@@ -127,7 +136,7 @@ export default function TasksScreen() {
       setMembers(nextMembers);
       setItems(nextItems);
     } catch (error) {
-      Alert.alert('Hiba', error instanceof Error ? error.message : 'A családi adatok betöltése sikertelen.');
+      notify('Hiba', error instanceof Error ? error.message : 'A családi adatok betöltése sikertelen.');
     } finally {
       setLoading(false);
     }
@@ -144,7 +153,26 @@ export default function TasksScreen() {
     void loadItems(familyId, type);
   }
 
+  function openEditForm(item: FamilyTask) {
+    setEditing(item);
+    setTitle(item.title);
+    setDetail(item.detail ?? '');
+    setQuantity(item.quantity ?? '');
+    setAssignedToProfileId(item.assigned_to_profile_id);
+    if (item.due_at) {
+      const due = new Date(item.due_at);
+      setDueDate(formatPickerValue(due, 'date'));
+      setDueTime(formatPickerValue(due, 'time'));
+    } else {
+      setDueDate('');
+      setDueTime('18:00');
+    }
+    setPendingItems([]);
+    setVisible(true);
+  }
+
   function openCreateForm() {
+    setEditing(null);
     setTitle('');
     setDetail('');
     setQuantity('');
@@ -174,12 +202,12 @@ export default function TasksScreen() {
 
   function addToBatch() {
     if (!title.trim()) {
-      Alert.alert('Hiányzó adat', 'Adj meg egy címet a hozzáadni kívánt elemhez.');
+      notify('Hiányzó adat', 'Adj meg egy címet a hozzáadni kívánt elemhez.');
       return;
     }
     const item = buildCurrentItem();
     if (!item) {
-      Alert.alert('Hibás határidő', 'Ellenőrizd a dátumot és az időpontot.');
+      notify('Hibás határidő', 'Ellenőrizd a dátumot és az időpontot.');
       return;
     }
     setPendingItems((current) => [...current, item]);
@@ -190,17 +218,41 @@ export default function TasksScreen() {
 
   async function save() {
     if (!familyId || !profile?.id) return;
+    if (editing) {
+      if (!title.trim()) {
+        notify('Hiányzó adat', 'Adj meg egy címet.');
+        return;
+      }
+      const edited = buildCurrentItem();
+      if (!edited) {
+        notify('Hibás határidő', 'Ellenőrizd a dátumot és az időpontot.');
+        return;
+      }
+      setBusy(true);
+      try {
+        await updateFamilyTask(editing.id, edited);
+        setVisible(false);
+        setEditing(null);
+        await loadItems(familyId, listType);
+      } catch (error) {
+        notify('Mentés sikertelen', error instanceof Error ? error.message : 'Próbáld újra.');
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+
     const itemsToSave = [...pendingItems];
     if (title.trim()) {
       const currentItem = buildCurrentItem();
       if (!currentItem) {
-        Alert.alert('Hibás határidő', 'Ellenőrizd a dátumot és az időpontot.');
+        notify('Hibás határidő', 'Ellenőrizd a dátumot és az időpontot.');
         return;
       }
       itemsToSave.push(currentItem);
     }
     if (itemsToSave.length === 0) {
-      Alert.alert('Hiányzó adat', 'Adj meg legalább egy elemet a mentéshez.');
+      notify('Hiányzó adat', 'Adj meg legalább egy elemet a mentéshez.');
       return;
     }
 
@@ -221,7 +273,7 @@ export default function TasksScreen() {
       setVisible(false);
       await loadItems(familyId, listType);
     } catch (error) {
-      Alert.alert('Mentés sikertelen', error instanceof Error ? error.message : 'Próbáld újra.');
+      notify('Mentés sikertelen', error instanceof Error ? error.message : 'Próbáld újra.');
     } finally {
       setBusy(false);
     }
@@ -234,25 +286,61 @@ export default function TasksScreen() {
         current.map((entry) => (entry.id === item.id ? { ...entry, completed: !entry.completed } : entry)),
       );
     } catch (error) {
-      Alert.alert('Frissítés sikertelen', error instanceof Error ? error.message : 'Próbáld újra.');
+      notify('Frissítés sikertelen', error instanceof Error ? error.message : 'Próbáld újra.');
     }
   }
 
-  function remove(item: FamilyTask) {
-    Alert.alert('Elem törlése', `Törlöd: ${item.title}?`, [
-      { text: 'Mégse', style: 'cancel' },
-      {
-        text: 'Törlés',
-        style: 'destructive',
-        onPress: () =>
-          void deleteFamilyTask(item.id)
-            .then(() => loadItems())
-            .catch((error) =>
-              Alert.alert('Hiba', error instanceof Error ? error.message : 'A törlés sikertelen.'),
-            ),
-      },
-    ]);
+  async function confirmDelete() {
+    const item = deleteTarget;
+    if (!item) return;
+    setDeleteTarget(null);
+    try {
+      await deleteFamilyTask(item.id);
+      await loadItems();
+    } catch (error) {
+      notify('Hiba', error instanceof Error ? error.message : 'A törlés sikertelen.');
+    }
   }
+
+  const menuActions: SheetAction[] = menuTarget
+    ? [
+        {
+          key: 'edit',
+          label: 'Szerkesztés',
+          icon: 'create-outline',
+          onPress: () => {
+            const item = menuTarget;
+            setMenuTarget(null);
+            setTimeout(() => openEditForm(item), 250);
+          },
+        },
+        {
+          key: 'delete',
+          label: 'Törlés',
+          icon: 'trash-outline',
+          destructive: true,
+          onPress: () => {
+            const item = menuTarget;
+            setMenuTarget(null);
+            setTimeout(() => setDeleteTarget(item), 250);
+          },
+        },
+      ]
+    : [];
+
+  const noticeDialog = (
+    <ConfirmDialog
+      visible={notice !== null}
+      title={notice?.title ?? ''}
+      message={notice?.message ?? ''}
+      confirmLabel="Rendben"
+      destructive={false}
+      hideCancel
+      onConfirm={() => setNotice(null)}
+      onCancel={() => setNotice(null)}
+      palette={palette}
+    />
+  );
 
   const isTask = listType === 'task';
   const openItems = items.filter((item) => !item.completed);
@@ -264,19 +352,17 @@ export default function TasksScreen() {
     const overdue = Boolean(item.due_at && !item.completed && new Date(item.due_at).getTime() < nowMs);
 
     return (
-      <Pressable
+      <View
         key={item.id}
+        style={[styles.card, overdue && styles.cardOverdue, item.completed && styles.cardDone]}
+      >
+      <Pressable
         accessibilityRole="checkbox"
         accessibilityState={{ checked: item.completed }}
         accessibilityLabel={item.title}
         onPress={() => void toggle(item)}
-        onLongPress={() => remove(item)}
-        style={({ pressed }) => [
-          styles.card,
-          overdue && styles.cardOverdue,
-          item.completed && styles.cardDone,
-          pressed && styles.pressed,
-        ]}
+        onLongPress={() => setMenuTarget(item)}
+        style={({ pressed }) => [styles.cardMain, pressed && styles.pressed]}
       >
         <View style={[styles.checkbox, item.completed && styles.checkboxDone]}>
           {item.completed ? <Ionicons name="checkmark" size={17} color={palette.white} /> : null}
@@ -331,16 +417,17 @@ export default function TasksScreen() {
             ) : null}
           </View>
         </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`${item.title} törlése`}
-          onPress={() => remove(item)}
-          hitSlop={10}
-          style={styles.deleteButton}
-        >
-          <Ionicons name="trash-outline" size={18} color={palette.textMuted} />
-        </Pressable>
       </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${item.title} műveletei`}
+        onPress={() => setMenuTarget(item)}
+        hitSlop={10}
+        style={styles.deleteButton}
+      >
+        <Ionicons name="ellipsis-vertical" size={19} color={palette.textMuted} />
+      </Pressable>
+      </View>
     );
   }
 
@@ -444,7 +531,7 @@ export default function TasksScreen() {
                 {doneItems.map(renderItem)}
               </>
             ) : null}
-            <Text style={styles.hint}>Koppints a pipához a kipipáláshoz, nyomd hosszan a törléshez.</Text>
+            <Text style={styles.hint}>Koppints a pipához a kipipáláshoz, a ⋮ gombbal szerkesztheted vagy törölheted.</Text>
           </>
         )}
       </ScrollView>
@@ -470,7 +557,7 @@ export default function TasksScreen() {
               <View style={styles.modalIcon}>
                 <Ionicons name={isTask ? 'checkmark-done' : 'cart'} size={20} color={palette.primary} />
               </View>
-              <Text style={styles.modalTitle}>{isTask ? 'Új teendő' : 'Új bevásárlási tétel'}</Text>
+              <Text style={styles.modalTitle}>{editing ? (isTask ? 'Teendő szerkesztése' : 'Tétel szerkesztése') : isTask ? 'Új teendő' : 'Új bevásárlási tétel'}</Text>
             </View>
 
             <ScrollView
@@ -590,23 +677,45 @@ export default function TasksScreen() {
               <Pressable onPress={() => setVisible(false)} style={styles.cancel}>
                 <Text style={styles.cancelText}>Mégse</Text>
               </Pressable>
-              <Pressable disabled={busy} onPress={addToBatch} style={styles.addToBatch}>
-                <Ionicons name="add" size={17} color={palette.primary} />
-                <Text style={styles.addToBatchText}>Újabb elem</Text>
-              </Pressable>
+              {!editing ? (
+                <Pressable disabled={busy} onPress={addToBatch} style={styles.addToBatch}>
+                  <Ionicons name="add" size={17} color={palette.primary} />
+                  <Text style={styles.addToBatchText}>Újabb elem</Text>
+                </Pressable>
+              ) : null}
               <Pressable
                 disabled={busy}
                 onPress={() => void save()}
                 style={[styles.save, busy && styles.disabled]}
               >
                 <Text style={styles.saveText}>
-                  {busy ? 'Mentés...' : pendingItems.length > 0 ? 'Összes mentése' : 'Hozzáadás'}
+                  {busy ? 'Mentés...' : editing ? 'Mentés' : pendingItems.length > 0 ? 'Összes mentése' : 'Hozzáadás'}
                 </Text>
               </Pressable>
             </View>
           </View>
+          {visible ? noticeDialog : null}
         </KeyboardAvoidingView>
       </Modal>
+
+      <ActionSheet
+        visible={menuTarget !== null}
+        title={menuTarget?.title ?? ''}
+        subtitle={isTask ? 'Teendő' : 'Bevásárlási tétel'}
+        actions={menuActions}
+        onClose={() => setMenuTarget(null)}
+        palette={palette}
+      />
+
+      <ConfirmDialog
+        visible={deleteTarget !== null}
+        title="Elem törlése"
+        message={`Törlöd: ${deleteTarget?.title ?? ''}?`}
+        onConfirm={() => void confirmDelete()}
+        onCancel={() => setDeleteTarget(null)}
+        palette={palette}
+      />
+      {!visible ? noticeDialog : null}
     </SafeAreaView>
   );
 }
@@ -735,7 +844,8 @@ function createStyles(palette: Palette) {
       backgroundColor: '#C9D8E5',
     },
     miniAvatarText: { color: '#243447', fontSize: 9, fontWeight: '900' },
-    deleteButton: { padding: 4 },
+    cardMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+    deleteButton: { padding: 8 },
     allDone: {
       padding: spacing.md,
       flexDirection: 'row',

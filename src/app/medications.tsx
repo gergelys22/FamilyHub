@@ -1,4 +1,4 @@
-
+import { ActionSheet, ConfirmDialog, type SheetAction } from '@/components/action-sheet';
 import { ScreenCloseButton } from '@/components/screen-close-button';
 import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
@@ -14,7 +14,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import {
-  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -59,6 +58,13 @@ export default function MedicationsScreen() {
   const [isActive, setIsActive] = useState(true);
   const [pendingItems, setPendingItems] = useState<PendingMedication[]>([]);
   const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<{ title: string; message: string } | null>(null);
+  const [menuTarget, setMenuTarget] = useState<Medication | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Medication | null>(null);
+
+  function notify(title: string, message: string) {
+    setNotice({ title, message });
+  }
   const [search, setSearch] = useState('');
   const [filterVisible, setFilterVisible] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
@@ -85,7 +91,7 @@ export default function MedicationsScreen() {
         setItems(medications);
       })
       .catch((error) =>
-        Alert.alert(
+        notify(
           'Betöltés sikertelen',
           error instanceof Error ? error.message : 'Próbáld újra.',
         ),
@@ -141,14 +147,14 @@ export default function MedicationsScreen() {
 
   function addToBatch() {
     if (!name.trim() || !dosage.trim()) {
-      Alert.alert('Hiányzó adat', 'Add meg a gyógyszer nevét és adagját.');
+      notify('Hiányzó adat', 'Add meg a gyógyszer nevét és adagját.');
       return;
     }
 
     const item = buildCurrentItem();
 
     if (item === false) {
-      Alert.alert(
+      notify(
         'Hibás dátum',
         'Az időpontnál használd a 2026-10-11 09:30, a lejáratnál a 2026-10-11 formátumot.',
       );
@@ -172,12 +178,12 @@ export default function MedicationsScreen() {
       const item = buildCurrentItem();
 
       if (item === null) {
-        Alert.alert('Hiányzó adat', 'Add meg a gyógyszer nevét és adagját.');
+        notify('Hiányzó adat', 'Add meg a gyógyszer nevét és adagját.');
         return;
       }
 
       if (item === false) {
-        Alert.alert('Hibás dátum', 'Ellenőrizd az időpontok formátumát.');
+        notify('Hibás dátum', 'Ellenőrizd az időpontok formátumát.');
         return;
       }
 
@@ -202,7 +208,7 @@ export default function MedicationsScreen() {
         await reload();
         setVisible(false);
       } catch (error) {
-        Alert.alert('Mentés sikertelen', error instanceof Error ? error.message : 'Próbáld újra.');
+        notify('Mentés sikertelen', error instanceof Error ? error.message : 'Próbáld újra.');
       } finally {
         setBusy(false);
       }
@@ -216,7 +222,7 @@ export default function MedicationsScreen() {
       const current = buildCurrentItem();
 
       if (current === false) {
-        Alert.alert('Hibás dátum', 'Ellenőrizd az időpontok formátumát.');
+        notify('Hibás dátum', 'Ellenőrizd az időpontok formátumát.');
         return;
       }
 
@@ -224,7 +230,7 @@ export default function MedicationsScreen() {
     }
 
     if (itemsToSave.length === 0) {
-      Alert.alert('Hiányzó adat', 'Adj meg legalább egy gyógyszert.');
+      notify('Hiányzó adat', 'Adj meg legalább egy gyógyszert.');
       return;
     }
 
@@ -250,27 +256,98 @@ export default function MedicationsScreen() {
       await reload();
       setVisible(false);
     } catch (error) {
-      Alert.alert('Mentés sikertelen', error instanceof Error ? error.message : 'Próbáld újra.');
+      notify('Mentés sikertelen', error instanceof Error ? error.message : 'Próbáld újra.');
     } finally {
       setBusy(false);
     }
   }
 
-  function remove(item: Medication) {
-    Alert.alert('Gyógyszer törlése', `Törlöd a(z) ${item.name} gyógyszert?`, [
-      { text: 'Mégse', style: 'cancel' },
-      {
-        text: 'Törlés',
-        style: 'destructive',
-        onPress: () =>
-          void deleteMedication(item.id)
-            .then(() => reload())
-            .catch((error) =>
-              Alert.alert('Hiba', error instanceof Error ? error.message : 'A törlés sikertelen.'),
-            ),
-      },
-    ]);
+  async function confirmDelete() {
+    const item = deleteTarget;
+    if (!item) return;
+    setDeleteTarget(null);
+
+    try {
+      await deleteMedication(item.id);
+      await reload();
+    } catch (error) {
+      notify('Hiba', error instanceof Error ? error.message : 'A törlés sikertelen.');
+    }
   }
+
+  async function toggleActive(item: Medication) {
+    if (!familyId || !profile?.id) return;
+
+    try {
+      await saveMedication({
+        id: item.id,
+        familyId,
+        profileId: profile.id,
+        personProfileId: item.person_profile_id,
+        name: item.name,
+        dosageText: item.dosage_text ?? '',
+        instructions: item.instructions ?? '',
+        nextAt: item.next_at,
+        frequency: item.frequency ?? 'Napi',
+        scheduleTime: item.schedule_time ?? '',
+        isActive: !item.is_active,
+        endsOn: item.ends_on,
+      });
+      await reload();
+    } catch (error) {
+      notify('Mentés sikertelen', error instanceof Error ? error.message : 'Próbáld újra.');
+    }
+  }
+
+  const menuActions: SheetAction[] = menuTarget
+    ? [
+        {
+          key: 'edit',
+          label: 'Szerkesztés',
+          icon: 'create-outline',
+          onPress: () => {
+            const item = menuTarget;
+            setMenuTarget(null);
+            setTimeout(() => openForm(item), 250);
+          },
+        },
+        {
+          key: 'toggle',
+          label: menuTarget.is_active ? 'Inaktiválás' : 'Újra aktiválás',
+          icon: menuTarget.is_active ? 'pause-circle-outline' : 'play-circle-outline',
+          onPress: () => {
+            const item = menuTarget;
+            setMenuTarget(null);
+            void toggleActive(item);
+          },
+        },
+        {
+          key: 'delete',
+          label: 'Törlés',
+          icon: 'trash-outline',
+          destructive: true,
+          onPress: () => {
+            const item = menuTarget;
+            setMenuTarget(null);
+            setTimeout(() => setDeleteTarget(item), 250);
+          },
+        },
+      ]
+    : [];
+
+  const noticeDialog = (
+    <ConfirmDialog
+      visible={notice !== null}
+      title={notice?.title ?? ''}
+      message={notice?.message ?? ''}
+      confirmLabel="Rendben"
+      destructive={false}
+      hideCancel
+      onConfirm={() => setNotice(null)}
+      onCancel={() => setNotice(null)}
+      palette={palette}
+    />
+  );
 
   const filteredItems = [...items]
     .filter((item) => {
@@ -312,6 +389,7 @@ export default function MedicationsScreen() {
   ) {
     return (
       <Pressable
+        key={label}
         onPress={onPress}
         style={[
           styles.option,
@@ -451,10 +529,8 @@ export default function MedicationsScreen() {
           const person = members.find((member) => member.profile_id === item.person_profile_id);
 
           return (
-            <Pressable
+            <View
               key={item.id}
-              onPress={() => openForm(item)}
-              onLongPress={() => remove(item)}
               style={[
                 styles.card,
                 {
@@ -463,6 +539,13 @@ export default function MedicationsScreen() {
                 },
               ]}
             >
+              <Pressable
+                onPress={() => openForm(item)}
+                onLongPress={() => setMenuTarget(item)}
+                style={styles.cardMain}
+                accessibilityRole="button"
+                accessibilityLabel={`${item.name} szerkesztése`}
+              >
               <View
                 style={[
                   styles.cardIcon,
@@ -558,10 +641,18 @@ export default function MedicationsScreen() {
                 ) : null}
               </View>
 
-              <View style={styles.cardAction}>
-                <Ionicons name="chevron-forward" size={19} color={palette.textMuted} />
-              </View>
-            </Pressable>
+              </Pressable>
+
+              <Pressable
+                onPress={() => setMenuTarget(item)}
+                hitSlop={8}
+                style={styles.cardAction}
+                accessibilityRole="button"
+                accessibilityLabel={`${item.name} műveletei`}
+              >
+                <Ionicons name="ellipsis-vertical" size={20} color={palette.textMuted} />
+              </Pressable>
+            </View>
           );
         })}
 
@@ -588,7 +679,7 @@ export default function MedicationsScreen() {
         ) : null}
 
         <Text style={[styles.hint, { color: palette.textMuted }]}>
-          Tipp: koppints egy gyógyszerre a szerkesztéshez, vagy tartsd hosszan lenyomva a törléshez.
+          Tipp: koppints egy gyógyszerre a szerkesztéshez, vagy használd a ⋮ gombot további műveletekhez.
         </Text>
       </ScrollView>
 
@@ -850,8 +941,29 @@ export default function MedicationsScreen() {
               </View>
             </ScrollView>
           </View>
+          {visible ? noticeDialog : null}
         </View>
       </Modal>
+
+      <ActionSheet
+        visible={menuTarget !== null}
+        title={menuTarget?.name ?? ''}
+        subtitle={menuTarget?.dosage_text ?? undefined}
+        actions={menuActions}
+        onClose={() => setMenuTarget(null)}
+        palette={palette}
+      />
+
+      <ConfirmDialog
+        visible={deleteTarget !== null}
+        title="Gyógyszer törlése"
+        message={`Törlöd a(z) ${deleteTarget?.name ?? ''} gyógyszert?`}
+        onConfirm={() => void confirmDelete()}
+        onCancel={() => setDeleteTarget(null)}
+        palette={palette}
+      />
+
+      {!visible ? noticeDialog : null}
     </SafeAreaView>
   );
 }
@@ -998,7 +1110,8 @@ const styles = StyleSheet.create({
   detailRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
   detailText: { fontSize: 10, fontWeight: '500' },
   instructions: { marginTop: 3, fontSize: 10, lineHeight: 15 },
-  cardAction: { paddingTop: 12 },
+  cardMain: { flex: 1, flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  cardAction: { width: 32, height: 44, alignItems: 'center', justifyContent: 'center' },
 
   emptyCard: {
     padding: spacing.xl,

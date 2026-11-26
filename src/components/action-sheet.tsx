@@ -95,6 +95,7 @@ export function ConfirmDialog({
   message,
   confirmLabel = 'Törlés',
   destructive = true,
+  hideCancel = false,
   onConfirm,
   onCancel,
   palette,
@@ -104,6 +105,8 @@ export function ConfirmDialog({
   message: string;
   confirmLabel?: string;
   destructive?: boolean;
+  /** Csak egy gombos tájékoztató ablak. */
+  hideCancel?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
   palette: Palette;
@@ -115,11 +118,12 @@ export function ConfirmDialog({
         <Pressable accessibilityLabel="Bezárás" onPress={onCancel} style={StyleSheet.absoluteFill} />
         <View style={[styles.dialog, { backgroundColor: palette.surface, borderColor: palette.border }, shadows.floating]}>
           <View style={[styles.dialogIcon, { backgroundColor: `${accent}22` }]}>
-            <Ionicons name={destructive ? 'trash-outline' : 'help-circle-outline'} size={26} color={accent} />
+            <Ionicons name={hideCancel ? 'information-circle-outline' : destructive ? 'trash-outline' : 'help-circle-outline'} size={26} color={accent} />
           </View>
           <Text style={[styles.dialogTitle, { color: palette.textPrimary }]}>{title}</Text>
           <Text style={[styles.dialogMessage, { color: palette.textMuted }]}>{message}</Text>
           <View style={styles.dialogButtons}>
+            {hideCancel ? null : (
             <Pressable
               accessibilityRole="button"
               onPress={onCancel}
@@ -127,6 +131,7 @@ export function ConfirmDialog({
             >
               <Text style={[styles.dialogButtonText, { color: palette.textSecondary }]}>Mégse</Text>
             </Pressable>
+            )}
             <Pressable
               accessibilityRole="button"
               onPress={onConfirm}

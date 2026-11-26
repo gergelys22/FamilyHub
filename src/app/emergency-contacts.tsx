@@ -1,4 +1,4 @@
-
+import { ActionSheet, ConfirmDialog, type SheetAction } from '@/components/action-sheet';
 import { ScreenCloseButton } from '@/components/screen-close-button';
 import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
@@ -16,7 +16,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Linking,
   Modal,
@@ -241,7 +240,7 @@ function createStyles(palette: Palette, isDark: boolean) {
       backgroundColor: teal,
       ...shadows.floating,
     },
-    deleteButton: { padding: 2 },
+    deleteButton: { padding: 6 },
     emptyCard: {
       padding: spacing.xl,
       alignItems: 'center',
@@ -430,6 +429,13 @@ export default function EmergencyContactsScreen() {
   const [notes, setNotes] = useState('');
   const [pendingItems, setPendingItems] = useState<PendingContact[]>([]);
   const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<{ title: string; message: string } | null>(null);
+  const [menuTarget, setMenuTarget] = useState<EmergencyContact | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<EmergencyContact | null>(null);
+
+  function notify(title: string, message: string) {
+    setNotice({ title, message });
+  }
   const [search, setSearch] = useState('');
   const [filterVisible, setFilterVisible] = useState(false);
   const [primaryFilter, setPrimaryFilter] = useState<'all' | 'primary' | 'regular'>('all');
@@ -457,7 +463,7 @@ export default function EmergencyContactsScreen() {
       })
       .catch((error) => {
         if (active) {
-          Alert.alert(
+          notify(
             'Betöltés sikertelen',
             error instanceof Error ? error.message : 'Próbáld újra.',
           );
@@ -550,7 +556,7 @@ export default function EmergencyContactsScreen() {
     const item = buildCurrentItem();
 
     if (!item) {
-      Alert.alert('Hiányzó adat', 'Add meg a kapcsolattartó nevét és telefonszámát.');
+      notify('Hiányzó adat', 'Add meg a kapcsolattartó nevét és telefonszámát.');
       return;
     }
 
@@ -569,7 +575,7 @@ export default function EmergencyContactsScreen() {
       const item = buildCurrentItem();
 
       if (!item) {
-        Alert.alert('Hiányzó adat', 'Add meg a kapcsolattartó nevét és telefonszámát.');
+        notify('Hiányzó adat', 'Add meg a kapcsolattartó nevét és telefonszámát.');
         return;
       }
 
@@ -592,7 +598,7 @@ export default function EmergencyContactsScreen() {
         await reload();
         setVisible(false);
       } catch (error) {
-        Alert.alert(
+        notify(
           'Mentés sikertelen',
           error instanceof Error ? error.message : 'Próbáld újra.',
         );
@@ -611,7 +617,7 @@ export default function EmergencyContactsScreen() {
     }
 
     if (itemsToSave.length === 0) {
-      Alert.alert('Hiányzó adat', 'Adj meg legalább egy sürgősségi kapcsolatot.');
+      notify('Hiányzó adat', 'Adj meg legalább egy sürgősségi kapcsolatot.');
       return;
     }
 
@@ -635,7 +641,7 @@ export default function EmergencyContactsScreen() {
       await reload();
       setVisible(false);
     } catch (error) {
-      Alert.alert(
+      notify(
         'Mentés sikertelen',
         error instanceof Error ? error.message : 'Próbáld újra.',
       );
@@ -644,23 +650,16 @@ export default function EmergencyContactsScreen() {
     }
   }
 
-  function remove(item: EmergencyContact) {
-    Alert.alert('Kapcsolat törlése', `Törlöd: ${item.name}?`, [
-      { text: 'Mégse', style: 'cancel' },
-      {
-        text: 'Törlés',
-        style: 'destructive',
-        onPress: () =>
-          void deleteEmergencyContact(item.id)
-            .then(() => reload())
-            .catch((error) =>
-              Alert.alert(
-                'Hiba',
-                error instanceof Error ? error.message : 'A törlés sikertelen.',
-              ),
-            ),
-      },
-    ]);
+  async function confirmDelete() {
+    const item = deleteTarget;
+    if (!item) return;
+    setDeleteTarget(null);
+    try {
+      await deleteEmergencyContact(item.id);
+      await reload();
+    } catch (error) {
+      notify('Hiba', error instanceof Error ? error.message : 'A törlés sikertelen.');
+    }
   }
 
   async function call(number: string) {
@@ -669,9 +668,59 @@ export default function EmergencyContactsScreen() {
     try {
       await Linking.openURL(url);
     } catch {
-      Alert.alert('Nem sikerült hívni', 'A készülék nem tudja elindítani a tárcsázást.');
+      notify('Nem sikerült hívni', 'A készülék nem tudja elindítani a tárcsázást.');
     }
   }
+
+  const menuActions: SheetAction[] = menuTarget
+    ? [
+        {
+          key: 'call',
+          label: 'Hívás',
+          icon: 'call-outline',
+          onPress: () => {
+            const item = menuTarget;
+            setMenuTarget(null);
+            void call(item.phone);
+          },
+        },
+        {
+          key: 'edit',
+          label: 'Szerkesztés',
+          icon: 'create-outline',
+          onPress: () => {
+            const item = menuTarget;
+            setMenuTarget(null);
+            setTimeout(() => openForm(item), 250);
+          },
+        },
+        {
+          key: 'delete',
+          label: 'Törlés',
+          icon: 'trash-outline',
+          destructive: true,
+          onPress: () => {
+            const item = menuTarget;
+            setMenuTarget(null);
+            setTimeout(() => setDeleteTarget(item), 250);
+          },
+        },
+      ]
+    : [];
+
+  const noticeDialog = (
+    <ConfirmDialog
+      visible={notice !== null}
+      title={notice?.title ?? ''}
+      message={notice?.message ?? ''}
+      confirmLabel="Rendben"
+      destructive={false}
+      hideCancel
+      onConfirm={() => setNotice(null)}
+      onCancel={() => setNotice(null)}
+      palette={palette}
+    />
+  );
 
   const tealGradient: [string, string] = isDark
     ? ['#157A6C', '#0E4A43']
@@ -800,6 +849,7 @@ export default function EmergencyContactsScreen() {
             <Pressable
               style={styles.flex}
               onPress={() => openForm(item)}
+              onLongPress={() => setMenuTarget(item)}
               accessibilityRole="button"
               accessibilityLabel={`${item.name} szerkesztése`}
             >
@@ -845,15 +895,15 @@ export default function EmergencyContactsScreen() {
               </Pressable>
 
               <Pressable
-                onPress={() => remove(item)}
+                onPress={() => setMenuTarget(item)}
                 accessibilityRole="button"
-                accessibilityLabel={`${item.name} törlése`}
+                accessibilityLabel={`${item.name} műveletei`}
                 hitSlop={10}
                 style={styles.deleteButton}
               >
                 <Ionicons
-                  name="trash-outline"
-                  size={16}
+                  name="ellipsis-horizontal"
+                  size={20}
                   color={palette.textMuted}
                 />
               </Pressable>
@@ -890,7 +940,7 @@ export default function EmergencyContactsScreen() {
 
         {visibleItems.length > 0 ? (
           <Text style={styles.hint}>
-            Koppints a kapcsolatra a szerkesztéshez.
+            Koppints a kapcsolatra a szerkesztéshez, a ⋮ gombbal további műveletek érhetők el.
           </Text>
         ) : null}
       </ScrollView>
@@ -1254,8 +1304,28 @@ export default function EmergencyContactsScreen() {
               </View>
             </ScrollView>
           </View>
+          {visible ? noticeDialog : null}
         </KeyboardAvoidingView>
       </Modal>
+
+      <ActionSheet
+        visible={menuTarget !== null}
+        title={menuTarget?.name ?? ''}
+        subtitle={menuTarget?.phone}
+        actions={menuActions}
+        onClose={() => setMenuTarget(null)}
+        palette={palette}
+      />
+
+      <ConfirmDialog
+        visible={deleteTarget !== null}
+        title="Kapcsolat törlése"
+        message={`Törlöd: ${deleteTarget?.name ?? ''}?`}
+        onConfirm={() => void confirmDelete()}
+        onCancel={() => setDeleteTarget(null)}
+        palette={palette}
+      />
+      {!visible ? noticeDialog : null}
     </SafeAreaView>
   );
 }

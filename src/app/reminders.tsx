@@ -1,22 +1,27 @@
-import { colors, radius, shadows, spacing , darkColors } from '@/constants/theme';
+import { ActionSheet, ConfirmDialog, type SheetAction } from '@/components/action-sheet';
+import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
 
-import { useTheme } from '@/providers/theme-provider';
+import { ScreenCloseButton } from '@/components/screen-close-button';
 import { useAuth } from '@/providers/auth-provider';
+import { useTheme } from '@/providers/theme-provider';
 import { getMyFamilies } from '@/services/families';
 import { deleteReminder, getReminders, type Reminder, saveReminder, saveReminders } from '@/services/family-content';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ScreenCloseButton } from '@/components/screen-close-button';
 
 export default function RemindersScreen() {
   const router = useRouter(); const { profile } = useAuth(); const [familyId, setFamilyId] = useState<string | null>(null); const [items, setItems] = useState<Reminder[]>([]); const [visible, setVisible] = useState(false); const [editing, setEditing] = useState<Reminder | null>(null); const [title, setTitle] = useState(''); const [detail, setDetail] = useState(''); const [dueAt, setDueAt] = useState(''); const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<{ title: string; message: string } | null>(null);
+  const [menuTarget, setMenuTarget] = useState<Reminder | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Reminder | null>(null);
+  function notify(title: string, message: string) { setNotice({ title, message }); }
   const { isDark } = useTheme(); const palette = isDark ? darkColors : colors;
   const [pendingItems, setPendingItems] = useState<{ title: string; detail: string; dueAt: string }[]>([]);
   async function reload(id = familyId) { if (id) setItems(await getReminders(id)); }
-  useEffect(() => { void getMyFamilies().then((families) => { const id = families[0]?.id ?? null; setFamilyId(id); void reload(id); }).catch((error) => Alert.alert('Hiba', error.message)); }, []);
+  useEffect(() => { void getMyFamilies().then((families) => { const id = families[0]?.id ?? null; setFamilyId(id); void reload(id); }).catch((error) => notify('Hiba', error instanceof Error ? error.message : 'Próbáld újra.')); }, []);
   function openForm(item?: Reminder) {
     setEditing(item ?? null);
     setTitle(item?.title ?? '');
@@ -35,12 +40,12 @@ export default function RemindersScreen() {
 
   function addToBatch() {
     if (!title.trim() || !dueAt.trim()) {
-      Alert.alert('Hiányzó adat', 'Add meg a címet és az időpontot.');
+      notify('Hiányzó adat', 'Add meg a címet és az időpontot.');
       return;
     }
     const item = buildCurrentItem();
     if (!item) {
-      Alert.alert('Hibás időpont', 'Használd ezt a formátumot: 2026-10-11 09:30');
+      notify('Hibás időpont', 'Használd ezt a formátumot: 2026-10-11 09:30');
       return;
     }
     setPendingItems((current) => [...current, item]);
@@ -53,7 +58,7 @@ export default function RemindersScreen() {
     if (editing) {
       const item = buildCurrentItem();
       if (!item) {
-        Alert.alert(!title.trim() || !dueAt.trim() ? 'Hiányzó adat' : 'Hibás időpont',
+        notify(!title.trim() || !dueAt.trim() ? 'Hiányzó adat' : 'Hibás időpont',
           !title.trim() || !dueAt.trim() ? 'Add meg a címet és az időpontot.' : 'Használd ezt a formátumot: 2026-10-11 09:30');
         return;
       }
@@ -63,7 +68,7 @@ export default function RemindersScreen() {
         await reload();
         setVisible(false);
       } catch (error) {
-        Alert.alert('Mentés sikertelen', error instanceof Error ? error.message : 'Próbáld újra.');
+        notify('Mentés sikertelen', error instanceof Error ? error.message : 'Próbáld újra.');
       } finally {
         setBusy(false);
       }
@@ -74,13 +79,13 @@ export default function RemindersScreen() {
     if (title.trim()) {
       const current = buildCurrentItem();
       if (!current) {
-        Alert.alert('Hibás időpont', 'Használd ezt a formátumot: 2026-10-11 09:30');
+        notify('Hibás időpont', 'Használd ezt a formátumot: 2026-10-11 09:30');
         return;
       }
       if (current) itemsToSave.push(current);
     }
     if (itemsToSave.length === 0) {
-      Alert.alert('Hiányzó adat', 'Adj meg legalább egy emlékeztetőt.');
+      notify('Hiányzó adat', 'Adj meg legalább egy emlékeztetőt.');
       return;
     }
     setBusy(true);
@@ -95,12 +100,44 @@ export default function RemindersScreen() {
       await reload();
       setVisible(false);
     } catch (error) {
-      Alert.alert('Mentés sikertelen', error instanceof Error ? error.message : 'Próbáld újra.');
+      notify('Mentés sikertelen', error instanceof Error ? error.message : 'Próbáld újra.');
     } finally {
       setBusy(false);
     }
   }
-  function remove(item: Reminder) { Alert.alert('Emlékeztető törlése', `Törlöd: ${item.title}?`, [{ text: 'Mégse', style: 'cancel' }, { text: 'Törlés', style: 'destructive', onPress: () => void deleteReminder(item.id).then(() => reload()).catch((error) => Alert.alert('Hiba', error.message)) }]); }
+  async function confirmDelete() {
+    const item = deleteTarget;
+    if (!item) return;
+    setDeleteTarget(null);
+    try {
+      await deleteReminder(item.id);
+      await reload();
+    } catch (error) {
+      notify('Hiba', error instanceof Error ? error.message : 'A törlés sikertelen.');
+    }
+  }
+
+  const menuActions: SheetAction[] = menuTarget
+    ? [
+        { key: 'edit', label: 'Szerkesztés', icon: 'create-outline', onPress: () => { const item = menuTarget; setMenuTarget(null); setTimeout(() => openForm(item), 250); } },
+        { key: 'delete', label: 'Törlés', icon: 'trash-outline', destructive: true, onPress: () => { const item = menuTarget; setMenuTarget(null); setTimeout(() => setDeleteTarget(item), 250); } },
+      ]
+    : [];
+
+  const noticeDialog = (
+    <ConfirmDialog
+      visible={notice !== null}
+      title={notice?.title ?? ''}
+      message={notice?.message ?? ''}
+      confirmLabel="Rendben"
+      destructive={false}
+      hideCancel
+      onConfirm={() => setNotice(null)}
+      onCancel={() => setNotice(null)}
+      palette={palette}
+    />
+  );
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: palette.background }]} edges={['top']}>
       <View style={styles.header}>
@@ -118,15 +155,31 @@ export default function RemindersScreen() {
           <Text style={styles.count}>{items.length}</Text>
         </View>
         {items.map((item) => (
-          <Pressable key={item.id} onPress={() => openForm(item)} onLongPress={() => remove(item)} style={[styles.card, { backgroundColor: palette.surface }]}>
-            <View style={[styles.icon, { backgroundColor: palette.primarySoft }]}><Ionicons name="alarm-outline" size={24} color={colors.primary} /></View>
-            <View style={styles.flex}>
-              <Text style={[styles.cardTitle, { color: palette.textPrimary }]}>{item.title}</Text>
-              <Text style={[styles.cardText, { color: palette.textSecondary }]}>{new Date(item.due_at).toLocaleString('hu-HU')}</Text>
-              {item.detail ? <Text style={[styles.meta, { color: palette.textMuted }]}>{item.detail}</Text> : null}
-            </View>
-            <Ionicons name="create-outline" size={20} color={colors.primary} />
-          </Pressable>
+          <View key={item.id} style={[styles.card, { backgroundColor: palette.surface }]}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`${item.title} szerkesztése`}
+              onPress={() => openForm(item)}
+              onLongPress={() => setMenuTarget(item)}
+              style={styles.cardMain}
+            >
+              <View style={[styles.icon, { backgroundColor: palette.primarySoft }]}><Ionicons name="alarm-outline" size={24} color={colors.primary} /></View>
+              <View style={styles.flex}>
+                <Text style={[styles.cardTitle, { color: palette.textPrimary }]}>{item.title}</Text>
+                <Text style={[styles.cardText, { color: palette.textSecondary }]}>{new Date(item.due_at).toLocaleString('hu-HU')}</Text>
+                {item.detail ? <Text style={[styles.meta, { color: palette.textMuted }]}>{item.detail}</Text> : null}
+              </View>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`${item.title} műveletei`}
+              onPress={() => setMenuTarget(item)}
+              hitSlop={8}
+              style={styles.moreButton}
+            >
+              <Ionicons name="ellipsis-vertical" size={20} color={palette.textMuted} />
+            </Pressable>
+          </View>
         ))}
         {items.length === 0 ? <Text style={[styles.empty, { color: palette.textMuted }]}>Még nincs emlékeztető rögzítve.</Text> : null}
       </ScrollView>
@@ -169,8 +222,27 @@ export default function RemindersScreen() {
               <Pressable disabled={busy} onPress={() => void save()} style={[styles.save, { backgroundColor: palette.primary }]}><Text style={styles.saveText}>{busy ? 'Mentés…' : !editing && pendingItems.length > 0 ? 'Összes mentése' : 'Mentés'}</Text></Pressable>
             </View>
           </View>
+          {visible ? noticeDialog : null}
         </View>
       </Modal>
+
+      <ActionSheet
+        visible={menuTarget !== null}
+        title={menuTarget?.title ?? ''}
+        subtitle={menuTarget ? new Date(menuTarget.due_at).toLocaleString('hu-HU') : undefined}
+        actions={menuActions}
+        onClose={() => setMenuTarget(null)}
+        palette={palette}
+      />
+      <ConfirmDialog
+        visible={deleteTarget !== null}
+        title="Emlékeztető törlése"
+        message={`Törlöd: ${deleteTarget?.title ?? ''}?`}
+        onConfirm={() => void confirmDelete()}
+        onCancel={() => setDeleteTarget(null)}
+        palette={palette}
+      />
+      {!visible ? noticeDialog : null}
     </SafeAreaView>
   );
 }
@@ -190,6 +262,8 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 14, fontWeight: '900' },
   cardText: { fontSize: 12, marginTop: 4 },
   meta: { fontSize: 11, marginTop: 3 },
+  cardMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  moreButton: { width: 32, height: 44, alignItems: 'center', justifyContent: 'center' },
   empty: { textAlign: 'center', padding: spacing.xl },
   fab: { position: 'absolute', right: spacing.lg, bottom: spacing.xl, width: 58, height: 58, alignItems: 'center', justifyContent: 'center', borderRadius: 29, backgroundColor: colors.primary, ...shadows.floating },
   overlay: { flex: 1, justifyContent: 'flex-end' },

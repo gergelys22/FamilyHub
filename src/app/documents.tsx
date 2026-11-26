@@ -1,3 +1,4 @@
+import { ActionSheet, ConfirmDialog, type SheetAction } from '@/components/action-sheet';
 import { ScreenCloseButton } from '@/components/screen-close-button';
 import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
@@ -20,7 +21,6 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Linking,
   Modal,
   Pressable,
@@ -111,6 +111,14 @@ export default function DocumentsScreen() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
+  const [notice, setNotice] = useState<{ title: string; message: string } | null>(null);
+  const [menuTarget, setMenuTarget] = useState<FamilyDocument | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<FamilyDocument | null>(null);
+
+  function notify(title: string, message: string) {
+    setNotice({ title, message });
+  }
+
   const [search, setSearch] = useState('');
   const [now] = useState(() => Date.now());
 
@@ -167,7 +175,7 @@ export default function DocumentsScreen() {
         setItems(documents);
       } catch (error) {
         if (active) {
-          Alert.alert(
+          notify(
             'Betöltési hiba',
             errorMessage(error, 'A dokumentumok betöltése sikertelen.'),
           );
@@ -217,7 +225,7 @@ export default function DocumentsScreen() {
       setRestricted(false);
       setMetadataVisible(true);
     } catch (error) {
-      Alert.alert(
+      notify(
         'Fájl kiválasztása sikertelen',
         errorMessage(error, 'Próbáld újra.'),
       );
@@ -228,7 +236,7 @@ export default function DocumentsScreen() {
     if (!familyId || !profile?.id || !pendingFile || busy) return;
 
     if (!documentName.trim()) {
-      Alert.alert('Hiányzó adat', 'Adj meg egy dokumentumnevet.');
+      notify('Hiányzó adat', 'Adj meg egy dokumentumnevet.');
       return;
     }
 
@@ -243,7 +251,7 @@ export default function DocumentsScreen() {
         !/^\d{4}-\d{2}-\d{2}$/.test(dateString) ||
         date.toISOString().slice(0, 10) !== dateString
       ) {
-        Alert.alert(
+        notify(
           'Hibás lejárati dátum',
           'Válassz egy érvényes dátumot a naptárból.',
         );
@@ -298,7 +306,7 @@ export default function DocumentsScreen() {
 
       await reload();
 
-      Alert.alert('Sikeres feltöltés', 'A dokumentum bekerült a családi tárba.');
+      notify('Sikeres feltöltés', 'A dokumentum bekerült a családi tárba.');
     } catch (error) {
       if (uploadedPath) {
         await supabase.storage
@@ -306,7 +314,7 @@ export default function DocumentsScreen() {
           .remove([uploadedPath]);
       }
 
-      Alert.alert(
+      notify(
         'Feltöltés sikertelen',
         errorMessage(error, 'Próbáld újra.'),
       );
@@ -327,36 +335,65 @@ export default function DocumentsScreen() {
 
       await Linking.openURL(data.signedUrl);
     } catch (error) {
-      Alert.alert(
+      notify(
         'Nem sikerült megnyitni',
         errorMessage(error, 'A dokumentum jelenleg nem érhető el.'),
       );
     }
   }
 
-  function remove(item: FamilyDocument) {
-    Alert.alert(
-      'Dokumentum törlése',
-      `Biztosan törlöd ezt a dokumentumot?\n\n${item.name}`,
-      [
-        { text: 'Mégse', style: 'cancel' },
+  async function confirmDelete() {
+    const item = deleteTarget;
+    if (!item) return;
+    setDeleteTarget(null);
+
+    try {
+      await deleteFamilyDocument(item);
+      await reload();
+    } catch (error) {
+      notify('Törlési hiba', errorMessage(error, 'A törlés sikertelen.'));
+    }
+  }
+
+  const menuActions: SheetAction[] = menuTarget
+    ? [
         {
-          text: 'Törlés',
-          style: 'destructive',
+          key: 'open',
+          label: 'Megnyitás',
+          icon: 'open-outline',
           onPress: () => {
-            void deleteFamilyDocument(item)
-              .then(() => reload())
-              .catch((error: unknown) => {
-                Alert.alert(
-                  'Törlési hiba',
-                  errorMessage(error, 'A törlés sikertelen.'),
-                );
-              });
+            const item = menuTarget;
+            setMenuTarget(null);
+            setTimeout(() => void open(item), 250);
           },
         },
-      ],
-    );
-  }
+        {
+          key: 'delete',
+          label: 'Törlés',
+          icon: 'trash-outline',
+          destructive: true,
+          onPress: () => {
+            const item = menuTarget;
+            setMenuTarget(null);
+            setTimeout(() => setDeleteTarget(item), 250);
+          },
+        },
+      ]
+    : [];
+
+  const noticeDialog = (
+    <ConfirmDialog
+      visible={notice !== null}
+      title={notice?.title ?? ''}
+      message={notice?.message ?? ''}
+      confirmLabel="Rendben"
+      destructive={false}
+      hideCancel
+      onConfirm={() => setNotice(null)}
+      onCancel={() => setNotice(null)}
+      palette={palette}
+    />
+  );
 
   const activeFilterCount =
     (typeFilter !== 'all' ? 1 : 0) +
@@ -467,12 +504,12 @@ export default function DocumentsScreen() {
     );
 
     return (
+      <View key={item.id} style={styles.documentCard}>
       <Pressable
-        key={item.id}
         onPress={() => void open(item)}
-        onLongPress={() => remove(item)}
+        onLongPress={() => setMenuTarget(item)}
         style={({ pressed }) => [
-          styles.documentCard,
+          styles.documentMain,
           pressed && styles.pressed,
         ]}
         accessibilityRole="button"
@@ -542,14 +579,18 @@ export default function DocumentsScreen() {
           ) : null}
         </View>
 
-        <View style={styles.openIcon}>
-          <Ionicons
-            name="chevron-forward"
-            size={19}
-            color={palette.textMuted}
-          />
-        </View>
       </Pressable>
+
+      <Pressable
+        onPress={() => setMenuTarget(item)}
+        hitSlop={8}
+        style={styles.openIcon}
+        accessibilityRole="button"
+        accessibilityLabel={`${item.name} műveletei`}
+      >
+        <Ionicons name="ellipsis-vertical" size={20} color={palette.textMuted} />
+      </Pressable>
+      </View>
     );
   }
 
@@ -1328,8 +1369,29 @@ export default function DocumentsScreen() {
               </View>
             </ScrollView>
           </View>
+          {metadataVisible ? noticeDialog : null}
         </View>
       </Modal>
+
+      <ActionSheet
+        visible={menuTarget !== null}
+        title={menuTarget?.name ?? ''}
+        subtitle={menuTarget ? getDocumentType(menuTarget.document_type).label : undefined}
+        actions={menuActions}
+        onClose={() => setMenuTarget(null)}
+        palette={palette}
+      />
+
+      <ConfirmDialog
+        visible={deleteTarget !== null}
+        title="Dokumentum törlése"
+        message={`Biztosan törlöd ezt a dokumentumot?\n\n${deleteTarget?.name ?? ''}`}
+        onConfirm={() => void confirmDelete()}
+        onCancel={() => setDeleteTarget(null)}
+        palette={palette}
+      />
+
+      {!metadataVisible ? noticeDialog : null}
     </SafeAreaView>
   );
 }
@@ -1469,6 +1531,12 @@ function createStyles(palette: Palette, isDark: boolean) {
       justifyContent: 'center',
       borderRadius: 16,
     },
+    documentMain: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+    },
     documentInfo: { flex: 1, gap: 5 },
     documentTitleRow: {
       flexDirection: 'row',
@@ -1504,7 +1572,8 @@ function createStyles(palette: Palette, isDark: boolean) {
     expiryText: { fontSize: 9, fontWeight: '900' },
     tags: { fontSize: 10, fontWeight: '800' },
     openIcon: {
-      width: 25,
+      width: 32,
+      height: 44,
       alignItems: 'center',
       justifyContent: 'center',
     },

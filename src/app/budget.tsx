@@ -1,4 +1,4 @@
-
+import { ActionSheet, ConfirmDialog, type SheetAction } from '@/components/action-sheet';
 import { ScreenCloseButton } from '@/components/screen-close-button';
 import { colors, darkColors, radius, shadows, spacing } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
@@ -15,6 +15,14 @@ import {
   type BudgetTransaction,
   type Subscription,
 } from '@/services/budget';
+import {
+  deleteBudgetGoal,
+  deleteSubscription,
+  setSubscriptionActive,
+  updateBudgetGoal,
+  updateBudgetTransaction,
+  updateSubscription,
+} from '@/services/budget-manage';
 import { getFamilyMembers, getMyFamilies, type FamilyMember } from '@/services/families';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
@@ -31,6 +39,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type Tab = 'transactions' | 'goals' | 'subscriptions';
+type ManageTarget =
+  | { kind: 'transaction'; item: BudgetTransaction }
+  | { kind: 'goal'; item: BudgetGoal }
+  | { kind: 'subscription'; item: Subscription };
 type Palette = typeof colors | typeof darkColors;
 
 const categories = [
@@ -79,6 +91,14 @@ function SectionTitle({
   );
 }
 
+function MenuButton({ onPress, color, label }: { onPress: () => void; color: string; label: string }) {
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={label} hitSlop={10} onPress={onPress}>
+      <Ionicons name="ellipsis-horizontal" size={20} color={color} />
+    </Pressable>
+  );
+}
+
 function EmptyState({
   icon,
   title,
@@ -114,6 +134,9 @@ export default function BudgetScreen() {
   const [tab, setTab] = useState<Tab>('transactions');
   const [visible, setVisible] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState<ManageTarget | null>(null);
+  const [menuTarget, setMenuTarget] = useState<ManageTarget | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ManageTarget | null>(null);
 
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
@@ -241,6 +264,7 @@ export default function BudgetScreen() {
   );
 
   function openCreate() {
+    setEditing(null);
     setTitle('');
     setAmount('');
     setDescription('');
@@ -255,6 +279,89 @@ export default function BudgetScreen() {
     setNextBilling('');
     setVisible(true);
   }
+
+  function openEdit(target: ManageTarget) {
+    setEditing(target);
+    setPaidBy(profile?.id ?? null);
+    if (target.kind === 'transaction') {
+      const item = target.item;
+      setTab('transactions');
+      setTitle(item.title);
+      setAmount(String(item.amount_cents / 100));
+      setDescription(item.description ?? '');
+      setCategory(item.category);
+      setPaidBy(item.paid_by_profile_id ?? null);
+      setSpentAt(item.spent_at.slice(0, 10));
+    } else if (target.kind === 'goal') {
+      const item = target.item;
+      setTab('goals');
+      setTitle(item.title);
+      setTargetAmount(String(item.target_cents / 100));
+      setSavedAmount(String(item.saved_cents / 100));
+      setDeadline(item.deadline ?? '');
+    } else {
+      const item = target.item;
+      setTab('subscriptions');
+      setTitle(item.title);
+      setProvider(item.provider ?? '');
+      setAmount(String(item.amount_cents / 100));
+      setBillingCycle(item.billing_cycle);
+      setNextBilling(item.next_billing_at?.slice(0, 10) ?? '');
+    }
+    setVisible(true);
+  }
+
+  async function performDelete(target: ManageTarget) {
+    try {
+      if (target.kind === 'transaction') await deleteBudgetTransaction(target.item.id);
+      else if (target.kind === 'goal') await deleteBudgetGoal(target.item.id);
+      else await deleteSubscription(target.item.id);
+      await reload();
+    } catch (caught) {
+      Alert.alert('A törlés sikertelen', caught instanceof Error ? caught.message : 'Próbáld újra.');
+    }
+  }
+
+  async function toggleSubscription(item: Subscription) {
+    try {
+      await setSubscriptionActive(item.id, !item.active);
+      await reload();
+    } catch (caught) {
+      Alert.alert('A módosítás sikertelen', caught instanceof Error ? caught.message : 'Próbáld újra.');
+    }
+  }
+
+  const menuActions: SheetAction[] = menuTarget
+    ? [
+        { key: 'edit', label: 'Szerkesztés', icon: 'pencil-outline', onPress: () => openEdit(menuTarget) },
+        ...(menuTarget.kind === 'subscription'
+          ? [
+              {
+                key: 'toggle',
+                label: menuTarget.item.active ? 'Szüneteltetés' : 'Újra aktiválás',
+                icon: (menuTarget.item.active ? 'pause-circle-outline' : 'play-circle-outline') as SheetAction['icon'],
+                onPress: () => void toggleSubscription(menuTarget.item),
+              },
+            ]
+          : []),
+        {
+          key: 'delete',
+          label: 'Törlés',
+          icon: 'trash-outline',
+          destructive: true,
+          // iOS-en egy másik Modal csak az előző eltűnése után nyitható
+          onPress: () => setTimeout(() => setDeleteTarget(menuTarget), 250),
+        },
+      ]
+    : [];
+
+  const deleteMessage = deleteTarget
+    ? deleteTarget.kind === 'transaction'
+      ? `Törlöd ezt a kiadást: ${deleteTarget.item.title}?`
+      : deleteTarget.kind === 'goal'
+        ? `Törlöd ezt a megtakarítási célt: ${deleteTarget.item.title}?`
+        : `Törlöd ezt az előfizetést: ${deleteTarget.item.title}?`
+    : '';
 
   async function save() {
     if (!familyId || !profile?.id) return;
@@ -275,18 +382,31 @@ export default function BudgetScreen() {
           return;
         }
 
-        await createBudgetTransaction({
-          familyId,
-          profileId: profile.id,
-          paidByProfileId: paidBy,
-          title,
-          description,
-          category,
-          amountCents: cents,
-          spentAt: new Date(
-            `${spentAt || new Date().toISOString().slice(0, 10)}T12:00:00`,
-          ).toISOString(),
-        });
+        const spentIso = new Date(
+          `${spentAt || new Date().toISOString().slice(0, 10)}T12:00:00`,
+        ).toISOString();
+
+        if (editing?.kind === 'transaction') {
+          await updateBudgetTransaction(editing.item.id, {
+            title,
+            description,
+            category,
+            amountCents: cents,
+            spentAt: spentIso,
+            paidByProfileId: paidBy,
+          });
+        } else {
+          await createBudgetTransaction({
+            familyId,
+            profileId: profile.id,
+            paidByProfileId: paidBy,
+            title,
+            description,
+            category,
+            amountCents: cents,
+            spentAt: spentIso,
+          });
+        }
       } else if (tab === 'goals') {
         const target = parseHuf(targetAmount);
         const saved = parseHuf(savedAmount || '0');
@@ -296,14 +416,23 @@ export default function BudgetScreen() {
           return;
         }
 
-        await saveBudgetGoal({
-          familyId,
-          profileId: profile.id,
-          title,
-          targetCents: target,
-          savedCents: saved ?? 0,
-          deadline: deadline || null,
-        });
+        if (editing?.kind === 'goal') {
+          await updateBudgetGoal(editing.item.id, {
+            title,
+            targetCents: target,
+            savedCents: saved ?? 0,
+            deadline: deadline || null,
+          });
+        } else {
+          await saveBudgetGoal({
+            familyId,
+            profileId: profile.id,
+            title,
+            targetCents: target,
+            savedCents: saved ?? 0,
+            deadline: deadline || null,
+          });
+        }
       } else {
         const cents = parseHuf(amount);
 
@@ -312,15 +441,25 @@ export default function BudgetScreen() {
           return;
         }
 
-        await saveSubscription({
-          familyId,
-          profileId: profile.id,
-          title,
-          provider,
-          amountCents: cents,
-          billingCycle,
-          nextBillingAt: nextBilling || null,
-        });
+        if (editing?.kind === 'subscription') {
+          await updateSubscription(editing.item.id, {
+            title,
+            provider,
+            amountCents: cents,
+            billingCycle,
+            nextBillingAt: nextBilling || null,
+          });
+        } else {
+          await saveSubscription({
+            familyId,
+            profileId: profile.id,
+            title,
+            provider,
+            amountCents: cents,
+            billingCycle,
+            nextBillingAt: nextBilling || null,
+          });
+        }
       }
 
       await reload();
@@ -333,25 +472,6 @@ export default function BudgetScreen() {
     } finally {
       setBusy(false);
     }
-  }
-
-  function removeTransaction(item: BudgetTransaction) {
-    Alert.alert('Kiadás törlése', `Törlöd: ${item.title}?`, [
-      { text: 'Mégse', style: 'cancel' },
-      {
-        text: 'Törlés',
-        style: 'destructive',
-        onPress: () =>
-          void deleteBudgetTransaction(item.id)
-            .then(() => reload())
-            .catch((caught) =>
-              Alert.alert(
-                'Hiba',
-                caught instanceof Error ? caught.message : 'A törlés sikertelen.',
-              ),
-            ),
-      },
-    ]);
   }
 
   function renderInput(
@@ -642,7 +762,7 @@ export default function BudgetScreen() {
 
             <SectionTitle
               title="Legutóbbi kiadások"
-              subtitle="Hosszan nyomva törölheted a tételt"
+              subtitle="A ••• gombbal szerkesztheted vagy törölheted"
               palette={palette}
             />
 
@@ -670,9 +790,8 @@ export default function BudgetScreen() {
                   );
 
                   return (
-                    <Pressable
+                    <View
                       key={item.id}
-                      onLongPress={() => removeTransaction(item)}
                       style={[
                         styles.card,
                         {
@@ -727,7 +846,12 @@ export default function BudgetScreen() {
                           })}
                         </Text>
                       </View>
-                    </Pressable>
+                      <MenuButton
+                        label={`${item.title} műveletei`}
+                        color={palette.textMuted}
+                        onPress={() => setMenuTarget({ kind: 'transaction', item })}
+                      />
+                    </View>
                   );
                 })
             )}
@@ -789,6 +913,11 @@ export default function BudgetScreen() {
                       <Text style={[styles.progressText, { color: palette.primary }]}>
                         {progress}%
                       </Text>
+                      <MenuButton
+                        label={`${goal.title} műveletei`}
+                        color={palette.textMuted}
+                        onPress={() => setMenuTarget({ kind: 'goal', item: goal })}
+                      />
                     </View>
 
                     <View style={styles.goalAmounts}>
@@ -903,6 +1032,11 @@ export default function BudgetScreen() {
                       </Text>
                     </View>
                   </View>
+                  <MenuButton
+                    label={`${item.title} műveletei`}
+                    color={palette.textMuted}
+                    onPress={() => setMenuTarget({ kind: 'subscription', item })}
+                  />
                 </View>
               ))
             )}
@@ -958,14 +1092,14 @@ export default function BudgetScreen() {
               <View style={styles.modalHeader}>
                 <View style={styles.flex}>
                   <Text style={[styles.modalEyebrow, { color: palette.primary }]}>
-                    ÚJ BEJEGYZÉS
+                    {editing ? 'SZERKESZTÉS' : 'ÚJ BEJEGYZÉS'}
                   </Text>
                   <Text style={[styles.modalTitle, { color: palette.textPrimary }]}>
                     {tab === 'transactions'
-                      ? 'Új kiadás'
+                      ? editing ? 'Kiadás szerkesztése' : 'Új kiadás'
                       : tab === 'goals'
-                        ? 'Megtakarítási cél'
-                        : 'Új előfizetés'}
+                        ? editing ? 'Cél szerkesztése' : 'Megtakarítási cél'
+                        : editing ? 'Előfizetés szerkesztése' : 'Új előfizetés'}
                   </Text>
                 </View>
                 <Pressable
@@ -1184,6 +1318,34 @@ export default function BudgetScreen() {
           </View>
         </View>
       </Modal>
+
+      <ActionSheet
+        visible={menuTarget !== null}
+        title={
+          menuTarget?.kind === 'transaction'
+            ? 'Kiadás'
+            : menuTarget?.kind === 'goal'
+              ? 'Megtakarítási cél'
+              : 'Előfizetés'
+        }
+        subtitle={menuTarget?.item.title}
+        actions={menuActions}
+        onClose={() => setMenuTarget(null)}
+        palette={palette}
+      />
+
+      <ConfirmDialog
+        visible={deleteTarget !== null}
+        title="Törlés megerősítése"
+        message={deleteMessage}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => {
+          const target = deleteTarget;
+          setDeleteTarget(null);
+          if (target) void performDelete(target);
+        }}
+        palette={palette}
+      />
     </SafeAreaView>
   );
 }

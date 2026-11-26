@@ -1,3 +1,4 @@
+import { ActionSheet, ConfirmDialog, type SheetAction } from '@/components/action-sheet';
 import { FeedTab, NewPostModal } from '@/components/community-feed';
 import { LiveTab, StartLiveModal } from '@/components/community-live';
 import { NewRecipeModal, RecipesTab } from '@/components/community-recipes';
@@ -19,7 +20,6 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Modal,
   Pressable,
@@ -162,6 +162,11 @@ function MemoryEditModal({
   const [memoryDate, setMemoryDate] = useState('');
   const [location, setLocation] = useState('');
   const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<{ title: string; message: string; closeAfter?: boolean } | null>(null);
+
+  function notify(title: string, message: string, closeAfter = false) {
+    setNotice({ title, message, closeAfter });
+  }
 
   useEffect(() => {
     let active = true;
@@ -173,8 +178,7 @@ function MemoryEditModal({
       .then(({ data, error }) => {
         if (!active) return;
         if (error || !data) {
-          Alert.alert('Betöltés sikertelen', error?.message ?? 'Az emlék nem található.');
-          onClose();
+          notify('Betöltés sikertelen', error?.message ?? 'Az emlék nem található.', true);
           return;
         }
         setTitle(data.title ?? '');
@@ -191,11 +195,11 @@ function MemoryEditModal({
 
   async function save() {
     if (!title.trim()) {
-      Alert.alert('Hiányzó adat', 'Add meg az emlék címét.');
+      notify('Hiányzó adat', 'Add meg az emlék címét.');
       return;
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(memoryDate)) {
-      Alert.alert('Hibás dátum', 'A dátum formátuma: ÉÉÉÉ-HH-NN.');
+      notify('Hibás dátum', 'A dátum formátuma: ÉÉÉÉ-HH-NN.');
       return;
     }
     setBusy(true);
@@ -204,7 +208,7 @@ function MemoryEditModal({
       onSaved();
       onClose();
     } catch (error) {
-      Alert.alert('Mentés sikertelen', error instanceof Error ? error.message : 'Próbáld újra.');
+      notify('Mentés sikertelen', error instanceof Error ? error.message : 'Próbáld újra.');
     } finally {
       setBusy(false);
     }
@@ -225,6 +229,25 @@ function MemoryEditModal({
       ) : (
         <ActivityIndicator color={palette.primary} />
       )}
+      <ConfirmDialog
+        visible={notice !== null}
+        title={notice?.title ?? ''}
+        message={notice?.message ?? ''}
+        confirmLabel="Rendben"
+        destructive={false}
+        hideCancel
+        onConfirm={() => {
+          const close = notice?.closeAfter;
+          setNotice(null);
+          if (close) onClose();
+        }}
+        onCancel={() => {
+          const close = notice?.closeAfter;
+          setNotice(null);
+          if (close) onClose();
+        }}
+        palette={palette}
+      />
     </Sheet>
   );
 }
@@ -244,28 +267,45 @@ function MemoryCard({
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [notice, setNotice] = useState<{ title: string; message: string } | null>(null);
 
-  function confirmDelete() {
-    Alert.alert('Emlék törlése', `Törlöd ezt az emléket: ${item.title}? A fotói is törlődnek.`, [
-      { text: 'Mégse', style: 'cancel' },
-      {
-        text: 'Törlés',
-        style: 'destructive',
-        onPress: () =>
-          void deleteMemory(item.id)
-            .then(onChanged)
-            .catch((error) => Alert.alert('Törlés sikertelen', error instanceof Error ? error.message : 'Próbáld újra.')),
-      },
-    ]);
+  async function doDelete() {
+    setDeleteOpen(false);
+    try {
+      await deleteMemory(item.id);
+      onChanged();
+    } catch (error) {
+      setNotice({ title: 'Törlés sikertelen', message: error instanceof Error ? error.message : 'Próbáld újra.' });
+    }
   }
 
   function openActions() {
-    Alert.alert(item.title, undefined, [
-      { text: 'Szerkesztés', onPress: () => setEditing(true) },
-      { text: 'Törlés', style: 'destructive', onPress: confirmDelete },
-      { text: 'Mégse', style: 'cancel' },
-    ]);
+    setMenuOpen(true);
   }
+
+  const menuActions: SheetAction[] = [
+    {
+      key: 'edit',
+      label: 'Szerkesztés',
+      icon: 'create-outline',
+      onPress: () => {
+        setMenuOpen(false);
+        setTimeout(() => setEditing(true), 250);
+      },
+    },
+    {
+      key: 'delete',
+      label: 'Törlés',
+      icon: 'trash-outline',
+      destructive: true,
+      onPress: () => {
+        setMenuOpen(false);
+        setTimeout(() => setDeleteOpen(true), 250);
+      },
+    },
+  ];
 
   const menu = (onImage: boolean) => (
     <Pressable
@@ -362,6 +402,33 @@ function MemoryCard({
     {editing ? (
       <MemoryEditModal memoryId={item.id} palette={palette} onClose={() => setEditing(false)} onSaved={onChanged} />
     ) : null}
+    <ActionSheet
+      visible={menuOpen}
+      title={item.title}
+      subtitle={item.when}
+      actions={menuActions}
+      onClose={() => setMenuOpen(false)}
+      palette={palette}
+    />
+    <ConfirmDialog
+      visible={deleteOpen}
+      title="Emlék törlése"
+      message={`Törlöd ezt az emléket: ${item.title}? A fotói is törlődnek.`}
+      onConfirm={() => void doDelete()}
+      onCancel={() => setDeleteOpen(false)}
+      palette={palette}
+    />
+    <ConfirmDialog
+      visible={notice !== null}
+      title={notice?.title ?? ''}
+      message={notice?.message ?? ''}
+      confirmLabel="Rendben"
+      destructive={false}
+      hideCancel
+      onConfirm={() => setNotice(null)}
+      onCancel={() => setNotice(null)}
+      palette={palette}
+    />
     </View>
   );
 }
@@ -495,6 +562,11 @@ function NewMemoryModal({
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<{ title: string; message: string } | null>(null);
+
+  function notify(title: string, message: string) {
+    setNotice({ title, message });
+  }
 
   // A résztvevők listája megnyitáskor töltődik be.
   useEffect(() => {
@@ -506,7 +578,7 @@ function NewMemoryModal({
         if (active) setFamilyMembers(members);
       })
       .catch((error) => {
-        if (active) Alert.alert('Hiba', error instanceof Error ? error.message : 'A családtagok betöltése sikertelen.');
+        if (active) notify('Hiba', error instanceof Error ? error.message : 'A családtagok betöltése sikertelen.');
       });
     return () => {
       active = false;
@@ -516,7 +588,7 @@ function NewMemoryModal({
   async function choosePhoto() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Engedély szükséges', 'A fotó kiválasztásához engedélyezd a fotókönyvtár hozzáférést.');
+      notify('Engedély szükséges', 'A fotó kiválasztásához engedélyezd a fotókönyvtár hozzáférést.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -536,11 +608,11 @@ function NewMemoryModal({
 
   async function saveMemory() {
     if (!profile?.id || !title.trim()) {
-      Alert.alert('Hiányzó adat', 'Add meg az emlék címét.');
+      notify('Hiányzó adat', 'Add meg az emlék címét.');
       return;
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(memoryDate)) {
-      Alert.alert('Hibás dátum', 'A dátum formátuma: ÉÉÉÉ-HH-NN.');
+      notify('Hibás dátum', 'A dátum formátuma: ÉÉÉÉ-HH-NN.');
       return;
     }
     setBusy(true);
@@ -582,7 +654,7 @@ function NewMemoryModal({
       if (uploadedPaths.length) {
         await supabase.storage.from('memories').remove(uploadedPaths);
       }
-      Alert.alert('Mentés sikertelen', error instanceof Error ? error.message : 'Próbáld újra.');
+      notify('Mentés sikertelen', error instanceof Error ? error.message : 'Próbáld újra.');
     } finally {
       setBusy(false);
     }
@@ -656,6 +728,18 @@ function NewMemoryModal({
       ) : null}
 
       <PrimaryButton label="Mentés" icon="checkmark" busy={busy} onPress={() => void saveMemory()} />
+
+      <ConfirmDialog
+        visible={notice !== null}
+        title={notice?.title ?? ''}
+        message={notice?.message ?? ''}
+        confirmLabel="Rendben"
+        destructive={false}
+        hideCancel
+        onConfirm={() => setNotice(null)}
+        onCancel={() => setNotice(null)}
+        palette={palette}
+      />
     </Sheet>
   );
 }

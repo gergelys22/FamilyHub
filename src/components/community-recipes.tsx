@@ -1,3 +1,4 @@
+import { ConfirmDialog } from '@/components/action-sheet';
 import {
   EmptyBlock,
   FormInput,
@@ -18,7 +19,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Pressable,
   ScrollView,
@@ -82,6 +82,12 @@ export function RecipeSheet({
   canDelete: boolean;
 }) {
   const { palette } = usePalette();
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [notice, setNotice] = useState<{ title: string; message: string } | null>(null);
+
+  function notify(title: string, message: string) {
+    setNotice({ title, message });
+  }
   if (!recipe) {
     return (
       <Sheet visible={false} onClose={onClose} title="" icon="restaurant">
@@ -92,23 +98,15 @@ export function RecipeSheet({
   const meta = categoryMeta(recipe.category);
   const favorite = favorites.isFavorite('recipe', recipe.id);
 
-  function remove() {
-    Alert.alert('Recept törlése', `Törlöd ezt a receptet: ${recipe?.title}?`, [
-      { text: 'Mégse', style: 'cancel' },
-      {
-        text: 'Törlés',
-        style: 'destructive',
-        onPress: () =>
-          void deleteRecipe(recipe!.id, recipe!.image_path)
-            .then(() => {
-              onDeleted();
-              onClose();
-            })
-            .catch((caught) =>
-              Alert.alert('Hiba', caught instanceof Error ? caught.message : 'A törlés sikertelen.'),
-            ),
-      },
-    ]);
+  async function doDelete() {
+    setDeleteOpen(false);
+    try {
+      await deleteRecipe(recipe!.id, recipe!.image_path);
+      onDeleted();
+      onClose();
+    } catch (caught) {
+      notify('Hiba', caught instanceof Error ? caught.message : 'A törlés sikertelen.');
+    }
   }
 
   return (
@@ -206,7 +204,7 @@ export function RecipeSheet({
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Recept törlése"
-            onPress={remove}
+            onPress={() => setDeleteOpen(true)}
             style={({ pressed }) => [
               recipeStyles.deleteButton,
               { borderColor: palette.border },
@@ -217,6 +215,26 @@ export function RecipeSheet({
           </Pressable>
         ) : null}
       </View>
+
+      <ConfirmDialog
+        visible={deleteOpen}
+        title="Recept törlése"
+        message={`Törlöd ezt a receptet: ${recipe.title}?`}
+        onConfirm={() => void doDelete()}
+        onCancel={() => setDeleteOpen(false)}
+        palette={palette}
+      />
+      <ConfirmDialog
+        visible={notice !== null}
+        title={notice?.title ?? ''}
+        message={notice?.message ?? ''}
+        confirmLabel="Rendben"
+        destructive={false}
+        hideCancel
+        onConfirm={() => setNotice(null)}
+        onCancel={() => setNotice(null)}
+        palette={palette}
+      />
     </Sheet>
   );
 }
@@ -252,11 +270,16 @@ export function NewRecipeModal({
   const [removeImage, setRemoveImage] = useState(false);
   const existingImage = recipe && !removeImage ? recipe.image_url : null;
   const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<{ title: string; message: string } | null>(null);
+
+  function notify(title: string, message: string) {
+    setNotice({ title, message });
+  }
 
   async function pickImage() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Engedély szükséges', 'A fotó kiválasztásához engedélyezd a fotókönyvtár hozzáférést.');
+      notify('Engedély szükséges', 'A fotó kiválasztásához engedélyezd a fotókönyvtár hozzáférést.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
@@ -268,11 +291,11 @@ export function NewRecipeModal({
     const ingredientList = splitLines(ingredients);
     const stepList = splitLines(steps);
     if (!title.trim()) {
-      Alert.alert('Hiányzó adat', 'Add meg a recept nevét.');
+      notify('Hiányzó adat', 'Add meg a recept nevét.');
       return;
     }
     if (ingredientList.length === 0 || stepList.length === 0) {
-      Alert.alert('Hiányzó adat', 'Adj meg legalább egy hozzávalót és egy elkészítési lépést.');
+      notify('Hiányzó adat', 'Adj meg legalább egy hozzávalót és egy elkészítési lépést.');
       return;
     }
     setBusy(true);
@@ -318,7 +341,7 @@ export function NewRecipeModal({
       onSaved();
       onClose();
     } catch (caught) {
-      Alert.alert('A recept nem menthető', caught instanceof Error ? caught.message : 'Próbáld újra.');
+      notify('A recept nem menthető', caught instanceof Error ? caught.message : 'Próbáld újra.');
     } finally {
       setBusy(false);
     }
@@ -422,6 +445,17 @@ export function NewRecipeModal({
       )}
 
       <PrimaryButton label={recipe ? 'Módosítások mentése' : 'Recept mentése'} icon="checkmark" busy={busy} onPress={() => void save()} />
+      <ConfirmDialog
+        visible={notice !== null}
+        title={notice?.title ?? ''}
+        message={notice?.message ?? ''}
+        confirmLabel="Rendben"
+        destructive={false}
+        hideCancel
+        onConfirm={() => setNotice(null)}
+        onCancel={() => setNotice(null)}
+        palette={palette}
+      />
     </Sheet>
   );
 }
